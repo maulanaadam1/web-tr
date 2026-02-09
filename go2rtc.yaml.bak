@@ -1,0 +1,49 @@
+streams:
+    Area Fabrikasi: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_28&streamindex=2
+    Besi Scrap: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_23&streamindex=2
+    Building Berth: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_25&streamindex=2
+    CNC: ffmpeg:rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_6&streamindex=2#video=h264#audio=aac#hwaccel=auto#raw=-preset ultrafast
+    GSM: rtsp://admin:Admin123@5.181.178.65:554/cam/realmonitor?channel=1&subtype=0&unicast=true
+    Gerbang 1:
+        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_2&streamindex=2
+    Gerbang Pintu 2: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_10&streamindex=2
+    Gerbang Pintu 3: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_5&streamindex=2
+    Gudang Tabung LPG: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_15&streamindex=2
+    Hanggar Barat:
+        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_17&streamindex=2
+    Hanggar Belakang: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_12&streamindex=2
+    Hanggar Depan: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_7&streamindex=2
+    Hanggar Timur: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_20&streamindex=2
+    Kade: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_8&streamindex=2
+    Kade Belakang Hanggar: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_18&streamindex=2
+    Kade Selatan Unit 2: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_24&streamindex=2
+    Office (Unit 1 Utama): rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_14&streamindex=2
+    Pagar Barat: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_29&streamindex=2
+    Parkir Mobil (Unit 1 Gerbang): rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_16&streamindex=2
+    Pintu Dua: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_27&streamindex=2
+    Pintu Satu: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_26&streamindex=2
+    Pintu Tiga (ex Warung): ffmpeg:rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_22&streamindex=2#video=h264#audio=aac#hwaccel=auto#raw=-preset ultrafast
+    Sisi Barat: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_13&streamindex=2
+    Slipway A/B/C Barat: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_11&streamindex=2
+    Slipway A/B/C Timur: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_9&streamindex=2
+    Slipway E: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_4&streamindex=2
+    Slipway E (Hanggar): rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_21&streamindex=2
+    WJS: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_19&streamindex=2
+    Warehouse: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_3&streamindex=2
+    Workshop: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_1&streamindex=2
+api:
+    listen: :1984
+hls:
+    listen: :8899
+log:
+    level: debug
+mp4:
+    listen: :8556
+rtsp:
+    listen: :8554
+srt:
+    listen: :8555
+webrtc:
+    candidates:
+        - 127.0.0.1:8555
+    listen: :8555

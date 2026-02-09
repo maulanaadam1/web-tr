@@ -1,0 +1,19 @@
+api: yes
+apiAddress: :9997
+rtsp: yes
+rtspAddress: :8554
+hls: yes
+hlsAddress: :8888
+
+# WebRTC Section
+webrtc: yes
+webrtcAddress: :8889
+webrtcAllowOrigin: '*'
+webrtcLocalUDPAddress: :8189
+webrtcLocalTCPAddress: :8189
+
+paths:
+  camera_1:
+    source: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_27&streamindex=2
+    sourceProtocol: tcp
+    sourceOnDemand: no  # Keep it 'no' to see if it connects immediately

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Player - {{.Name}}</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+            /* User requested "fill" */
+            display: block;
+        }
+
+        .error-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff5555;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 8px;
+            font-family: sans-serif;
+            z-index: 10;
+        }
+
+        .debug-log {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ff00;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 20;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="video-container">
+        <video id="video-player" autoplay playsinline muted controls></video>
+        <div id="error-display" class="error-display" style="display: none;"></div>
+        <div id="debug-log" class="debug-log"></div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamName = urlParams.get('stream') || "{{.Name}}";
+        const video = document.getElementById('video-player');
+        const errorDisplay = document.getElementById('error-display');
+        const debugLog = document.getElementById('debug-log');
+
+        function log(msg) {
+            console.log(msg);
+            const line = document.createElement('div');
+            line.textContent = `> ${msg}`;
+            debugLog.appendChild(line);
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+
+        async function startPlay() {
+            log(`Starting playback for: ${streamName}`);
+            try {
+                // 1. Create PeerConnection
+                const pc = new RTCPeerConnection({
+                    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                });
+
+                pc.onconnectionstatechange = () => log(`Connection State: ${pc.connectionState}`);
+                pc.oniceconnectionstatechange = () => log(`ICE State: ${pc.iceConnectionState}`);
+                pc.onsignalingstatechange = () => log(`Signal State: ${pc.signalingState}`);
+
+                // 2. Add Transceiver (recvonly as we are watching)
+                pc.addTransceiver('video', { direction: 'recvonly' });
+                // Optional: Add audio if needed, but often cameras are video only
+                // pc.addTransceiver('audio', { direction: 'recvonly' });
+                log("Transceiver added");
+
+                // 3. Create Offer
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                log("Offer created & set locally");
+
+                // 4. Send Offer to Go2RTC (via our proxy)
+                // Go2RTC api expects POST with SDP body
+                // We use our proxy /api/webrtc?src={name}
+                log("Sending offer to server...");
+                const res = await fetch(`/api/webrtc?src=${encodeURIComponent(streamName)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/sdp' }, // Important for Go2RTC
+                    body: offer.sdp
+                });
+
+                if (!res.ok) throw new Error(`Server error: ${res.status} ${await res.text()}`);
+
+                // 5. Set Remote Description
+                const answerSdp = await res.text();
+                log(`Answer received (${answerSdp.length} chars)`);
+                await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
+                log("Remote description set");
+
+                // 6. Handle Track Logic
+                pc.ontrack = (event) => {
+                    log(`Track received: ${event.track.kind}`);
+                    if (video.srcObject !== event.streams[0]) {
+                        video.srcObject = event.streams[0];
+                        log("Video stream attached to element");
+                    }
+                };
+
+            } catch (e) {
+                console.error(e);
+                showError("Playback failed: " + e.message);
+                log("Error: " + e.message);
+            }
+        }
+
+        function showError(msg) {
+            errorDisplay.innerText = msg;
+            errorDisplay.style.display = 'block';
+        }
+
+        if (streamName) {
+            startPlay();
+        } else {
+            showError("No stream specified");
+        }
+    </script>
+</body>
+
+</html>
