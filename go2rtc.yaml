@@ -1,52 +1,23 @@
 streams:
-    Area Fabrikasi: ffmpeg:rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_28&streamindex=2#raw=-preset ultrafast
-    Bedeng Subkon:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_24&streamindex=2
-    Belakang Hanggar:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_20&streamindex=1
-    Dalam Hanggar 1:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_13&streamindex=1
-    Dalam Hanggar 2:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_8&streamindex=1
-    East Slipway A/B/C:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_10&streamindex=1
-    Fabrication Area:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_22&streamindex=1
-    Front Maintenance:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_23&streamindex=2
-    Front Office:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_18&streamindex=2
-    Front Warehouse:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_3&streamindex=1
-    GSM: rtsp://admin:Admin123@5.181.178.65:554/cam/realmonitor?channel=1&subtype=0&unicast=true
-    Gerbang Pintu 3:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_5&streamindex=2
-    Gerbang Pos 4:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_6&streamindex=2
-    Gudang Tabung LPG:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_15&streamindex=1
-    Hanggar Belakang: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_12&streamindex=2
-    Hopper Sandblast:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_17&streamindex=2
-    Kade Slipway E:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_26&streamindex=2
-    Main Office:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_16&streamindex=2
-    Maintenance:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_25&streamindex=2
-    Office (Unit 1 Utama): rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_14&streamindex=2
-    Office NB:
-      - rtsp://admin:LFFVJY@10.85.50.234:554/H.264
-    Pagar Barat: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_29&streamindex=2
-    Parkir Motor:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_27&streamindex=2
-    Slipway A/B/C Barat: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_11&streamindex=2
-    Slipway E (Hanggar): rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_21&streamindex=2
-    WJS: rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_19&streamindex=2
-    Workshop CNC:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_7&streamindex=2
-    Workshops:
-        - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_1&streamindex=2
+    Area Fabrikasi: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_28&streamindex=2
+    Besi Scrap: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_23&streamindex=2
+api:
+    listen: :1984
+hls:
+    listen: :8899
+log:
+    level: debug
+mp4:
+    listen: :8556
+rtsp:
+    listen: :8554
+srt:
+    listen: :8555
+webrtc:
+    candidates:
+        - 127.0.0.1:8555
+    listen: :8555
+
 api:
     listen: :1984
 hls: {}
