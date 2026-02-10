@@ -368,6 +368,41 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/api/webrtc", func(w http.ResponseWriter, r *http.Request) {
+		targetURL := "http://localhost:1984" + r.URL.RequestURI()
+
+		// Create proxy request
+		proxyReq, err := http.NewRequest(r.Method, targetURL, r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Copy headers
+		for name, values := range r.Header {
+			for _, value := range values {
+				proxyReq.Header.Add(name, value)
+			}
+		}
+
+		resp, err := http.DefaultClient.Do(proxyReq)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Go2RTC Proxy Error: %v", err), http.StatusBadGateway)
+			return
+		}
+		defer resp.Body.Close()
+
+		// Copy response headers
+		for name, values := range resp.Header {
+			for _, value := range values {
+				w.Header().Add(name, value)
+			}
+		}
+
+		w.WriteHeader(resp.StatusCode)
+		io.Copy(w, resp.Body)
+	})
+
 	// HLS & MSE Proxy Handlers
 	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC) // MSE/MP4
 

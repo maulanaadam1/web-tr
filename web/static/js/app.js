@@ -508,7 +508,6 @@ function initPlayers() {
         // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
         if (window.location.protocol === 'https:') {
             // User confirmed https://stream.campod.my.id/rtc/ works
-            // So we use the relative path /rtc (which maps to the proxy)
             go2rtcBase = '/rtc';
         }
 
