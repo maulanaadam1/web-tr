@@ -218,8 +218,8 @@ function openShareModal(name) {
     // Determine Base URL
     let shareUrl = `${protocol}//${hostname}${port}/share?stream=${encodeURIComponent(name)}`;
 
-    // User requested direct /rtc/stream.html format for HTTPS
-    if (protocol === 'https:') {
+    // If not localhost, we use the direct Go2RTC player via Reverse Proxy
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
         // Assuming reverse proxy is at /rtc/
         shareUrl = `${protocol}//${hostname}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
     }
@@ -467,9 +467,8 @@ function reloadPlayer(name, mode) {
     // Determine Go2RTC Base URL
     let go2rtcBase = `http://${hostname}:1984`;
 
-    // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
-    if (window.location.protocol === 'https:') {
-        // User confirmed https://stream.campod.my.id/rtc/ works
+    // If not localhost, we assume a Reverse Proxy setup (like /rtc/)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
         go2rtcBase = '/rtc';
     }
 
@@ -508,9 +507,9 @@ function initPlayers() {
         const hostname = window.location.hostname;
         let go2rtcBase = `http://${hostname}:1984`;
 
-        // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
-        if (window.location.protocol === 'https:') {
-            // User confirmed https://stream.campod.my.id/rtc/ works
+        // If not localhost, we assume a Reverse Proxy setup (like /rtc/)
+        // This covers both HTTPS and HTTP (if port 1984 is blocked externally)
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             go2rtcBase = '/rtc';
         }
 

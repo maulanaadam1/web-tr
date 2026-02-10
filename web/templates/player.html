@@ -47,9 +47,8 @@
         // Determine Go2RTC Base URL
         let go2rtcBase = `http://${hostname}:1984`;
 
-        // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
-        if (window.location.protocol === 'https:') {
-            // User confirmed https://stream.campod.my.id/rtc/ works
+        // If not localhost, we assume a Reverse Proxy setup (like /rtc/)
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             go2rtcBase = '/rtc';
         }
 
