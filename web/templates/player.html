@@ -54,7 +54,8 @@
         }
 
         // Use Go2RTC built-in player
-        const playerUrl = `${go2rtcBase}/rtc/stream.html?src=${encodeURIComponent(streamName)}&mode=webrtc`;
+        // go2rtcBase is either "http://hostname:1984" or "/rtc"
+        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}&mode=webrtc`;
         document.getElementById("go2rtc-player").src = playerUrl;
     </script>
 </body>
