@@ -215,10 +215,15 @@ function openShareModal(name) {
     const port = window.location.port ? ":" + window.location.port : "";
     const protocol = window.location.protocol;
 
-    // We use the public share link which maps to /share?stream=...
-    // Adjust logic if you want direct Go2RTC link. 
-    // Here we use the app's share page for a cleaner player.
-    const shareUrl = `${protocol}//${hostname}${port}/share?stream=${encodeURIComponent(name)}`;
+    // Determine Base URL
+    let shareUrl = `${protocol}//${hostname}${port}/share?stream=${encodeURIComponent(name)}`;
+
+    // User requested direct /rtc/stream.html format for HTTPS
+    if (protocol === 'https:') {
+        // Assuming reverse proxy is at /rtc/
+        shareUrl = `${protocol}//${hostname}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+    }
+
     const embed = `<iframe src="${shareUrl}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
 
     document.getElementById("shareLink").value = shareUrl;
