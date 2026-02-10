@@ -458,11 +458,23 @@ function reloadPlayer(name, mode) {
 
     const iframe = document.createElement('iframe');
     const hostname = window.location.hostname;
-    const port = window.location.port ? ":" + window.location.port : "";
 
-    // We ignore 'mode' now because our custom player handles everything via WebRTC
-    // But we use the /share endpoint
-    iframe.src = `${window.location.protocol}//${hostname}${port}/share?stream=${encodeURIComponent(name)}`;
+    // Determine Go2RTC Base URL
+    let go2rtcBase = `http://${hostname}:1984`;
+
+    // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
+    if (window.location.protocol === 'https:') {
+        // User confirmed https://stream.campod.my.id/rtc/ works
+        go2rtcBase = '/rtc';
+    }
+
+    // Use WebRTC mode by default or respecting 'mode' for testing
+    // But since we removed the mode buttons, we might default to webrtc
+    // or keep the mode passed from UI (if buttons are still there)
+    // For now, respect the argument, default 'webrtc'
+    const playMode = mode || 'webrtc';
+
+    iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=${playMode}`;
     iframe.style.width = "100%";
     iframe.style.height = "100%";
     iframe.style.border = "none";
@@ -489,11 +501,19 @@ function initPlayers() {
         // Clear container
         container.innerHTML = '';
 
-        // Use Go2RTC built-in player (WebRTC mode) as requested
+        // Determine Go2RTC Base URL
         const hostname = window.location.hostname;
+        let go2rtcBase = `http://${hostname}:1984`;
+
+        // If on HTTPS, we assume a Reverse Proxy setup (like /rtc/)
+        if (window.location.protocol === 'https:') {
+            // User confirmed https://stream.campod.my.id/rtc/ works
+            // So we use the relative path /rtc (which maps to the proxy)
+            go2rtcBase = '/rtc';
+        }
+
         const iframe = document.createElement('iframe');
-        // Assuming Go2RTC is on port 1984 (standard)
-        iframe.src = `http://${hostname}:1984/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+        iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
         iframe.style.width = "100%";
         iframe.style.height = "100%";
         iframe.style.border = "none";
