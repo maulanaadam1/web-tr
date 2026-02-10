@@ -60,5 +60,5 @@ srt:
     listen: :8555
 webrtc:
     candidates:
-        - 127.0.0.1:8555
+        - stun:stun.l.google.com:19302
     listen: :8555

@@ -372,8 +372,11 @@ func main() {
 	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC) // MSE/MP4
 
 	// Start Server
-	port := "8080"
-	log.Printf("Server listening on http://localhost:%s", port)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Server listening on http://0.0.0.0:%s", port)
 
 	// Graceful shutdown
 	stop := make(chan os.Signal, 1)
