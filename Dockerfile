@@ -34,6 +34,9 @@ RUN chmod +x /usr/local/bin/go2rtc
 # Copy the built binary
 COPY --from=builder /app/web-tr .
 
+# Force cache invalidation for frontend assets
+ARG CACHEBUST=1
+
 # Copy necessary assets
 # The structure inside the container will mimic the project structure
 COPY --from=builder /app/web/templates ./web/templates
