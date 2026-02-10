@@ -473,12 +473,10 @@ function reloadPlayer(name, mode) {
         go2rtcBase = '/rtc';
     }
 
-    // Use WebRTC mode by default or respecting 'mode' for testing
-    // But since we removed the mode buttons, we might default to webrtc
-    // or keep the mode passed from UI (if buttons are still there)
-    // For now, respect the argument, default 'webrtc'
+    // Use WebRTC mode by default
     const playMode = mode || 'webrtc';
 
+    // Direct Go2RTC player
     iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=${playMode}`;
     iframe.style.width = "100%";
     iframe.style.height = "100%";
@@ -517,7 +515,9 @@ function initPlayers() {
         }
 
         const iframe = document.createElement('iframe');
+        // Direct Go2RTC player
         iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+
         iframe.style.width = "100%";
         iframe.style.height = "100%";
         iframe.style.border = "none";
