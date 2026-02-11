@@ -58,8 +58,7 @@
         }
 
         // 3. Susun URL Player
-        // Menambahkan mode=webrtc,mse,hls agar browser punya cadangan jika WebRTC diblokir Cloudflare
-        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}&mode=webrtc,mse,hls`;
+        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}`;
 
         // 4. Masukkan ke iframe
         console.log("Memuat player dari:", playerUrl);

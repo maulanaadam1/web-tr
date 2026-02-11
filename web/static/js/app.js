@@ -221,7 +221,7 @@ function openShareModal(name) {
     // If not localhost, we use the direct Go2RTC player via Reverse Proxy
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
         // Assuming reverse proxy is at /rtc/
-        shareUrl = `${protocol}//${hostname}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+        shareUrl = `${protocol}//${hostname}/rtc/stream.html?src=${encodeURIComponent(name)}`;
     }
 
     const embed = `<iframe src="${shareUrl}" width="100%" height="100%" frameborder="0" allowfullscreen></iframe>`;
@@ -476,7 +476,7 @@ function reloadPlayer(name, mode) {
     const playMode = mode || 'webrtc';
 
     // Direct Go2RTC player
-    iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=${playMode}`;
+    iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}`;
     iframe.style.width = "100%";
     iframe.style.height = "100%";
     iframe.style.border = "none";
