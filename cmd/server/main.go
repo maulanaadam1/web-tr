@@ -17,6 +17,72 @@ import (
 	"web-tr/internal/stream"
 )
 
+// CSV Helper Functions
+func splitLines(s string) []string {
+	var lines []string
+	var current string
+	for _, ch := range s {
+		if ch == '\n' || ch == '\r' {
+			if current != "" {
+				lines = append(lines, current)
+				current = ""
+			}
+		} else {
+			current += string(ch)
+		}
+	}
+	if current != "" {
+		lines = append(lines, current)
+	}
+	return lines
+}
+
+func splitCSVLine(line string) []string {
+	var parts []string
+	var current string
+	inQuotes := false
+
+	for _, ch := range line {
+		if ch == '"' {
+			inQuotes = !inQuotes
+		} else if ch == ',' && !inQuotes {
+			parts = append(parts, current)
+			current = ""
+		} else {
+			current += string(ch)
+		}
+	}
+	parts = append(parts, current)
+	return parts
+}
+
+func trimString(s string) string {
+	// Remove spaces, quotes, and newlines
+	result := ""
+	for _, ch := range s {
+		if ch != ' ' && ch != '\t' && ch != '"' && ch != '\'' && ch != '\r' && ch != '\n' {
+			result += string(ch)
+		} else if len(result) > 0 && ch == ' ' {
+			// Keep internal spaces
+			if result[len(result)-1] != ' ' {
+				result += " "
+			}
+		}
+	}
+	// Trim trailing space
+	for len(result) > 0 && result[len(result)-1] == ' ' {
+		result = result[:len(result)-1]
+	}
+	return result
+}
+
+func startsWithString(s, prefix string) bool {
+	if len(s) < len(prefix) {
+		return false
+	}
+	return s[:len(prefix)] == prefix
+}
+
 func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 	targetURL := "http://localhost:1984" + r.URL.RequestURI()
 	log.Printf("[Proxy] Request: %s -> %s\n", r.URL.Path, targetURL)
@@ -255,6 +321,91 @@ func main() {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+	})
+
+	// CSV Import endpoint for bulk adding streams
+	http.HandleFunc("/api/streams/import", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		// Parse multipart form (10MB max)
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
+			http.Error(w, "Failed to parse form", http.StatusBadRequest)
+			return
+		}
+
+		file, _, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, "No file uploaded", http.StatusBadRequest)
+			return
+		}
+		defer file.Close()
+
+		// Read CSV content
+		content, err := io.ReadAll(file)
+		if err != nil {
+			http.Error(w, "Failed to read file", http.StatusInternalServerError)
+			return
+		}
+
+		// Parse CSV - simple line-by-line parsing
+		lines := splitLines(string(content))
+		successCount := 0
+		failCount := 0
+		errors := []string{}
+
+		for i, line := range lines {
+			lineNum := i + 1
+			line = trimString(line)
+
+			// Skip empty lines, comments, and header row
+			if line == "" || startsWithString(line, "#") || lineNum == 1 {
+				continue
+			}
+
+			// Split by comma
+			parts := splitCSVLine(line)
+			if len(parts) < 2 {
+				failCount++
+				errors = append(errors, fmt.Sprintf("Row %d: invalid format (expected: name,url)", lineNum))
+				continue
+			}
+
+			name := trimString(parts[0])
+			streamURL := trimString(parts[1])
+
+			if name == "" || streamURL == "" {
+				failCount++
+				errors = append(errors, fmt.Sprintf("Row %d: empty name or URL", lineNum))
+				continue
+			}
+
+			// Add stream
+			if err := streamMgr.AddStream(name, streamURL); err != nil {
+				failCount++
+				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
+				continue
+			}
+
+			// Sync with Go2RTC
+			if err := syncStreamToGo2RTC(name, streamURL, false); err != nil {
+				log.Printf("Failed to sync stream %s to go2rtc: %v", name, err)
+			}
+
+			successCount++
+		}
+
+		// Return result
+		result := map[string]interface{}{
+			"success": successCount,
+			"failed":  failCount,
+			"errors":  errors,
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(result)
 	})
 
 	http.HandleFunc("/api/probe", func(w http.ResponseWriter, r *http.Request) {
