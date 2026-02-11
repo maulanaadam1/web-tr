@@ -40,21 +40,29 @@
     </div>
 
     <script>
+        // 1. Ambil parameter dari URL (misal: ?stream=Hanggar)
         const urlParams = new URLSearchParams(window.location.search);
         const streamName = urlParams.get('stream') || "{{.Name}}";
         const hostname = window.location.hostname;
 
-        // Determine Go2RTC Base URL
-        let go2rtcBase = `http://${hostname}:1984`;
+        // 2. Tentukan Base URL untuk go2rtc
+        let go2rtcBase;
 
-        // If not localhost, we assume a Reverse Proxy setup (like /rtc/)
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-            go2rtcBase = '/rtc';
+        // Jika dijalankan di lokal (development), gunakan port 1984
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            go2rtcBase = `http://${hostname}:1984`;
+        } else {
+            // Jika di server (production), gunakan path reverse proxy /rtc
+            // window.location.origin akan otomatis menyesuaikan (https://stream.campod.my.id)
+            go2rtcBase = window.location.origin + '/rtc';
         }
 
-        // Use Go2RTC built-in player
-        // go2rtcBase is either "http://hostname:1984" or "/rtc"
-        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}&mode=webrtc`;
+        // 3. Susun URL Player
+        // Menambahkan mode=webrtc,mse,hls agar browser punya cadangan jika WebRTC diblokir Cloudflare
+        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}&mode=webrtc,mse,hls`;
+
+        // 4. Masukkan ke iframe
+        console.log("Memuat player dari:", playerUrl);
         document.getElementById("go2rtc-player").src = playerUrl;
     </script>
 </body>
