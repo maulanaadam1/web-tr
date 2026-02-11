@@ -1,35 +1,31 @@
 streams:
-    Area Fabrikasi: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_28&streamindex=2
-    Besi Scrap: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_23&streamindex=2
-api:
-    listen: :1984
-hls:
-    listen: :8899
-log:
-    level: debug
-mp4:
-    listen: :8556
-rtsp:
-    listen: :8554
-srt:
-    listen: :8555
-webrtc:
-    candidates:
-        - 127.0.0.1:8555
-    listen: :8555
+  Area Fabrikasi: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_28&streamindex=2
+  Besi Scrap: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_23&streamindex=2
 
 api:
-    listen: :1984
-hls: {}
+  listen: :1984
+
+# HLS Configuration - required for m3u8 playback
+hls:
+  listen: :8899
+
 log:
-    level: debug
+  level: debug
+
+# MP4 Recording
 mp4:
-    listen: :8556
+  listen: :8556
+
+# RTSP Server
 rtsp:
-    listen: :8554
+  listen: :8554
+
+# SRT Streaming
 srt:
-    listen: :8555
+  listen: :8555
+
+# WebRTC Configuration
 webrtc:
-    candidates:
-        - stun:stun.l.google.com:19302
-    listen: :8555
+  listen: :8555
+  candidates:
+    - stun:stun.l.google.com:19302
