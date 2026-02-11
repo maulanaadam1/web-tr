@@ -148,7 +148,8 @@ func (m *Manager) SyncFromDB() error {
 
 // ProbeStream runs ffprobe to check if the stream is reachable
 func (m *Manager) ProbeStream(url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Increased timeout from 5s to 15s for slow/distant streams
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	// Adjust arguments. -rtsp_transport tcp is usually more reliable.
@@ -156,6 +157,7 @@ func (m *Manager) ProbeStream(url string) error {
 		"-v", "error",
 		"-show_entries", "stream=codec_type",
 		"-rtsp_transport", "tcp",
+		"-timeout", "10000000", // 10 second connection timeout (in microseconds)
 		"-i", url,
 	}
 
@@ -181,10 +183,20 @@ func (m *Manager) ProbeStream(url string) error {
 	}
 
 	cmd := exec.CommandContext(ctx, path, args...)
-	// log.Printf("Executing Probe: %s %v", path, args) // Debug log
 	output, err := cmd.CombinedOutput()
+
 	if err != nil {
-		return fmt.Errorf("probe failed: %v, output: %s", err, string(output))
+		// Provide more helpful error messages
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("connection timeout (15s) - stream might be too slow or unreachable")
+		}
+
+		outputStr := string(output)
+		if outputStr != "" {
+			return fmt.Errorf("stream validation failed: %s", outputStr)
+		}
+
+		return fmt.Errorf("cannot connect to stream - check URL, credentials, and network connectivity")
 	}
 
 	return nil
