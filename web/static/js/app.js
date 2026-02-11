@@ -515,7 +515,9 @@ function initPlayers() {
 
         const iframe = document.createElement('iframe');
         // Direct Go2RTC player
-        iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+        iframe.src = `${go2rtcBase}/stream.html?src=${encodeURIComponent(name)}`;
+
+        //https://stream.campod.my.id/rtc/stream.html?src=Workshop
 
         iframe.style.width = "100%";
         iframe.style.height = "100%";
