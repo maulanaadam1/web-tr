@@ -1,31 +1,25 @@
 streams:
-  Area Fabrikasi: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_28&streamindex=2
-  Besi Scrap: rtsp://admin:admin@192.168.1.1:8554/Media/Live/Normal?camera=C_23&streamindex=2
+  Workshop:
+    - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_13&streamindex=2
+    - "ffmpeg:Workshop#video=h264#audio=aac"  # Force H.264 for HLS
+# streams:
+  # Workshop:
+    # - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_13&streamindex=2
+    # - "ffmpeg:Workshop#video=h264#audio=aac"  # Force H.264 for HLS
 
 api:
-  listen: :1984
-
-# HLS Configuration - required for m3u8 playback
+    listen: :1984
 hls:
-  listen: :8899
-
+    listen: :8899
 log:
-  level: debug
-
-# MP4 Recording
+    level: debug
 mp4:
-  listen: :8556
-
-# RTSP Server
+    listen: :8556
 rtsp:
-  listen: :8554
-
-# SRT Streaming
+    listen: :8554
 srt:
-  listen: :8555
-
-# WebRTC Configuration
+    listen: :8555
 webrtc:
-  listen: :8555
-  candidates:
-    - stun:stun.l.google.com:19302
+    candidates:
+        - stun:stun.l.google.com:19302
+    listen: :8555

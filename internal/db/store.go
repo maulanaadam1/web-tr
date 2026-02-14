@@ -32,19 +32,29 @@ func NewStore(connStr string) (*Store, error) {
 }
 
 func (s *Store) Init() error {
+	// Create table
 	query := `
 	CREATE TABLE IF NOT EXISTS streams (
 		id SERIAL PRIMARY KEY,
 		name TEXT UNIQUE NOT NULL,
 		url TEXT NOT NULL,
+		backend TEXT DEFAULT 'go2rtc',
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
-	_, err := s.db.Exec(query)
+	if _, err := s.db.Exec(query); err != nil {
+		return err
+	}
+
+	// Add backend column if it doesn't exist (migration)
+	alterQuery := `
+	ALTER TABLE streams 
+	ADD COLUMN IF NOT EXISTS backend TEXT DEFAULT 'go2rtc';`
+	_, err := s.db.Exec(alterQuery)
 	return err
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend FROM streams ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +63,13 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL); err != nil {
+		if err := rows.Scan(&st.Name, &st.URL, &st.Backend); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
+		}
+		// Default to go2rtc if empty
+		if st.Backend == "" {
+			st.Backend = "go2rtc"
 		}
 		streams = append(streams, st)
 	}
@@ -63,7 +77,14 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 }
 
 func (s *Store) AddStream(st models.Stream) error {
-	_, err := s.db.Exec("INSERT INTO streams (name, url) VALUES ($1, $2) ON CONFLICT (name) DO UPDATE SET url = $2", st.Name, st.URL)
+	// Default to go2rtc if backend not specified
+	if st.Backend == "" {
+		st.Backend = "go2rtc"
+	}
+	_, err := s.db.Exec(
+		"INSERT INTO streams (name, url, backend) VALUES ($1, $2, $3) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3",
+		st.Name, st.URL, st.Backend,
+	)
 	return err
 }
 
@@ -72,7 +93,12 @@ func (s *Store) RemoveStream(name string) error {
 	return err
 }
 
-func (s *Store) UpdateStream(oldName, newName, url string) error {
+func (s *Store) UpdateStream(oldName, newName, url, backend string) error {
+	// Default to go2rtc if backend not specified
+	if backend == "" {
+		backend = "go2rtc"
+	}
+
 	tx, err := s.db.Begin()
 	if err != nil {
 		return err
@@ -90,14 +116,14 @@ func (s *Store) UpdateStream(oldName, newName, url string) error {
 			return fmt.Errorf("stream name '%s' already exists", newName)
 		}
 
-		// Update name and url
-		_, err = tx.Exec("UPDATE streams SET name = $1, url = $2 WHERE name = $3", newName, url, oldName)
+		// Update name, url, and backend
+		_, err = tx.Exec("UPDATE streams SET name = $1, url = $2, backend = $3 WHERE name = $4", newName, url, backend, oldName)
 		if err != nil {
 			return err
 		}
 	} else {
-		// Just update url
-		_, err = tx.Exec("UPDATE streams SET url = $1 WHERE name = $2", url, newName)
+		// Just update url and backend
+		_, err = tx.Exec("UPDATE streams SET url = $1, backend = $2 WHERE name = $3", url, backend, newName)
 		if err != nil {
 			return err
 		}

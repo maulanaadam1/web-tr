@@ -69,9 +69,10 @@ func (m *Manager) Start() error {
 }
 
 func (m *Manager) AddStream(name, url string) error {
+	backend := "go2rtc" // Default backend
 	if m.Store != nil {
 		// DB mode - simplified for now, assuming URL string
-		if err := m.Store.UpdateStream(name, name, url); err != nil {
+		if err := m.Store.UpdateStream(name, name, url, backend); err != nil {
 			return err
 		}
 		return m.SyncFromDB()
@@ -92,8 +93,9 @@ func (m *Manager) RemoveStream(name string) error {
 }
 
 func (m *Manager) UpdateStream(oldName, name, url string) error {
+	backend := "go2rtc" // Default backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, url); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, url, backend); err != nil {
 			return err
 		}
 		return m.SyncFromDB()

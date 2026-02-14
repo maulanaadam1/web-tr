@@ -3,6 +3,7 @@ package models
 type Stream struct {
 	Name      string `json:"name"`
 	URL       string `json:"url"`
+	Backend   string `json:"backend,omitempty"` // "go2rtc" or "mediamtx"
 	Recording bool   `json:"recording,omitempty"`
 }
 
