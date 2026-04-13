@@ -10,15 +10,39 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
+// getEnvDuration reads an env var as minutes, falling back to defaultVal.
+func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	minutes, err := strconv.Atoi(v)
+	if err != nil || minutes <= 0 {
+		return defaultVal
+	}
+	return time.Duration(minutes) * time.Minute
+}
+
+// getEnvInt reads an env var as int, falling back to defaultVal.
+func getEnvInt(key string, defaultVal int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return defaultVal
+	}
+	return n
+}
+
 const (
-	batchSize     = 5                // Process N cameras at a time
-	batchDelay    = 3 * time.Second  // Pause between batches
-	ffmpegTimeout = 60 * time.Second // Timeout per camera for ffmpeg
 	go2rtcTimeout = 10 * time.Second // Timeout per camera for Go2RTC API
 )
 
@@ -29,14 +53,19 @@ type StreamInfo struct {
 }
 
 type Manager struct {
-	Interval   time.Duration
-	OutputDir  string
-	go2rtcBase string
-	ffmpegPath string
-	stop       chan struct{}
-	wg         sync.WaitGroup
-	statusLock sync.RWMutex
-	online     map[string]bool
+	Interval      time.Duration
+	OutputDir     string
+	go2rtcBase    string
+	ffmpegPath    string
+	batchSize     int
+	batchDelay    time.Duration
+	ffmpegTimeout time.Duration
+	jpegQuality   int    // 1-31, lower = better quality
+	resolution    string // e.g. "640x480" or "" for original
+	stop          chan struct{}
+	wg            sync.WaitGroup
+	statusLock    sync.RWMutex
+	online        map[string]bool
 }
 
 // sanitizeFilename replaces characters that are invalid in Windows filenames
@@ -65,8 +94,33 @@ func NewManager(interval time.Duration, outputDir string, go2rtcBase string) *Ma
 	if err := os.MkdirAll(absDir, 0755); err != nil {
 		log.Printf("[Snapshot] Failed to create output directory: %v", err)
 	}
+
+	// Read config from environment variables (configurable via EasyPanel)
+	// SNAPSHOT_INTERVAL_MINUTES: How often to refresh snapshots (default: 15 minutes)
+	// SNAPSHOT_BATCH_SIZE: How many cameras per batch (default: 5)
+	// SNAPSHOT_BATCH_DELAY_SECONDS: Pause between batches in seconds (default: 3)
+	// SNAPSHOT_FFMPEG_TIMEOUT_SECONDS: Max time per camera for ffmpeg (default: 60)
+	// SNAPSHOT_JPEG_QUALITY: JPEG quality 1-31 lower=better (default: 2)
+	// SNAPSHOT_RESOLUTION: Output resolution e.g. 640x480 (default: original)
+	batchSz := getEnvInt("SNAPSHOT_BATCH_SIZE", 5)
+	batchDly := time.Duration(getEnvInt("SNAPSHOT_BATCH_DELAY_SECONDS", 3)) * time.Second
+	ffTimeout := time.Duration(getEnvInt("SNAPSHOT_FFMPEG_TIMEOUT_SECONDS", 60)) * time.Second
+	jpegQuality := getEnvInt("SNAPSHOT_JPEG_QUALITY", 2)
+	resolution := os.Getenv("SNAPSHOT_RESOLUTION") // e.g. "640x480"
+
+	// If interval was passed as default, allow env override
+	envInterval := getEnvDuration("SNAPSHOT_INTERVAL_MINUTES", 0)
+	if envInterval > 0 {
+		interval = envInterval
+	}
+
 	log.Printf("[Snapshot] Output directory: %s", absDir)
-	log.Printf("[Snapshot] Batch size: %d, Batch delay: %v, FFmpeg timeout: %v", batchSize, batchDelay, ffmpegTimeout)
+	log.Printf("[Snapshot] Interval: %v, Batch size: %d, Batch delay: %v, FFmpeg timeout: %v", interval, batchSz, batchDly, ffTimeout)
+	if resolution != "" {
+		log.Printf("[Snapshot] Resolution: %s, JPEG quality: %d", resolution, jpegQuality)
+	} else {
+		log.Printf("[Snapshot] Resolution: original, JPEG quality: %d", jpegQuality)
+	}
 
 	// Resolve ffmpeg path
 	ffmpegBin := "ffmpeg"
@@ -87,12 +141,17 @@ func NewManager(interval time.Duration, outputDir string, go2rtcBase string) *Ma
 	}
 
 	return &Manager{
-		Interval:   interval,
-		OutputDir:  absDir,
-		go2rtcBase: go2rtcBase,
-		ffmpegPath: ffmpegPath,
-		stop:       make(chan struct{}),
-		online:     make(map[string]bool),
+		Interval:      interval,
+		OutputDir:     absDir,
+		go2rtcBase:    go2rtcBase,
+		ffmpegPath:    ffmpegPath,
+		batchSize:     batchSz,
+		batchDelay:    batchDly,
+		ffmpegTimeout: ffTimeout,
+		jpegQuality:   jpegQuality,
+		resolution:    resolution,
+		stop:          make(chan struct{}),
+		online:        make(map[string]bool),
 	}
 }
 
@@ -141,19 +200,19 @@ func (m *Manager) Stop() {
 // captureAllBatched processes cameras in small batches to avoid overwhelming the NVR
 func (m *Manager) captureAllBatched(streams []StreamInfo) []StreamInfo {
 	total := len(streams)
-	log.Printf("[Snapshot] Starting batched capture for %d streams (batch size: %d)...", total, batchSize)
+	log.Printf("[Snapshot] Starting batched capture for %d streams (batch size: %d)...", total, m.batchSize)
 
 	var allFailed []StreamInfo
 	success := 0
 
-	for i := 0; i < total; i += batchSize {
-		end := i + batchSize
+	for i := 0; i < total; i += m.batchSize {
+		end := i + m.batchSize
 		if end > total {
 			end = total
 		}
 		batch := streams[i:end]
-		batchNum := (i / batchSize) + 1
-		totalBatches := (total + batchSize - 1) / batchSize
+		batchNum := (i / m.batchSize) + 1
+		totalBatches := (total + m.batchSize - 1) / m.batchSize
 
 		log.Printf("[Snapshot] Batch %d/%d: %d cameras", batchNum, totalBatches, len(batch))
 
@@ -168,7 +227,7 @@ func (m *Manager) captureAllBatched(streams []StreamInfo) []StreamInfo {
 
 		// Pause between batches to let NVR recover
 		if end < total {
-			time.Sleep(batchDelay)
+			time.Sleep(m.batchDelay)
 		}
 	}
 
@@ -296,9 +355,18 @@ func (m *Manager) captureViaFFmpeg(name, rawURL, tmpPath string) bool {
 		"-rtsp_transport", "tcp",
 		"-i", cleanUrl,
 		"-vframes", "1",
-		"-q:v", "2",
-		tmpPath,
+		"-q:v", strconv.Itoa(m.jpegQuality),
 	}
+
+	// Add resolution scaling if configured
+	if m.resolution != "" {
+		parts := strings.SplitN(m.resolution, "x", 2)
+		if len(parts) == 2 {
+			args = append(args, "-vf", fmt.Sprintf("scale=%s:%s", parts[0], parts[1]))
+		}
+	}
+
+	args = append(args, tmpPath)
 
 	cmd := exec.Command(m.ffmpegPath, args...)
 
@@ -312,7 +380,7 @@ func (m *Manager) captureViaFFmpeg(name, rawURL, tmpPath string) bool {
 	}()
 
 	select {
-	case <-time.After(ffmpegTimeout):
+	case <-time.After(m.ffmpegTimeout):
 		if cmd.Process != nil {
 			cmd.Process.Kill()
 		}
