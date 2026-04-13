@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  web-tr:
+    build: .
+    container_name: web-tr-app
+    restart: unless-stopped
+    volumes:
+      - ./docker-data/streams.db:/app/streams.db
+      - ./docker-data/snapshots:/app/data/snapshots
+      - ./docker-data/timelapse:/app/data/timelapse
+    ports:
+      - "8554:8554"  # Let RTSP pass outside natively if needed
+    environment:
+      - DATABASE_URL=file:streams.db
+      - TZ=Asia/Jakarta
+      - ADMIN_USER=admin
+      - ADMIN_PASS=admin123
+
+  nginx:
+    image: nginx:alpine
+    container_name: web-tr-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - default
+      - easypanel
+    labels:
+      # Inject into EasyPanel's Traefik reverse proxy automatically
+      - "traefik.enable=true"
+      - "traefik.http.routers.webtr.rule=Host(`stream.campod.my.id`)"
+      - "traefik.http.routers.webtr.entrypoints=websecure"
+      - "traefik.http.routers.webtr.tls.certresolver=letsencrypt"
+      - "traefik.http.services.webtr.loadbalancer.server.port=80"
+
+networks:
+  easypanel:
+    external: true
