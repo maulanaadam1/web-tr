@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream Player - {{.Name}}</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="video-container">
+        <iframe id="go2rtc-player" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+    </div>
+
+    <script>
+        // 1. Ambil parameter dari URL (misal: ?stream=Hanggar)
+        const urlParams = new URLSearchParams(window.location.search);
+        const streamName = urlParams.get('stream') || "{{.Name}}";
+        const hostname = window.location.hostname;
+
+        // 2. Tentukan Base URL untuk go2rtc
+        let go2rtcBase;
+
+        // Jika dijalankan di lokal (development), gunakan port 1984
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            go2rtcBase = `http://${hostname}:1984`;
+        } else {
+            // Jika di server (production), gunakan path reverse proxy /rtc
+            // window.location.origin akan otomatis menyesuaikan (https://stream.campod.my.id)
+            go2rtcBase = window.location.origin + '/rtc';
+        }
+
+        // 3. Susun URL Player
+        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}`;
+
+        // 4. Masukkan ke iframe
+        console.log("Memuat player dari:", playerUrl);
+        document.getElementById("go2rtc-player").src = playerUrl;
+    </script>
+</body>
+
+</html>

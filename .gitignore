@@ -1,0 +1,32 @@
+# Compiled object files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+web-tr
+
+# Data and Databases
+data/
+*.db
+*.sqlite
+*.sqlite3
+timelapse.json
+streams.db
+web-tr.db
+
+# Binaries
+ffmpeg.exe
+go2rtc.exe
+
+# Environment variables
+.env
+.env.local
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

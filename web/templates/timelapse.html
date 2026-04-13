@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timelapse Dashboard - RTSP Web Transcoder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script>
+        // Apply theme immediately to prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom scrollbar for gallery */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 4px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-white min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 h-screen flex flex-col">
+        <!-- Header -->
+        <header
+            class="flex justify-between items-center mb-6 border-b border-gray-200 dark:border-gray-700 pb-6 shrink-0">
+            <div>
+                <h1 class="text-2xl font-bold text-blue-600 dark:text-blue-400">Timelapse Dashboard</h1>
+                <p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Review captured history</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span
+                    class="text-sm font-mono bg-gray-200 dark:bg-gray-800 px-3 py-1 rounded text-gray-600 dark:text-gray-400"
+                    id="clock">--:--:--</span>
+
+                <button id="themeToggleBtn"
+                    class="p-2 rounded-lg bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-yellow-400 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    <!-- Sun Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h1a1 1 0 100 2h-1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    <!-- Moon Icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                    </svg>
+                </button>
+
+                <a href="/"
+                    class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    Back to Streams
+                </a>
+            </div>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-6 flex-1 overflow-hidden">
+
+            <!-- Sidebar Controls -->
+            <aside class="w-full lg:w-[30%] max-w-[500px] min-w-[350px] flex flex-col gap-6 shrink-0 overflow-y-auto">
+                <div
+                    class="card bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5">
+                    <h3 class="font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-500" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Controls
+                    </h3>
+
+                    <!-- Monitor Selection -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Select
+                            Monitor</label>
+                        <select id="streamSelect"
+                            class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                            <option value="">Loading streams...</option>
+                        </select>
+                    </div>
+
+                    <!-- Date Selection -->
+                    <!-- Date Selection -->
+                    <!-- Date Selection -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Date
+                            Range</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-xs text-gray-500 mb-0.5 block">Start</label>
+                                <input type="datetime-local" id="startDate" step="1"
+                                    class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-1.5 px-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-0.5 block">End</label>
+                                <input type="datetime-local" id="endDate" step="1"
+                                    class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-1.5 px-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Playback Controls -->
+                    <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-2">Playback
+                            Speed</label>
+                        <div class="flex items-center gap-2 mb-4">
+                            <input type="range" id="fpsRange" min="1" max="30" value="5"
+                                class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            <span id="speedVal"
+                                class="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300">5fps</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <button id="playBtn"
+                                class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                </svg>
+                                Play
+                            </button>
+                            <button id="refreshBtn"
+                                class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Refresh
+                            </button>
+                        </div>
+
+                        <button id="exportBtn"
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Export MP4 (Current Range)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Gallery list (Sidebar mainly on large screens) -->
+                <div
+                    class="card bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 flex flex-col flex-1 overflow-hidden min-h-[300px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Snapshots
+                        </h3>
+                        <span
+                            class="text-xs font-mono bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded text-gray-500 dark:text-gray-400"
+                            id="fileCount">0</span>
+                    </div>
+
+                    <div id="gallery" class="flex-1 overflow-y-auto grid grid-cols-3 gap-4 pb-4 pr-1 content-start">
+                        <!-- Thumbnails injected here -->
+                        <div class="col-span-2 text-center text-gray-500 py-10 text-sm italic">Select a monitor to view
+                            snapshots</div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Viewport -->
+            <main
+                class="flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative group flex items-center justify-center border border-gray-800">
+                <img id="mainImage" src="" alt="Timelapse View" class="max-w-full max-h-full object-contain">
+
+                <!-- Timestamp Overlay -->
+                <div class="absolute top-4 right-4 bg-black/60 px-3 py-1.5 rounded-lg text-sm font-mono text-white backdrop-blur-sm pointer-events-none border border-white/10"
+                    id="timestampOverlay">
+                    --/--/---- --:--:--
+                </div>
+
+                <!-- Loading Overlay -->
+                <div id="loadingOverlay"
+                    class="absolute inset-0 flex items-center justify-center bg-black/50 z-20 hidden backdrop-blur-sm">
+                    <div class="text-blue-400 animate-pulse font-bold text-lg flex items-center gap-2">
+                        <svg class="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                        Loading...
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState"
+                    class="absolute inset-0 flex flex-col items-center justify-center text-gray-500 hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mb-4 opacity-50" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <p class="text-lg">No snapshot selected</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // === Logic ===
+
+        let currentStream = new URLSearchParams(window.location.search).get('name') || '';
+        let files = [];
+        let isPlaying = false;
+        let playIndex = 0;
+        let fps = 5;
+        let playInterval;
+
+        const mainImage = document.getElementById('mainImage');
+        const gallery = document.getElementById('gallery');
+        const streamSelect = document.getElementById('streamSelect');
+        const timestampOverlay = document.getElementById('timestampOverlay');
+        const playBtn = document.getElementById('playBtn');
+        const emptyState = document.getElementById('emptyState');
+        const htmlElement = document.documentElement;
+
+        // Theme Toggle Logic (Copied from index.html/app.js)
+        const themeToggleBtn = document.getElementById('themeToggleBtn');
+        themeToggleBtn?.addEventListener('click', () => {
+            if (htmlElement.classList.contains('dark')) {
+                htmlElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                htmlElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        });
+        // Load theme
+        if (localStorage.getItem('theme') === 'light') {
+            htmlElement.classList.remove('dark');
+        } else {
+            htmlElement.classList.add('dark');
+        }
+
+        // Clock
+        setInterval(() => {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Init
+        async function init() {
+            try {
+                const res = await fetch('/api/streams');
+                const streams = await res.json();
+
+                streamSelect.innerHTML = '<option value="">Select Monitor</option>';
+                streams.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.name;
+                    opt.textContent = s.name;
+                    if (s.name === currentStream) opt.selected = true;
+                    streamSelect.appendChild(opt);
+                });
+
+                if (currentStream) {
+                    loadFiles(currentStream);
+                } else {
+                    mainImage.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error("Failed to load streams", e);
+            }
+        }
+
+        streamSelect.addEventListener('change', (e) => {
+            currentStream = e.target.value;
+            const url = new URL(window.location);
+            if (currentStream) {
+                url.searchParams.set('name', currentStream);
+            } else {
+                url.searchParams.delete('name');
+            }
+            window.history.pushState({}, '', url);
+            loadFiles(currentStream);
+        });
+
+        const startDateInput = document.getElementById('startDate');
+        const endDateInput = document.getElementById('endDate');
+
+        // Set default date range (last 24 hours)
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+
+        // Format for datetime-local: YYYY-MM-DDTHH:mm:ss
+        const formatDateTime = (date) => {
+            const pad = (num) => String(num).padStart(2, '0');
+            return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        };
+
+        startDateInput.value = formatDateTime(yesterday);
+        endDateInput.value = formatDateTime(now);
+
+        [startDateInput, endDateInput].forEach(input => {
+            input.addEventListener('change', () => {
+                if (currentStream) loadFiles(currentStream);
+            });
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', async () => {
+            if (!currentStream) return;
+
+            const btn = document.getElementById('exportBtn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...`;
+
+            try {
+                const start = startDateInput.value;
+                const end = endDateInput.value;
+                const res = await fetch(`/api/timelapse/export?name=${encodeURIComponent(currentStream)}&start=${start}&end=${end}`);
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || "Export failed");
+                }
+
+                // Trigger download
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `${currentStream}_timelapse.mp4`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                alert("Export failed: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
+
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            if (currentStream) loadFiles(currentStream);
+        });
+
+        async function loadFiles(name) {
+            if (!name) {
+                gallery.innerHTML = '<div class="col-span-3 text-center text-gray-500 py-10 text-sm italic">Select a monitor</div>';
+                mainImage.src = '';
+                mainImage.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                document.getElementById('fileCount').textContent = '0';
+                return;
+            }
+
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            try {
+                const start = startDateInput.value;
+                const end = endDateInput.value;
+                const res = await fetch(`/api/timelapse/files?name=${encodeURIComponent(name)}&start=${start}&end=${end}`);
+                if (!res.ok) throw new Error('Failed');
+
+                files = await res.json();
+                files.sort();
+
+                renderGallery();
+
+                if (files.length > 0) {
+                    showImage(files.length - 1);
+                    mainImage.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                } else {
+                    mainImage.src = '';
+                    mainImage.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    emptyState.querySelector('p').textContent = "No snapshots found for this monitor";
+                }
+                document.getElementById('fileCount').textContent = files.length;
+            } catch (e) {
+                console.error(e);
+                gallery.innerHTML = '<div class="col-span-3 text-center text-red-500 py-10 text-sm">Failed to load files</div>';
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        let displayedCount = 0;
+        const BATCH_SIZE = 50;
+
+        function renderGallery() {
+            gallery.innerHTML = '';
+            displayedCount = 0;
+            loadMoreSnapshots();
+        }
+
+        function loadMoreSnapshots() {
+            if (displayedCount >= files.length) return;
+
+            const nextBatch = files.slice(displayedCount, displayedCount + BATCH_SIZE);
+            const fragment = document.createDocumentFragment();
+
+            nextBatch.forEach((file, i) => {
+                const index = displayedCount + i;
+                const div = document.createElement('div');
+
+                // Using padding hack for robust 16:9 aspect ratio:
+                // relative, width-full, height-0, padding-bottom-56.25%
+                div.className = 'relative w-full h-0 pb-[56.25%] bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden cursor-pointer group border-2 border-transparent hover:border-blue-500 transition-all';
+                div.onclick = () => showImage(index);
+
+                const parts = file.split('_');
+                const timePart = parts[1]?.replace('.jpg', '').replace(/-/g, ':') || '';
+
+                div.innerHTML = `
+                    <img src="/data/timelapse/${currentStream}/${file}" loading="lazy" class="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity">
+                    <div class="absolute bottom-0 left-0 right-0 bg-black/60 p-1 text-[10px] text-white truncate font-mono z-10">
+                        ${timePart}
+                    </div>
+                `;
+
+                if (index === playIndex) {
+                    div.classList.add('border-blue-500', 'ring-2', 'ring-blue-500/30');
+                    div.classList.remove('border-transparent');
+                }
+
+                div.id = `thumb-${index}`;
+                fragment.appendChild(div);
+            });
+
+            gallery.appendChild(fragment);
+            displayedCount += nextBatch.length;
+        }
+
+        // Infinite Scroll Observer
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                loadMoreSnapshots();
+            }
+        }, { root: gallery, threshold: 0.1 });
+
+        // Add a sentinel at the bottom
+        const sentinel = document.createElement('div');
+        sentinel.className = 'h-1 w-full col-span-3';
+        gallery.appendChild(sentinel);
+        observer.observe(sentinel);
+
+        function showImage(index) {
+            if (index < 0 || index >= files.length) return;
+
+            // Update previous thumb styling
+            const prevThumb = document.getElementById(`thumb-${playIndex}`);
+            if (prevThumb) {
+                prevThumb.classList.remove('border-blue-500', 'ring-2', 'ring-blue-500/30');
+                prevThumb.classList.add('border-transparent');
+            }
+
+            playIndex = index;
+            const file = files[index];
+            mainImage.src = `/data/timelapse/${currentStream}/${file}`;
+
+            const parts = file.split('_');
+            if (parts.length >= 2) {
+                const datePart = parts[0];
+                const timePart = parts[1].replace('.jpg', '').replace(/-/g, ':');
+                timestampOverlay.textContent = `${datePart} ${timePart}`;
+            }
+
+            // Update new thumb styling
+            const newThumb = document.getElementById(`thumb-${playIndex}`);
+            if (newThumb) {
+                newThumb.classList.add('border-blue-500', 'ring-2', 'ring-blue-500/30');
+                newThumb.classList.remove('border-transparent');
+                // Auto scroll to thumbnail
+                newThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // Playback
+        document.getElementById('fpsRange').addEventListener('input', (e) => {
+            fps = parseInt(e.target.value);
+            document.getElementById('speedVal').textContent = `${fps} fps`;
+            if (isPlaying) {
+                stopPlay();
+                startPlay();
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) stopPlay();
+            else startPlay();
+        });
+
+        function startPlay() {
+            if (!files || files.length === 0) return;
+            isPlaying = true;
+            playBtn.innerHTML = `
+                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg> Pause
+            `;
+
+            if (playIndex >= files.length - 1) playIndex = 0;
+
+            playInterval = setInterval(() => {
+                playIndex++;
+                if (playIndex >= files.length) {
+                    playIndex = 0;
+                }
+                showImage(playIndex);
+            }, 1000 / fps);
+        }
+
+        function stopPlay() {
+            isPlaying = false;
+            clearInterval(playInterval);
+            playBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg> Play
+            `;
+        }
+
+        init();
+
+    </script>
+</body>
+
+</html>
