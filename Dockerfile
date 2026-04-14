@@ -38,7 +38,7 @@ RUN chmod +x /usr/local/bin/go2rtc
 COPY --from=builder /app/web-tr .
 
 # Force cache invalidation for final assets
-ARG CACHEBUST=1
+ARG CACHEBUST=1776184000
 
 # Copy necessary assets
 # The structure inside the container will mimic the project structure

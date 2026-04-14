@@ -288,16 +288,25 @@ func initGo2RTCProxy() {
 }
 
 func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	log.Printf("[RTC Proxy] Processing request: %s (v3)", path)
+
+	// Fix: Intercept manifest.json first to prevent CORS errors from external resources
+	if strings.HasSuffix(path, "manifest.json") {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
+		return
+	}
+
 	// Security: Block access to the root of the RTC proxy to hide the dashboard
 	// but allow stream-related files and necessary API endpoints.
-	path := r.URL.Path
 	if path == "/rtc/" || path == "/rtc" {
 		http.Error(w, "Access Denied: The dashboard is restricted.", http.StatusForbidden)
 		return
 	}
 
 	allowed := false
-
 	// Allow all API sub-paths needed for streaming
 	if strings.HasPrefix(path, "/rtc/api/") {
 		allowed = true
@@ -309,7 +318,6 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
-	// This avoids whack-a-mole every time go2rtc adds a new dependency
 	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map", ".json"}
 	for _, ext := range staticExts {
 		if strings.HasSuffix(path, ext) {
@@ -320,13 +328,6 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !allowed {
 		http.Error(w, "Not Found", http.StatusNotFound)
-		return
-	}
-
-	// Fix: Intercept manifest.json to prevent CORS errors from external resources
-	if strings.HasSuffix(path, "manifest.json") {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
 		return
 	}
 
