@@ -131,6 +131,21 @@ func (s *Store) Init() error {
 				_, _ = s.db.Exec(fmt.Sprintf("ALTER TABLE users ADD COLUMN %s", colDef))
 			}
 		}
+
+		// Migrate streams table columns
+		streamCols := []string{
+			"lat REAL DEFAULT 0",
+			"lng REAL DEFAULT 0",
+		}
+		for _, colDef := range streamCols {
+			name := strings.Split(colDef, " ")[0]
+			var count int
+			_ = s.db.QueryRow("SELECT COUNT(*) FROM pragma_table_info('streams') WHERE name=?", name).Scan(&count)
+			if count == 0 {
+				_, _ = s.db.Exec(fmt.Sprintf("ALTER TABLE streams ADD COLUMN %s", colDef))
+			}
+		}
+
 	} else {
 		// PostgreSQL migrations
 		alterQuery := `
@@ -140,7 +155,11 @@ func (s *Store) Init() error {
 		ADD COLUMN IF NOT EXISTS whatsapp TEXT DEFAULT '',
 		ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
 		ADD COLUMN IF NOT EXISTS broadcast_notifications BOOLEAN DEFAULT FALSE,
-		ADD COLUMN IF NOT EXISTS notification_paid BOOLEAN DEFAULT FALSE;`
+		ADD COLUMN IF NOT EXISTS notification_paid BOOLEAN DEFAULT FALSE;
+		
+		ALTER TABLE streams
+		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
+		ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION DEFAULT 0;`
 		_, _ = s.db.Exec(alterQuery)
 	}
 
@@ -148,7 +167,7 @@ func (s *Store) Init() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng FROM streams ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +176,7 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL, &st.Backend); err != nil {
+		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -178,12 +197,12 @@ func (s *Store) AddStream(st models.Stream) error {
 
 	var query string
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO streams (name, url, backend) VALUES (?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.URL, st.Backend)
+		query = "INSERT INTO streams (name, url, backend, lat, lng) VALUES (?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.URL, st.Backend, st.Lat, st.Lng)
 		return err
 	} else {
-		query = "INSERT INTO streams (name, url, backend) VALUES ($1, $2, $3) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend)
+		query = "INSERT INTO streams (name, url, backend, lat, lng) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng)
 		return err
 	}
 }
@@ -204,7 +223,7 @@ func (s *Store) ClearAllStreams() error {
 	return err
 }
 
-func (s *Store) UpdateStream(oldName, newName, url, backend string) error {
+func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64) error {
 	// Default to go2rtc if backend not specified
 	if backend == "" {
 		backend = "go2rtc"
@@ -219,12 +238,12 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string) error {
 	var checkQuery, updateNameQuery, updateUrlQuery string
 	if s.dbType == "sqlite" {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = ?)"
-		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ? WHERE name = ?"
-		updateUrlQuery = "UPDATE streams SET url = ?, backend = ? WHERE name = ?"
+		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ? WHERE name = ?"
+		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ? WHERE name = ?"
 	} else {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = $1)"
-		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3 WHERE name = $4"
-		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2 WHERE name = $3"
+		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5 WHERE name = $6"
+		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4 WHERE name = $5"
 	}
 
 	if oldName != newName {
@@ -239,13 +258,13 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string) error {
 		}
 
 		// Update name, url, and backend
-		_, err = tx.Exec(updateNameQuery, newName, url, backend, oldName)
+		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, oldName)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Just update url and backend
-		_, err = tx.Exec(updateUrlQuery, url, backend, newName)
+		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, newName)
 		if err != nil {
 			return err
 		}

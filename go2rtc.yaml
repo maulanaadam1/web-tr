@@ -1,6 +1,272 @@
 streams:
   # Example stream format
   # example_cam: rtsp://username:password@192.168.1.100:554/stream
+  A. YANI - Bundaran WARU:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/102
+  A. YANI - JEMURSARI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/402
+  A. YANI - MAYANGKARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/1802
+  A. YANI - TAMAN PELANGI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/302
+  A. YANI MARGOREJO TIMUR FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/1302
+  A. Yani Papilio Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/4902
+  Adityawarman Indragiri Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch19/sub/av_stream
+  Adityawarman Kutai Pano:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch39/sub/av_stream
+  BABATAN MENGANTI PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch72/sub/av_stream
+  BAMBU RUNCING PANUVO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/12802
+  BANYU URIP PUTAT:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch5/sub/av_stream
+  BANYU URIP TOL BARAT PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch8/sub/av_stream
+  BLAURAN PRABAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/4202
+  BUNDARAN RAYA ITS PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/7402
+  BUNDARAN SATELITE NGESONG:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch125/sub/av_stream
+  BUNDARAN WARU ARAH TOL PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/202
+  Balongsari Tandes PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch69/sub/av_stream
+  Basrah Gramedia:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch128/sub/av_stream
+  Basuki Rahmat TP1 PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/5702
+  Basuki Rahmat Tegalsari:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/12502
+  Bubutan Kebonrojo:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/1902
+  Bubutan Tembaan Barat:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/1502
+  Bundaran Margomulyo SPBU:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch34/sub/av_stream
+  CILIWUNG:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch42/sub/av_stream
+  DANAU UNESA PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch66/sub/av_stream
+  DARMO - MERCURE:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/7602
+  DARMO AL-FALAH PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/1702
+  DARMO POLISI ISTIMEWA SELATAN PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/2702
+  DARMO POLISI ISTIMEWA UTARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/2802
+  DINOYO BAT DOME:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/3202
+  DIPONEGORO CILIWUNG:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch41/sub/av_stream
+  DIPONEGORO DARMO KBS:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/2302
+  DIPONEGORO MUSI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch15/sub/av_stream
+  DIPONEGORO MUSI UTARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch16/sub/av_stream
+  DIPONEGORO SOETOMO TIMUR:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch12/sub/av_stream
+  DTC WONOKROMO PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/2302
+  DUPAK DEMAK PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/2602
+  Darmo Al-Falah Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/mpeg4/ch18/sub/av_stream
+  Darmokali Bengawan Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/5902
+  Diponegoro Kartini Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch112/sub/av_stream
+  Dupak Rukun Babatan PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch27/sub/av_stream
+  EMBONG MALANG BLAURAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/3702
+  EMBONG WUNGU UTARA PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/10602
+  Embong Malang Tidar Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/mpeg4/ch38/sub/av_stream
+  FLYOVER MAYANGKARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/2002
+  Flyover Mayangkara Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch106/sub/av_stream
+  GUBENG MASJID BARAT FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/7902
+  GUNUNG ANYAR SELATAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/2602
+  GUNUNGSARI EXIT TOL PERAK:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/3502
+  GUNUNGSARI PASAR IKAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/3902
+  Gemblongan Peneleh PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch18/sub/av_stream
+  Gemblongan Siola:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/5102
+  Gerbang Pos 3:
+    - rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_13&streamindex=2
+  Grand City Fix:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/7602
+  Gubeng Pojok GrandCity:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/1502
+  Gunungsari Rolak PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch122/sub/av_stream
+  HR. MUHAMMAD GRAPARI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch94/sub/av_stream
+  HR. MUHAMMAD PTC:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch30/sub/av_stream
+  INDRAGIRI GOR PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch101/sub/av_stream
+  JAGIR WONOKROMO BARAT:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/2502
+  JEMBATAN JOYOBOYO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch128/sub/av_stream
+  JEMBATAN MERR GN. ANYAR UTARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/3202
+  JEMUR KUTISARI BARAT FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/4502
+  JOYOBOYO PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/4002
+  Jagalan Pasar Besar Timur:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/1002
+  Jagalan Undaan PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/802
+  Jembatan Sawunggaling:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch117/sub/av_stream
+  Jemur Handayani:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/9402
+  Jl. Stasiun Gubeng FR:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/11902
+  KAPAS KRAMPUNG DOME:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/10102
+  KEMBANG JEPUN KAPASAN PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/102
+  KEPUTRAN PANDEGILING:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/3302
+  KODAM HAYAM WURUK:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch85/sub/av_stream
+  Karimun Jawa - Raya Gubeng:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/1002
+  Kayoon Sonokembang Barat:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/4902
+  Kedungdoro Kedungsari PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch3/sub/av_stream
+  Kertajaya Dharmawangsa Timur PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/4002
+  Kertajaya Manyar SAMSAT SLTN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/3702
+  Klampis Jaya Selatan PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/4402
+  Kupang Jaya Kupang Indah Barat:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch53/sub/av_stream
+  MARGOMULYO KALIANAK PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/6602
+  MASTRIP WIYUNG PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/3302
+  MAYJEND SUNGKONO TVRI BARAT:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch26/sub/av_stream
+  MAYJEND SUNGKONO TVRI PANO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch24/sub/av_stream
+  MERR ARIF RAHMAN HAKIM SLTN PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/1502
+  MERR ARIF RAHMAN HAKIM UTARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/1702
+  MERR KEDUNG BARUK DOME:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/2002
+  MERR KENJERAN UTARA:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/mpeg4/ch1/sub/av_stream
+  MERR KONI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/1002
+  MERR SEMOLOWARU SELATAN PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/1802
+  MERR STIKOM:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/2102
+  Margomulyo Kalianak Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/1202
+  Margorejo Frontage Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/1202
+  Mayjend Sungkono TVRI Timur:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch27/sub/av_stream
+  Merr UPN Gunung Anyar Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/2402
+  Moestopo Dharmawangsa PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/mpeg4/ch35/sub/av_stream
+  Moestopo Karangmenjangan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/3402
+  NGAGEL BAT SELATAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/9002
+  Ngagel Bilka Barat Fix:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/9602
+  Ngagel Jaya Ngagel Madya Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/5402
+  Ngagel Jaya Utara PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/mpeg4/ch64/sub/av_stream
+  Ngagel Ujung Galuh Selatan:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch93/sub/av_stream
+  Ngagel Upa Jiwa Barat:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/5602
+  Ngaglik Tambaksari:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/10402
+  Nginden Bratang Selatan Fix:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/8402
+  PANGSUD KARAPAN SAPI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/3402
+  PASAR KEMBANG ARJUNO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch2/sub/av_stream
+  PCTL INTILAND SELATAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/12402
+  PCTL Pandugo Timur:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/2302
+  PCTL RS DARMO UTARA FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/8002
+  PCTL TUNJUNGAN UTARA FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/7302
+  PECINDILAN PENGAMPON PANO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/7602
+  PEMUDA AIR MANCUR TIMUR:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/1302
+  PEMUDA SUMATERA TIMUR:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/11702
+  Pahlawan Kebonrojo PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/mpeg4/ch14/sub/av_stream
+  Pahlawan Ps. Besar:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/4902
+  Pegirian Barat:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/5602
+  Pemuda Kayoon:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/mpeg4/ch102/sub/av_stream
+  Pertigaan Marmoyo PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/2802
+  Pucang Anom PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/602
+  Raya Prapen Margorejo Indah:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/Streaming/Channels/7002
+  SAMBIKEREP LONTAR SELATAN:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch62/sub/av_stream
+  SEMOLO SUKOSEMOLO PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/Streaming/Channels/5602
+  SOGO EMBONG MALANG PANO:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/7702
+  SULAWESI BILITON:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/6602
+  Simokerto Kapasan PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.114:554/Streaming/Channels/202
+  Sukomanunggal Kupang Jaya Utara:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch48/sub/av_stream
+  Sulawesi:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/802
+  TANDES IMIRGRASI BARAT FIX:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch86/sub/av_stream
+  Tambang Boyo Barat PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.99:554/mpeg4/ch46/sub/av_stream
+  Terminal Manukan Fix:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.98:554/mpeg4/ch7/sub/av_stream
+  URIPSUMOHARJO PANDEGILING PTZ:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/3102
+  Wonokromo RSI:
+    - rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch113/sub/av_stream
 
 api:
   listen: :1984

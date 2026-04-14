@@ -81,7 +81,7 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) AddStream(name, url, backend string) error {
+func (m *Manager) AddStream(name, url, backend string, lat, lng float64) error {
 	if backend == "" {
 		backend = "go2rtc" // Default
 	}
@@ -91,6 +91,8 @@ func (m *Manager) AddStream(name, url, backend string) error {
 			Name:    name,
 			URL:     url,
 			Backend: backend,
+			Lat:     lat,
+			Lng:     lng,
 		}); err != nil {
 			return err
 		}
@@ -128,11 +130,11 @@ func (m *Manager) ClearAllStreams() error {
 	return m.ConfigManager.Save(cfg)
 }
 
-func (m *Manager) UpdateStream(oldName, name, url string) error {
+func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64) error {
 
 	backend := "go2rtc" // Forced backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, url, backend); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, url, backend, lat, lng); err != nil {
 			return err
 		}
 		return m.SyncFromDB()

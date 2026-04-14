@@ -1,10 +1,12 @@
 package models
 
 type Stream struct {
-	Name      string `json:"name"`
-	URL       string `json:"url"`
-	Backend   string `json:"backend,omitempty"` // "go2rtc" or "mediamtx"
-	Recording bool   `json:"recording,omitempty"`
+	Name      string  `json:"name"`
+	URL       string  `json:"url"`
+	Backend   string  `json:"backend,omitempty"` // "go2rtc" or "mediamtx"
+	Recording bool    `json:"recording,omitempty"`
+	Lat       float64 `json:"lat,omitempty"`
+	Lng       float64 `json:"lng,omitempty"`
 }
 
 type ApiConfig struct {

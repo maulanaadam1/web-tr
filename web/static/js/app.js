@@ -594,6 +594,60 @@ function escapeJS(str) {
 }
 
 // --- Modals (Common) ---
+let locationMap = null;
+let locationMarker = null;
+
+function initLocationMap(lat, lng) {
+    setTimeout(() => {
+        const DEFAULT_LAT = -7.2504; // Surabaya
+        const DEFAULT_LNG = 112.7688;
+        const initialLat = lat || DEFAULT_LAT;
+        const initialLng = lng || DEFAULT_LNG;
+
+        if (!locationMap) {
+            locationMap = L.map('streamLocationMap').setView([initialLat, initialLng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(locationMap);
+            
+            locationMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(locationMap);
+            
+            locationMap.on('click', function(e) {
+                const clickLat = e.latlng.lat;
+                const clickLng = e.latlng.lng;
+                document.getElementById('streamLat').value = clickLat.toFixed(6);
+                document.getElementById('streamLng').value = clickLng.toFixed(6);
+                locationMarker.setLatLng(e.latlng);
+            });
+
+            locationMarker.on('dragend', function(e) {
+                const pos = locationMarker.getLatLng();
+                document.getElementById('streamLat').value = pos.lat.toFixed(6);
+                document.getElementById('streamLng').value = pos.lng.toFixed(6);
+            });
+            
+            const updateMarker = () => {
+                const mLat = parseFloat(document.getElementById('streamLat').value);
+                const mLng = parseFloat(document.getElementById('streamLng').value);
+                if(!isNaN(mLat) && !isNaN(mLng)) {
+                    locationMarker.setLatLng([mLat, mLng]);
+                    locationMap.panTo([mLat, mLng]);
+                }
+            };
+            document.getElementById('streamLat').addEventListener('input', updateMarker);
+            document.getElementById('streamLng').addEventListener('input', updateMarker);
+        } else {
+            locationMap.setView([initialLat, initialLng], 13);
+            locationMarker.setLatLng([initialLat, initialLng]);
+            locationMap.invalidateSize();
+        }
+        
+        document.getElementById('streamLat').value = lat ? lat : '';
+        document.getElementById('streamLng').value = lng ? lng : '';
+    }, 150);
+}
+
 function openAddModal() {
     switchView('cameras'); // Helpful if coming from dashboard
     resetAdvancedOptions();
@@ -608,6 +662,8 @@ function openAddModal() {
     const testRes = document.getElementById("testConnectionResult");
     if(testRes) testRes.textContent = "";
 
+    initLocationMap(0, 0); // 0, 0 will be defaulted to Surabaya
+
     document.getElementById("streamModal").classList.remove("hidden");
 
     const submitBtn = document.getElementById("saveStreamBtn");
@@ -620,6 +676,10 @@ async function openEditModal(name, url) {
     document.getElementById("editOriginalName").value = name;
     document.getElementById("streamName").value = name;
     document.getElementById("streamUrl").value = url;
+    
+    const streamInfo = allStreams.find(s => s.name === name);
+    initLocationMap(streamInfo?.lat || 0, streamInfo?.lng || 0);
+
     const testRes = document.getElementById("testConnectionResult");
     if(testRes) testRes.textContent = "";
 
@@ -661,11 +721,13 @@ async function submitStreamForm(isEdit) {
     const name = document.getElementById("streamName").value.trim();
     let url = document.getElementById("streamUrl").value.trim();
     const originalName = document.getElementById("editOriginalName").value.trim();
+    const lat = parseFloat(document.getElementById("streamLat").value) || 0;
+    const lng = parseFloat(document.getElementById("streamLng").value) || 0;
 
     if (!name || !url) { alert("Fields required"); return; }
 
     const method = isEdit ? 'PUT' : 'POST';
-    const body = isEdit ? JSON.stringify({ name, url, originalName }) : JSON.stringify({ name, url });
+    const body = isEdit ? JSON.stringify({ name, url, originalName, lat, lng }) : JSON.stringify({ name, url, lat, lng });
 
     try {
         const response = await fetch('/api/streams', {

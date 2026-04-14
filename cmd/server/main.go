@@ -604,9 +604,11 @@ func main() {
 
 		if r.Method == http.MethodPost {
 			var req struct {
-				Name    string `json:"name"`
-				URL     string `json:"url"`
-				Backend string `json:"backend,omitempty"`
+				Name    string  `json:"name"`
+				URL     string  `json:"url"`
+				Backend string  `json:"backend,omitempty"`
+				Lat     float64 `json:"lat"`
+				Lng     float64 `json:"lng"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -618,7 +620,7 @@ func main() {
 				req.Backend = "go2rtc"
 			}
 
-			if err := streamMgr.AddStream(req.Name, req.URL, req.Backend); err != nil {
+			if err := streamMgr.AddStream(req.Name, req.URL, req.Backend, req.Lat, req.Lng); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -636,10 +638,12 @@ func main() {
 
 		if r.Method == http.MethodPut {
 			var req struct {
-				Name         string `json:"name"`
-				URL          string `json:"url"`
-				Backend      string `json:"backend,omitempty"`
-				OriginalName string `json:"originalName"`
+				Name         string  `json:"name"`
+				URL          string  `json:"url"`
+				Backend      string  `json:"backend,omitempty"`
+				OriginalName string  `json:"originalName"`
+				Lat          float64 `json:"lat"`
+				Lng          float64 `json:"lng"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -652,7 +656,7 @@ func main() {
 			}
 
 			// Use Manager Update
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -766,7 +770,7 @@ func main() {
 			}
 
 			// Add stream (default to go2rtc for CSV imports)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc"); err != nil {
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", 0, 0); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
