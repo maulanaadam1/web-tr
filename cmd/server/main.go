@@ -146,13 +146,6 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fix: Intercept manifest.json to prevent CORS errors from external go2rtc repo
-	if strings.HasSuffix(path, "manifest.json") {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
-		return
-	}
-
 	// Fix: Strip /rtc prefix before sending to Go2RTC which listens at root
 	targetPath := strings.TrimPrefix(path, "/rtc")
 	if targetPath == "" {
@@ -317,7 +310,7 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
 	// This avoids whack-a-mole every time go2rtc adds a new dependency
-	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map"}
+	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map", ".json"}
 	for _, ext := range staticExts {
 		if strings.HasSuffix(path, ext) {
 			allowed = true
@@ -327,6 +320,13 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !allowed {
 		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	// Fix: Intercept manifest.json to prevent CORS errors from external resources
+	if strings.HasSuffix(path, "manifest.json") {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
 		return
 	}
 
