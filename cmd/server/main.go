@@ -801,6 +801,31 @@ func main() {
 		json.NewEncoder(w).Encode(result)
 	}))
 
+	http.HandleFunc("/api/streams/export", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		streams, err := streamMgr.GetStreams()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Prepare CSV output
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", "attachment;filename=cctv_export.csv")
+
+		// Write header
+		w.Write([]byte("name,url,lat,lng\n"))
+
+		for _, s := range streams {
+			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.Name, s.URL, s.Lat, s.Lng)
+			w.Write([]byte(line))
+		}
+	}))
+
 	http.HandleFunc("/api/probe", basicAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
