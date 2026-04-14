@@ -756,12 +756,18 @@ func main() {
 			parts := splitCSVLine(line)
 			if len(parts) < 2 {
 				failCount++
-				errors = append(errors, fmt.Sprintf("Row %d: invalid format (expected: name,url)", lineNum))
+				errors = append(errors, fmt.Sprintf("Row %d: invalid format (expected: name,url,lat,lng)", lineNum))
 				continue
 			}
 
 			name := trimString(parts[0])
 			streamURL := trimString(parts[1])
+			
+			var lat, lng float64
+			if len(parts) >= 4 {
+				fmt.Sscanf(trimString(parts[2]), "%f", &lat)
+				fmt.Sscanf(trimString(parts[3]), "%f", &lng)
+			}
 
 			if name == "" || streamURL == "" {
 				failCount++
@@ -770,7 +776,7 @@ func main() {
 			}
 
 			// Add stream (default to go2rtc for CSV imports)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc", 0, 0); err != nil {
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
