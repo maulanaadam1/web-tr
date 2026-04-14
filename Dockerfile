@@ -54,7 +54,7 @@ COPY --from=builder /app/go2rtc.yaml .
 # 1984: Go2RTC API & Streaming
 # 8554: RTSP Server (if acting as server)
 # 8888: HLS/MSE (if used directly)
-EXPOSE 8080 1984 8554
+EXPOSE 8080 1984 8554 8555
 
 # Create data directories for snapshots and timelapse
 RUN mkdir -p /app/data/snapshots /app/data/timelapse
