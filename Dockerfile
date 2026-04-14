@@ -7,6 +7,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Force cache invalidation for build and assets
+ARG CACHEBUST=1
+
 # Copy source code
 COPY . .
 
@@ -33,9 +36,6 @@ RUN chmod +x /usr/local/bin/go2rtc
 
 # Copy the built binary
 COPY --from=builder /app/web-tr .
-
-# Force cache invalidation for frontend assets
-ARG CACHEBUST=1
 
 # Copy necessary assets
 # The structure inside the container will mimic the project structure
