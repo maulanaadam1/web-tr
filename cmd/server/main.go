@@ -133,6 +133,14 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Also allow static assets like .js, .wasm, .json (manifest)
+	if !allowed {
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext == ".js" || ext == ".css" || ext == ".ico" || ext == ".wasm" || ext == ".json" {
+			allowed = true
+		}
+	}
+
 	if !allowed {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
