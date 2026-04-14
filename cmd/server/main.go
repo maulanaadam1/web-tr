@@ -133,30 +133,12 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Also allow static assets like .js, .wasm, .json (manifest)
-	if !allowed {
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext == ".js" || ext == ".css" || ext == ".ico" || ext == ".wasm" || ext == ".json" {
-			allowed = true
-		}
-	}
-
 	if !allowed {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
 	}
 
-	// Fix: Strip /rtc prefix before sending to Go2RTC which listens at root
-	targetPath := strings.TrimPrefix(path, "/rtc")
-	if targetPath == "" {
-		targetPath = "/"
-	}
-
-	targetURL := "http://localhost:1984" + targetPath
-	if r.URL.RawQuery != "" {
-		targetURL += "?" + r.URL.RawQuery
-	}
-
+	targetURL := "http://localhost:1984" + r.URL.RequestURI()
 	log.Printf("[Proxy] Request: %s -> %s\n", r.URL.Path, targetURL)
 
 	req, err := http.NewRequest(r.Method, targetURL, r.Body)
@@ -288,25 +270,16 @@ func initGo2RTCProxy() {
 }
 
 func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path
-	log.Printf("[RTC Proxy] Processing request: %s (v3)", path)
-
-	// Fix: Intercept manifest.json first to prevent CORS errors from external resources
-	if strings.HasSuffix(path, "manifest.json") {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
-		return
-	}
-
 	// Security: Block access to the root of the RTC proxy to hide the dashboard
 	// but allow stream-related files and necessary API endpoints.
+	path := r.URL.Path
 	if path == "/rtc/" || path == "/rtc" {
 		http.Error(w, "Access Denied: The dashboard is restricted.", http.StatusForbidden)
 		return
 	}
 
 	allowed := false
+
 	// Allow all API sub-paths needed for streaming
 	if strings.HasPrefix(path, "/rtc/api/") {
 		allowed = true
@@ -318,7 +291,8 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
-	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map", ".json"}
+	// This avoids whack-a-mole every time go2rtc adds a new dependency
+	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map"}
 	for _, ext := range staticExts {
 		if strings.HasSuffix(path, ext) {
 			allowed = true

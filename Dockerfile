@@ -37,9 +37,6 @@ RUN chmod +x /usr/local/bin/go2rtc
 # Copy the built binary
 COPY --from=builder /app/web-tr .
 
-# Force cache invalidation for final assets
-ARG CACHEBUST=1776184000
-
 # Copy necessary assets
 # The structure inside the container will mimic the project structure
 COPY --from=builder /app/web/templates ./web/templates
@@ -54,7 +51,7 @@ COPY --from=builder /app/go2rtc.yaml .
 # 1984: Go2RTC API & Streaming
 # 8554: RTSP Server (if acting as server)
 # 8888: HLS/MSE (if used directly)
-EXPOSE 8080 1984 8554 8555
+EXPOSE 8080 1984 8554
 
 # Create data directories for snapshots and timelapse
 RUN mkdir -p /app/data/snapshots /app/data/timelapse
