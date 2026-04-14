@@ -146,7 +146,24 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetURL := "http://localhost:1984" + r.URL.RequestURI()
+	// Fix: Intercept manifest.json to prevent CORS errors from external go2rtc repo
+	if strings.HasSuffix(path, "manifest.json") {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"name":"Go2RTC","short_name":"Go2RTC","start_url":".","display":"standalone"}`))
+		return
+	}
+
+	// Fix: Strip /rtc prefix before sending to Go2RTC which listens at root
+	targetPath := strings.TrimPrefix(path, "/rtc")
+	if targetPath == "" {
+		targetPath = "/"
+	}
+
+	targetURL := "http://localhost:1984" + targetPath
+	if r.URL.RawQuery != "" {
+		targetURL += "?" + r.URL.RawQuery
+	}
+
 	log.Printf("[Proxy] Request: %s -> %s\n", r.URL.Path, targetURL)
 
 	req, err := http.NewRequest(r.Method, targetURL, r.Body)
