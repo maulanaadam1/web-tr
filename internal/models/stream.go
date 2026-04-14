@@ -7,6 +7,7 @@ type Stream struct {
 	Recording bool    `json:"recording,omitempty"`
 	Lat       float64 `json:"lat,omitempty"`
 	Lng       float64 `json:"lng,omitempty"`
+	Enabled   bool    `json:"enabled"`
 }
 
 type ApiConfig struct {

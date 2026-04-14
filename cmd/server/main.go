@@ -18,6 +18,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"strings"
 	"web-tr/internal/config"
 	"web-tr/internal/db"
 	"web-tr/internal/models"
@@ -107,6 +108,36 @@ func startsWithString(s, prefix string) bool {
 }
 
 func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
+	// Security: Block access to the root of the RTC proxy to hide the dashboard
+	// but allow stream-related files and necessary API endpoints.
+	path := r.URL.Path
+	if path == "/rtc/" || path == "/rtc" {
+		http.Error(w, "Access Denied: You do not have permission to view the dashboard.", http.StatusForbidden)
+		return
+	}
+
+	allowed := false
+	// Safe paths for public viewing and underlying WebRTC/MSE mechanics
+	safePaths := []string{
+		"/rtc/stream.html",
+		"/rtc/api/ws",      // WebSockets for signaling
+		"/rtc/api/webrtc",  // WebRTC negotiation
+		"/rtc/api/mse",     // MediaSource Extensions
+		"/rtc/api/streams", // Needed to query stream info
+	}
+
+	for _, sp := range safePaths {
+		if strings.HasPrefix(path, sp) {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
 	targetURL := "http://localhost:1984" + r.URL.RequestURI()
 	log.Printf("[Proxy] Request: %s -> %s\n", r.URL.Path, targetURL)
 
@@ -226,11 +257,7 @@ func initGo2RTCProxy() {
 
 	go2rtcProxy = &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
-			// Strip /rtc prefix
-			path := req.URL.Path
-			if len(path) >= 4 && path[:4] == "/rtc" {
-				path = path[4:]
-			}
+			path := strings.TrimPrefix(req.URL.Path, "/rtc")
 
 			req.URL.Scheme = target.Scheme
 			req.URL.Host = target.Host
@@ -240,6 +267,46 @@ func initGo2RTCProxy() {
 			req.SetBasicAuth(adminUser, adminPass)
 		},
 	}
+}
+
+func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
+	// Security: Block access to the root of the RTC proxy to hide the dashboard
+	// but allow stream-related files and necessary API endpoints.
+	path := r.URL.Path
+	if path == "/rtc/" || path == "/rtc" {
+		http.Error(w, "Access Denied: The dashboard is restricted.", http.StatusForbidden)
+		return
+	}
+
+	allowed := false
+
+	// Allow all API sub-paths needed for streaming
+	if strings.HasPrefix(path, "/rtc/api/") {
+		allowed = true
+	}
+
+	// Allow stream.html player page
+	if strings.HasPrefix(path, "/rtc/stream.html") {
+		allowed = true
+	}
+
+	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
+	// This avoids whack-a-mole every time go2rtc adds a new dependency
+	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map"}
+	for _, ext := range staticExts {
+		if strings.HasSuffix(path, ext) {
+			allowed = true
+			break
+		}
+	}
+
+	if !allowed {
+		http.Error(w, "Not Found", http.StatusNotFound)
+		return
+	}
+
+	// If allowed, pass to the real proxy
+	go2rtcProxy.ServeHTTP(w, r)
 }
 
 func main() {
@@ -359,7 +426,7 @@ func main() {
 
 	// HTTP handlers
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
-	http.Handle("/rtc/", go2rtcProxy)
+	http.Handle("/rtc/", http.HandlerFunc(secureRTCProxyHandler)) // Admin and Public access (handled by Director)
 	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -498,8 +565,9 @@ func main() {
 			
 			var req struct {
 				models.User
-				NewPassword string `json:"newPassword"`
-				UpdatePass  bool   `json:"update_pass"`
+				NewPassword     string `json:"newPassword"`
+				CurrentPassword string `json:"currentPassword"`
+				UpdatePass      bool   `json:"update_pass"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -513,6 +581,8 @@ func main() {
 			}
 
 			if req.UpdatePass && req.NewPassword != "" {
+				// Note: In an admin context, we typically allow reset without current password
+				// but we could verify CurrentPassword here if the user is editing themselves.
 				if err := store.UpdateUserPassword(id, req.NewPassword); err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return
@@ -552,9 +622,16 @@ func main() {
 			return
 		}
 
-		log.Printf("Rendering public root with %d streams", len(streams))
+		var enabledStreams []models.Stream
+		for _, s := range streams {
+			if s.Enabled {
+				enabledStreams = append(enabledStreams, s)
+			}
+		}
+
+		log.Printf("Rendering public root with %d streams", len(enabledStreams))
 		tmpl.Execute(w, map[string]interface{}{
-			"Streams": streams,
+			"Streams": enabledStreams,
 		})
 	})
 
@@ -620,7 +697,7 @@ func main() {
 				req.Backend = "go2rtc"
 			}
 
-			if err := streamMgr.AddStream(req.Name, req.URL, req.Backend, req.Lat, req.Lng); err != nil {
+			if err := streamMgr.AddStream(req.Name, req.URL, req.Backend, req.Lat, req.Lng, true); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -650,13 +727,30 @@ func main() {
 				return
 			}
 
+			req.Name = strings.TrimSpace(req.Name)
+			req.OriginalName = strings.TrimSpace(req.OriginalName)
+			if req.OriginalName == "" {
+				req.OriginalName = req.Name
+			}
+
 			// Default to go2rtc if not specified
 			if req.Backend == "" {
 				req.Backend = "go2rtc"
 			}
 
+			log.Printf("[API] Updating stream: OriginalName='%s', NewName='%s', Lat=%f, Lng=%f", req.OriginalName, req.Name, req.Lat, req.Lng)
+
 			// Use Manager Update
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng); err != nil {
+			streams, _ := streamMgr.GetStreams()
+			isEnabled := true
+			for _, s := range streams {
+				if s.Name == req.OriginalName {
+					isEnabled = s.Enabled
+					break
+				}
+			}
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, isEnabled); err != nil {
+				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -723,18 +817,22 @@ func main() {
 			return
 		}
 
-		file, _, err := r.FormFile("file")
-		if err != nil {
-			http.Error(w, "No file uploaded", http.StatusBadRequest)
-			return
-		}
-		defer file.Close()
+		var content []byte
+		if rawCSV := r.FormValue("raw_csv"); rawCSV != "" {
+			content = []byte(rawCSV)
+		} else {
+			file, _, err := r.FormFile("file")
+			if err != nil {
+				http.Error(w, "No file uploaded or raw text provided", http.StatusBadRequest)
+				return
+			}
+			defer file.Close()
 
-		// Read CSV content
-		content, err := io.ReadAll(file)
-		if err != nil {
-			http.Error(w, "Failed to read file", http.StatusInternalServerError)
-			return
+			content, err = io.ReadAll(file)
+			if err != nil {
+				http.Error(w, "Failed to read file", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		// Parse CSV - simple line-by-line parsing
@@ -747,13 +845,18 @@ func main() {
 			lineNum := i + 1
 			line = trimString(line)
 
-			// Skip empty lines, comments, and header row
-			if line == "" || startsWithString(line, "#") || lineNum == 1 {
+			// Skip empty lines, comments
+			if line == "" || startsWithString(line, "#") {
 				continue
 			}
 
 			// Split by comma
 			parts := splitCSVLine(line)
+
+			// Simple header detection
+			if lineNum == 1 && len(parts) > 0 && strings.ToLower(trimString(parts[0])) == "name" {
+				continue
+			}
 			if len(parts) < 2 {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d: invalid format (expected: name,url,lat,lng)", lineNum))
@@ -776,7 +879,7 @@ func main() {
 			}
 
 			// Add stream (default to go2rtc for CSV imports)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng); err != nil {
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
@@ -813,6 +916,14 @@ func main() {
 			return
 		}
 
+		selectedNames := r.URL.Query().Get("names")
+		nameSet := make(map[string]bool)
+		if selectedNames != "" {
+			for _, n := range strings.Split(selectedNames, ",") {
+				nameSet[strings.TrimSpace(n)] = true
+			}
+		}
+
 		// Prepare CSV output
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", "attachment;filename=cctv_export.csv")
@@ -821,9 +932,70 @@ func main() {
 		w.Write([]byte("name,url,lat,lng\n"))
 
 		for _, s := range streams {
+			if len(nameSet) > 0 && !nameSet[s.Name] {
+				continue
+			}
 			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.Name, s.URL, s.Lat, s.Lng)
 			w.Write([]byte(line))
 		}
+	}))
+
+	http.HandleFunc("/api/streams/bulk", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Action string   `json:"action"` // "delete", "enable", "disable"
+			Names  []string `json:"names"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		successCount := 0
+		for _, name := range req.Names {
+			var err error
+			switch req.Action {
+			case "delete":
+				err = streamMgr.RemoveStream(name)
+				if err == nil {
+					syncStreamToGo2RTC(name, "", true)
+				}
+			case "enable":
+				err = streamMgr.SetStreamStatus(name, true)
+			case "disable":
+				err = streamMgr.SetStreamStatus(name, false)
+			}
+			if err == nil {
+				successCount++
+			} else {
+				log.Printf("Bulk action '%s' failed on '%s': %v", req.Action, name, err)
+			}
+		}
+
+		// Sync logic for enable/disable
+		if req.Action == "enable" || req.Action == "disable" {
+			for _, name := range req.Names {
+				if req.Action == "disable" {
+					syncStreamToGo2RTC(name, "", true) // Delete from active proxy memory
+				} else {
+					// Enable: Re-sync to Go2RTC
+					streams, _ := streamMgr.GetStreams()
+					for _, s := range streams {
+						if s.Name == name {
+							syncStreamToGo2RTC(s.Name, s.URL, false)
+							break
+						}
+					}
+				}
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"success": successCount})
 	}))
 
 	http.HandleFunc("/api/probe", basicAuth(func(w http.ResponseWriter, r *http.Request) {

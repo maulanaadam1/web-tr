@@ -136,6 +136,7 @@ func (s *Store) Init() error {
 		streamCols := []string{
 			"lat REAL DEFAULT 0",
 			"lng REAL DEFAULT 0",
+			"is_enabled BOOLEAN DEFAULT 1",
 		}
 		for _, colDef := range streamCols {
 			name := strings.Split(colDef, " ")[0]
@@ -156,10 +157,10 @@ func (s *Store) Init() error {
 		ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
 		ADD COLUMN IF NOT EXISTS broadcast_notifications BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS notification_paid BOOLEAN DEFAULT FALSE;
-		
 		ALTER TABLE streams
 		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
-		ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION DEFAULT 0;`
+		ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION DEFAULT 0,
+		ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT TRUE;`
 		_, _ = s.db.Exec(alterQuery)
 	}
 
@@ -167,7 +168,7 @@ func (s *Store) Init() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled FROM streams ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +177,7 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng); err != nil {
+		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -197,12 +198,12 @@ func (s *Store) AddStream(st models.Stream) error {
 
 	var query string
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO streams (name, url, backend, lat, lng) VALUES (?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.URL, st.Backend, st.Lat, st.Lng)
+		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled)
 		return err
 	} else {
-		query = "INSERT INTO streams (name, url, backend, lat, lng) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng)
+		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled)
 		return err
 	}
 }
@@ -223,7 +224,10 @@ func (s *Store) ClearAllStreams() error {
 	return err
 }
 
-func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64) error {
+func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64, enabled bool) error {
+	newName = strings.TrimSpace(newName)
+	oldName = strings.TrimSpace(oldName)
+
 	// Default to go2rtc if backend not specified
 	if backend == "" {
 		backend = "go2rtc"
@@ -238,12 +242,12 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng flo
 	var checkQuery, updateNameQuery, updateUrlQuery string
 	if s.dbType == "sqlite" {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = ?)"
-		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ? WHERE name = ?"
-		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ? WHERE name = ?"
+		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ? WHERE name = ?"
+		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ? WHERE name = ?"
 	} else {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = $1)"
-		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5 WHERE name = $6"
-		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4 WHERE name = $5"
+		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6 WHERE name = $7"
+		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4, is_enabled = $5 WHERE name = $6"
 	}
 
 	if oldName != newName {
@@ -258,19 +262,30 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng flo
 		}
 
 		// Update name, url, and backend
-		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, oldName)
+		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, enabled, oldName)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Just update url and backend
-		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, newName)
+		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, enabled, newName)
 		if err != nil {
 			return err
 		}
 	}
 
 	return tx.Commit()
+}
+
+func (s *Store) SetStreamStatus(name string, enabled bool) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE streams SET is_enabled = ? WHERE name = ?"
+	} else {
+		query = "UPDATE streams SET is_enabled = $1 WHERE name = $2"
+	}
+	_, err := s.db.Exec(query, enabled, name)
+	return err
 }
 
 func (s *Store) Close() error {

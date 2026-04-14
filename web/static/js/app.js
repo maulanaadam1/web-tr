@@ -1,5 +1,8 @@
 // Global State
 let currentView = 'dashboard';
+let maintenanceMap = null;
+let maintenanceMarkers = {};
+let selectedCameraOnMap = null;
 
 // --- View Management ---
 function switchView(viewName) {
@@ -41,6 +44,10 @@ function switchView(viewName) {
     }
 
     // Refresh Data for specific views
+    if (viewName === 'dashboard') {
+        fetchSysInfo();
+        initMaintenanceMap();
+    }
     if (viewName === 'cameras') loadStreams();
     if (viewName === 'users') loadUsers();
     if (viewName === 'timelapse') initTimelapseView();
@@ -67,7 +74,9 @@ function renderStreamsTable() {
     if (gridContainer) {
         gridContainer.innerHTML = '';
         allStreams.forEach(s => {
-            gridContainer.appendChild(createStreamCard(s.name, s.url));
+            if (s.enabled !== false) {
+                gridContainer.appendChild(createStreamCard(s.name, s.url));
+            }
         });
     }
 
@@ -76,7 +85,11 @@ function renderStreamsTable() {
     tableBody.innerHTML = '';
 
     const query = (document.getElementById('cameraSearch')?.value || '').toLowerCase();
-    let filtered = allStreams.filter(s => s.name.toLowerCase().includes(query) || s.url.toLowerCase().includes(query));
+    let filtered = allStreams.filter(s => {
+        if (!query) return true;
+        const searchStr = `${s.name} ${s.url} ${s.backend || 'go2rtc'} ${s.online ? 'online' : 'offline'} ${s.enabled === false ? 'disabled' : 'enabled'} ${s.lat} ${s.lng}`.toLowerCase();
+        return searchStr.includes(query);
+    });
 
     const startIndex = (streamCurrentPage - 1) * streamsPerPage;
     const endIndex = startIndex + streamsPerPage;
@@ -87,16 +100,21 @@ function renderStreamsTable() {
         const tr = document.createElement('tr');
         tr.className = 'block md:table-row bg-white dark:bg-slate-900 md:bg-transparent rounded-2xl md:rounded-none border border-slate-200 dark:border-slate-800 md:border-none md:border-b mb-4 p-4 md:p-0 relative shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors';
         tr.innerHTML = `
-            <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-400 font-medium">${index + 1}</td>
-            <td class="hidden md:table-cell px-6 py-4">
-                ${s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>'}
+            <td class="hidden md:table-cell px-3 md:px-4 py-4 text-center">
+                <input type="checkbox" value="${escapeJS(s.name)}" class="camera-checkbox rounded border-slate-300 text-brand-600 focus:ring-brand-500 bg-white dark:bg-slate-800 dark:border-slate-600 cursor-pointer" onclick="updateBulkActions()">
+            </td>
+            <td class="hidden md:table-cell px-3 md:px-4 py-4 text-sm text-slate-400 font-medium">${index + 1}</td>
+            <td class="hidden md:table-cell px-3 md:px-4 py-4 flex items-center h-full pt-[22px]">
+                ${s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" title="Online"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700" title="Offline"></span>'}
+                ${s.enabled === false ? '<span class="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400 uppercase tracking-tighter" title="Transcoding Disabled">Disabled</span>' : ''}
             </td>
 
             <td class="block md:hidden pb-3 border-b border-slate-100 dark:border-slate-800 mb-3">
                 <div class="flex justify-between items-center w-full">
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" class="rounded w-4 h-4 text-brand-500 border-slate-300">
+                        <input type="checkbox" value="${escapeJS(s.name)}" class="camera-checkbox rounded w-4 h-4 text-brand-500 border-slate-300 cursor-pointer" onclick="updateBulkActions()">
                         <span class="text-xs font-bold text-brand-500">#${index + 1}</span>
+                        ${s.enabled === false ? '<span class="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 uppercase">Disabled</span>' : ''}
                     </div>
                     ${s.online 
                         ? '<div class="p-1 px-[10px] bg-green-50 dark:bg-green-900/30 text-green-500 rounded text-xl"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>' 
@@ -311,7 +329,12 @@ function renderUsersTable() {
     tableBody.innerHTML = '';
     
     const query = (document.getElementById('userSearch')?.value || '').toLowerCase();
-    let filtered = allUsers.filter(u => (u.full_name||u.username).toLowerCase().includes(query) || (u.email||'').toLowerCase().includes(query));
+    let filtered = allUsers.filter(u => {
+        if (!query) return true;
+        const statusStr = u.is_active ? 'active' : 'disabled';
+        const searchStr = `${u.full_name||''} ${u.username||''} ${u.email||''} ${u.whatsapp||''} ${u.role||''} ${statusStr}`.toLowerCase();
+        return searchStr.includes(query);
+    });
 
     const startIndex = (userCurrentPage - 1) * usersPerPage;
     const endIndex = startIndex + usersPerPage;
@@ -320,9 +343,12 @@ function renderUsersTable() {
     pagedUsers.forEach((u, i) => {
         const index = startIndex + i;
         const tr = document.createElement('tr');
-        tr.className = 'block md:table-row bg-white dark:bg-slate-900 md:bg-transparent rounded-2xl md:rounded-none border border-slate-200 dark:border-slate-800 md:border-none md:border-b mb-4 p-4 md:p-0 relative shadow-sm md:shadow-none hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors';
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors';
         
         const nameInitial = (u.full_name || u.username).charAt(0).toUpperCase();
+        const roleBadgeClass = u.role === 'admin'
+            ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300'
+            : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
 
         const statusHtml = u.is_active 
             ? '<span class="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold">ACTIVE</span>'
@@ -331,66 +357,42 @@ function renderUsersTable() {
         tr.innerHTML = `
             <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-400 font-medium">${index + 1}</td>
             
-            <td class="block md:table-cell md:px-6 py-2 md:py-4">
-                <div class="flex items-center justify-between md:hidden pb-3 border-b border-slate-100 dark:border-slate-800 mb-3 w-full">
-                    <span class="text-xs font-bold text-brand-500">#${index + 1}</span>
-                    <div class="p-1 px-2 bg-green-50 dark:bg-green-900/30 text-green-500 rounded text-xl">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    </div>
-                </div>
-
+            <td class="px-6 py-4">
                 <div class="flex items-center gap-3">
-                    <div class="hidden md:flex shrink-0 w-8 h-8 rounded-full bg-brand-500 items-center justify-center text-white text-xs font-bold ring-2 ring-brand-500/20">
+                    <div class="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold shadow">
                         ${nameInitial}
                     </div>
                     <div>
-                        <div class="text-base md:text-sm font-bold text-slate-800 dark:text-white capitalize">${u.full_name || u.username}</div>
-                        <div class="text-[11px] md:text-[10px] text-slate-400">${u.email || '@' + u.username}</div>
-                    </div>
-                </div>
-
-                <div class="md:hidden w-full mt-4 space-y-2">
-                    <div class="bg-slate-50 dark:bg-slate-800 p-2.5 rounded border border-slate-100 dark:border-slate-700">
-                        <p class="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Role</p>
-                        <p class="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase">${u.role}</p>
-                    </div>
-                    <div class="bg-slate-50 dark:bg-slate-800 p-2.5 rounded border border-slate-100 dark:border-slate-700">
-                        <p class="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">My Cameras</p>
-                        <p class="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 uppercase">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                            0 Cameras
-                        </p>
+                        <div class="text-sm font-bold text-slate-800 dark:text-white">${u.full_name || '—'}</div>
+                        <div class="text-[11px] text-slate-400">@${u.username}</div>
                     </div>
                 </div>
             </td>
 
+            <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                ${u.email ? `<a href="mailto:${u.email}" class="hover:text-brand-500 transition-colors">${u.email}</a>` : '<span class="text-slate-300">—</span>'}
+            </td>
+
+            <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                ${u.whatsapp || '<span class="text-slate-300">—</span>'}
+            </td>
+
             <td class="hidden md:table-cell px-6 py-4">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-tighter">${u.role}</span>
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${roleBadgeClass}">${u.role}</span>
             </td>
 
             <td class="hidden md:table-cell px-6 py-4">
                 ${statusHtml}
             </td>
 
-            <td class="block md:table-cell md:px-6 py-3 mt-4 pt-4 md:mt-0 md:pt-3 border-t md:border-none border-slate-100 dark:border-slate-800">
-                <div class="flex justify-end gap-2 md:gap-1 w-full flex-wrap">
-                    <button class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-indigo-50 dark:bg-slate-800 md:bg-transparent text-indigo-600 md:text-slate-400 hover:text-indigo-600 rounded-lg transition-colors">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                        <span class="md:hidden text-[10px] font-bold uppercase">Manage</span>
-                    </button>
-                    <!-- Pass / Auth (orange placeholder) -->
-                    <button class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-orange-50 dark:bg-slate-800 md:bg-transparent text-orange-600 md:text-slate-400 hover:text-orange-600 rounded-lg transition-colors">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
-                        <span class="md:hidden text-[10px] font-bold uppercase">Pass</span>
-                    </button>
-                    <button onclick='openUserModal(${JSON.stringify(u)})' class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-blue-50 dark:bg-slate-800 md:bg-transparent text-blue-600 md:text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="Edit Profile">
+            <td class="px-6 py-4">
+                <div class="flex justify-end gap-1">
+                    <button onclick='openUserModal(${JSON.stringify(u)})' class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors" title="Edit User">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        <span class="md:hidden text-[10px] font-bold uppercase">Edit</span>
                     </button>
                     ${u.username === 'admin' ? '' : `
-                    <button onclick="deleteUser(${u.id})" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-red-50 dark:bg-slate-800 md:bg-transparent text-red-600 md:text-slate-400 hover:text-red-500 rounded-lg transition-colors" title="Delete Account">
+                    <button onclick="deleteUser(${u.id})" class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete User">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        <span class="md:hidden text-[10px] font-bold uppercase">Delete</span>
                     </button>`}
                 </div>
             </td>
@@ -413,7 +415,7 @@ function renderUsersTable() {
 }
 
 // --- User Modal Logic ---
-let selectedRole = 'viewer';
+let selectedRole = 'user';
 
 function openUserModal(user = null) {
     const isEdit = !!user;
@@ -428,17 +430,22 @@ function openUserModal(user = null) {
     document.getElementById('userEmail').value = isEdit ? (user.email || '') : '';
     document.getElementById('userFullName').value = isEdit ? (user.full_name || '') : '';
     document.getElementById('userWhatsapp').value = isEdit ? (user.whatsapp || '') : '';
+    document.getElementById('userCurrentPassword').value = '';
     document.getElementById('userPassword').value = '';
-    document.getElementById('updatePasswordToggle').checked = !isEdit; // Always check for new users
+    document.getElementById('updatePasswordToggle').checked = !isEdit; 
     document.getElementById('passwordField').classList.toggle('hidden', isEdit);
+    
+    // Hide current password field if adding new user
+    const currentPassWrapper = document.getElementById('currentPasswordFieldWrapper');
+    if (currentPassWrapper) {
+        currentPassWrapper.classList.toggle('hidden', !isEdit);
+    }
     document.getElementById('userIsActive').checked = isEdit ? user.is_active : true;
-    document.getElementById('userBroadcast').checked = isEdit ? user.broadcast_notifications : false;
-    document.getElementById('userNotificationPaid').checked = isEdit ? user.notification_paid : false;
 
     title.textContent = isEdit ? `Edit User: ${user.full_name || user.username}` : 'Add New User';
     submitBtnText.textContent = isEdit ? 'Update User' : 'Create User';
     
-    selectRole(isEdit ? user.role : 'viewer');
+    selectRole(isEdit ? user.role : 'user');
     
     modal.classList.remove('hidden');
 }
@@ -470,6 +477,20 @@ document.getElementById('updatePasswordToggle')?.addEventListener('change', (e) 
     document.getElementById('passwordField').classList.toggle('hidden', !e.target.checked);
 });
 
+function togglePasswordVisibility(id, btn) {
+    const input = document.getElementById(id);
+    const svg = btn.querySelector('svg');
+    if (input.type === 'password') {
+        input.type = 'text';
+        // eye-off icon
+        svg.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+    } else {
+        input.type = 'password';
+        // eye icon
+        svg.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+    }
+}
+
 async function submitUserForm() {
     const id = document.getElementById('editUserId').value;
     const isEdit = !!id;
@@ -481,18 +502,21 @@ async function submitUserForm() {
         whatsapp: document.getElementById('userWhatsapp').value,
         role: selectedRole,
         is_active: document.getElementById('userIsActive').checked,
-        broadcast_notifications: document.getElementById('userBroadcast').checked,
-        notification_paid: document.getElementById('userNotificationPaid').checked,
+        broadcast_notifications: false,
+        notification_paid: false,
     };
 
     if (document.getElementById('updatePasswordToggle').checked) {
         const pass = document.getElementById('userPassword').value;
+        const currentPass = document.getElementById('userCurrentPassword').value;
+        
         if (!isEdit && !pass) {
             alert("Password is required for new users");
             return;
         }
         if (isEdit) {
             payload.newPassword = pass;
+            payload.currentPassword = currentPass;
             payload.update_pass = true;
         } else {
             payload.password = pass;
@@ -802,6 +826,33 @@ async function deleteStream(name) {
     } catch (e) { console.error(e); }
 }
 
+// --- Paging & Limits ---
+function changePageSize() {
+    const selector = document.getElementById('cameraPageSize');
+    if (!selector) return;
+    const val = selector.value;
+    if (val === 'all') {
+        streamsPerPage = allStreams.length > 0 ? allStreams.length : 9999;
+    } else {
+        streamsPerPage = parseInt(val, 10);
+    }
+    streamCurrentPage = 1;
+    renderStreamsTable();
+}
+
+function changeUserPageSize() {
+    const selector = document.getElementById('userPageSize');
+    if (!selector) return;
+    const val = selector.value;
+    if (val === 'all') {
+        usersPerPage = allUsers.length > 0 ? allUsers.length : 9999;
+    } else {
+        usersPerPage = parseInt(val, 10);
+    }
+    userCurrentPage = 1;
+    renderUsersTable();
+}
+
 // --- Search / Filters ---
 function filterCameraTable() {
     streamCurrentPage = 1;
@@ -818,13 +869,80 @@ function openCSVImportModal() { document.getElementById('csvImportModal').classL
 function closeCSVImportModal() { document.getElementById('csvImportModal').classList.add('hidden'); }
 async function submitCSVImport() {
     const file = document.getElementById('csvFileInput').files[0];
-    if (!file) return;
+    const text = document.getElementById('csvTextInput').value;
+    
+    if (!file && !text.trim()) {
+        alert("Please provide a CSV file or paste the content.");
+        return;
+    }
+    
     const formData = new FormData();
-    formData.append('file', file);
+    if (file) formData.append('file', file);
+    if (text.trim()) formData.append('raw_csv', text);
+    
     try {
         const res = await fetch('/api/streams/import', { method: 'POST', body: formData });
-        if (res.ok) { closeCSVImportModal(); loadStreams(); }
-    } catch (e) {}
+        if (res.ok) { 
+            closeCSVImportModal(); 
+            document.getElementById('csvFileInput').value = '';
+            document.getElementById('csvTextInput').value = '';
+            loadStreams(); 
+        } else {
+            alert("Error importing CSV. Verify your format.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Upload failed.");
+    }
+}
+
+// --- Bulk Actions ---
+function toggleAllCameras(checkbox) {
+    document.querySelectorAll('.camera-checkbox').forEach(cb => cb.checked = checkbox.checked);
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const selected = document.querySelectorAll('.camera-checkbox:checked').length;
+    const bulkDiv = document.getElementById('bulkActions');
+    document.getElementById('bulkCount').innerText = selected;
+    if (selected > 0) {
+        bulkDiv.classList.remove('hidden');
+        bulkDiv.classList.add('flex');
+    } else {
+        bulkDiv.classList.add('hidden');
+        bulkDiv.classList.remove('flex');
+    }
+}
+
+async function executeBulkAction(action) {
+    const selected = Array.from(document.querySelectorAll('.camera-checkbox:checked')).map(cb => cb.value);
+    if (selected.length === 0) return;
+
+    if (action === 'export') {
+        window.location.href = `/api/streams/export?names=${encodeURIComponent(selected.join(','))}`;
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to ${action} ${selected.length} camera(s)?`)) return;
+
+    try {
+        const response = await fetch('/api/streams/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action, names: selected })
+        });
+        if (response.ok) {
+            document.getElementById('selectAllCameras').checked = false;
+            updateBulkActions();
+            loadStreams();
+        } else {
+            alert("Bulk action failed.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Error executing bulk action.");
+    }
 }
 
 // --- Theme & Metrics ---
@@ -861,7 +979,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     loadStreams();
     fetchSysInfo();
-    setInterval(fetchSysInfo, 4000);
+    initMaintenanceMap();
+    setInterval(fetchSysInfo, 5000);
 });
 
 // --- Timelapse Logic ---
@@ -1156,5 +1275,210 @@ async function handleTlExport() {
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
+    }
+}
+
+// --- Maintenance Map logic ---
+async function initMaintenanceMap() {
+    const mapContainer = document.getElementById('maintenanceMap');
+    if (!mapContainer) return;
+
+    // Ensure we have streams data
+    if (allStreams.length === 0) {
+        await loadStreams();
+    }
+
+    if (!maintenanceMap) {
+        // Base Layers
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        });
+        
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+        });
+
+        maintenanceMap = L.map('maintenanceMap', {
+            center: [-7.250445, 112.768845],
+            zoom: 11,
+            layers: [osm] // Default
+        });
+
+        const baseMaps = {
+            "Road": osm,
+            "Satellite": satellite
+        };
+
+        L.control.layers(baseMaps).addTo(maintenanceMap);
+    }
+
+    // Clear existing markers
+    for (let id in maintenanceMarkers) {
+        maintenanceMap.removeLayer(maintenanceMarkers[id]);
+    }
+    maintenanceMarkers = {};
+
+    const bounds = [];
+    allStreams.forEach(s => {
+        if (s.lat && s.lng) {
+            const marker = L.marker([s.lat, s.lng], {
+                draggable: true,
+                title: s.name
+            }).addTo(maintenanceMap);
+
+            const updatePopup = (lat, lng) => {
+                marker.bindPopup(`
+                    <div class="p-1">
+                        <div class="text-sm font-bold border-b border-slate-100 pb-1 mb-1">${s.name}</div>
+                        <div class="text-[10px] text-slate-500 mb-1 font-medium italic">Coordinate updated via drag</div>
+                        <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 p-1 rounded border border-slate-200 dark:border-slate-700">
+                            LAT: ${lat.toFixed(6)}<br>
+                            LNG: ${lng.toFixed(6)}
+                        </div>
+                    </div>
+                `);
+            };
+
+            updatePopup(s.lat, s.lng);
+
+            // Marker Click - Show Preview
+            marker.on('click', () => {
+                selectCameraOnMap(s.name);
+            });
+
+            marker.on('dragend', async (event) => {
+                const position = marker.getLatLng();
+                updatePopup(position.lat, position.lng);
+                marker.openPopup();
+                await updateCameraLocation(s.name, position.lat, position.lng);
+            });
+
+            maintenanceMarkers[s.name] = marker;
+            bounds.push([s.lat, s.lng]);
+        }
+    });
+
+    // Handle Popup Close - Reset Preview
+    // We listen on the map itself to catch all ways a popup can close (X button, background click, etc)
+    maintenanceMap.off('popupclose'); // Prevent multiple listeners
+    maintenanceMap.on('popupclose', () => {
+        // Small delay to check if another popup is about to open (e.g. switching markers)
+        // Actually, just deselecting is fine as selectCameraOnMap will run immediately after if a marker was clicked
+        setTimeout(() => {
+            if (!maintenanceMap.hasLayer(maintenanceMap._popup)) {
+                deselectCameraOnMap();
+            }
+        }, 50);
+    });
+
+    if (bounds.length > 0) {
+        maintenanceMap.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    // Force resize to fix gray tile issue
+    setTimeout(() => maintenanceMap.invalidateSize(), 300);
+}
+
+function selectCameraOnMap(name) {
+    const stream = allStreams.find(s => s.name === name);
+    if (!stream) return;
+
+    // Remove highlight from previous
+    if (selectedCameraOnMap && maintenanceMarkers[selectedCameraOnMap]) {
+        maintenanceMarkers[selectedCameraOnMap].getElement()?.classList.remove('selected-marker');
+    }
+
+    selectedCameraOnMap = name;
+    
+    // Highlight current
+    if (maintenanceMarkers[name]) {
+        maintenanceMarkers[name].getElement()?.classList.add('selected-marker');
+    }
+    
+    // UI Updates
+    document.getElementById('noCameraSelected').classList.add('hidden');
+    document.getElementById('previewPlayerArea').classList.remove('hidden');
+    document.getElementById('previewStatus').classList.remove('hidden');
+    document.getElementById('previewCamName').textContent = name;
+
+    reloadDashboardPreview('webrtc');
+}
+
+function deselectCameraOnMap() {
+    if (selectedCameraOnMap && maintenanceMarkers[selectedCameraOnMap]) {
+        maintenanceMarkers[selectedCameraOnMap].getElement()?.classList.remove('selected-marker');
+    }
+    selectedCameraOnMap = null;
+    
+    // UI Reset
+    document.getElementById('noCameraSelected').classList.remove('hidden');
+    document.getElementById('previewPlayerArea').classList.add('hidden');
+    document.getElementById('previewStatus').classList.add('hidden');
+    const player = document.getElementById('dashboardPlayer');
+    if (player) player.innerHTML = '';
+}
+
+function reloadDashboardPreview(mode) {
+    if (!selectedCameraOnMap) return;
+    const name = selectedCameraOnMap;
+    
+    const container = document.getElementById('dashboardPlayer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : "";
+    const go2rtcProxy = `${protocol}//${hostname}${port}/rtc`;
+    const modeParam = mode || 'webrtc';
+
+    const iframe = document.createElement('iframe');
+    iframe.src = `${go2rtcProxy}/stream.html?src=${encodeURIComponent(name)}&mode=${modeParam}`;
+    iframe.className = "w-full h-full border-none";
+    iframe.allow = "autoplay; fullscreen; picture-in-picture";
+
+    container.appendChild(iframe);
+}
+
+async function updateCameraLocation(name, lat, lng) {
+    const stream = allStreams.find(s => s.name === name);
+    if (!stream) return;
+
+    const payload = {
+        name: stream.name,
+        originalName: name, // Required by backend to identify the row
+        url: stream.url,
+        backend: stream.backend || 'go2rtc',
+        lat: lat,
+        lng: lng,
+        enabled: stream.enabled !== false
+    };
+
+    try {
+        const response = await fetch(`/api/streams?name=${encodeURIComponent(name)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            // Update local state
+            stream.lat = lat;
+            stream.lng = lng;
+            
+            // Show subtle feedback
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-green-600 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold animate-bounce';
+            toast.textContent = `Location updated for ${name}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+            
+            // Refresh table if in cameras view
+            if (currentView === 'cameras') renderStreamsTable();
+        } else {
+            alert("Failed to update location");
+        }
+    } catch (e) {
+        console.error("Error updating location", e);
     }
 }

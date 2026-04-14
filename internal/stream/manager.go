@@ -81,7 +81,7 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) AddStream(name, url, backend string, lat, lng float64) error {
+func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled bool) error {
 	if backend == "" {
 		backend = "go2rtc" // Default
 	}
@@ -93,6 +93,7 @@ func (m *Manager) AddStream(name, url, backend string, lat, lng float64) error {
 			Backend: backend,
 			Lat:     lat,
 			Lng:     lng,
+			Enabled: enabled,
 		}); err != nil {
 			return err
 		}
@@ -130,11 +131,11 @@ func (m *Manager) ClearAllStreams() error {
 	return m.ConfigManager.Save(cfg)
 }
 
-func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64) error {
+func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64, enabled bool) error {
 
 	backend := "go2rtc" // Forced backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, url, backend, lat, lng); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, url, backend, lat, lng, enabled); err != nil {
 			return err
 		}
 		return m.SyncFromDB()
@@ -148,6 +149,16 @@ func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64) erro
 		return m.ConfigManager.AddStream(name, url)
 	}
 	return m.ConfigManager.SetStream(name, url)
+}
+
+func (m *Manager) SetStreamStatus(name string, enabled bool) error {
+	if m.Store != nil {
+		if err := m.Store.SetStreamStatus(name, enabled); err != nil {
+			return err
+		}
+		return m.SyncFromDB()
+	}
+	return nil // Not supported in JSON Config mode
 }
 
 func (m *Manager) GetStreams() ([]models.Stream, error) {
@@ -181,8 +192,10 @@ func (m *Manager) SyncFromDB() error {
 	// Reset streams map and filter by backend
 	cfg.Streams = make(map[string]interface{})
 	for _, s := range streams {
-		// Only add to go2rtc config
-		cfg.Streams[s.Name] = s.URL
+		// Only add to go2rtc config if enabled
+		if s.Enabled {
+			cfg.Streams[s.Name] = s.URL
+		}
 	}
 
 	// Save go2rtc config
