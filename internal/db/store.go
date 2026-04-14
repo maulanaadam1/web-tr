@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"web-tr/internal/models"
 
@@ -164,7 +165,35 @@ func (s *Store) Init() error {
 		_, _ = s.db.Exec(alterQuery)
 	}
 
+	if err := s.SeedDefaultAdmin(); err != nil {
+		log.Printf("Warning: Failed to seed default admin: %v", err)
+	}
+
 	return nil
+}
+
+func (s *Store) SeedDefaultAdmin() error {
+	var count int
+	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		return nil // Admin already exists
+	}
+
+	// Use Environment Variables or defaults
+	adminUser := os.Getenv("ADMIN_USER")
+	adminPass := os.Getenv("ADMIN_PASS")
+	if adminUser == "" { adminUser = "admin" }
+	if adminPass == "" { adminPass = "admin123" }
+
+	log.Printf("Seeding default admin user: %s", adminUser)
+	return s.CreateUserFull(models.User{
+		Username: adminUser,
+		Role:     "admin",
+	}, adminPass)
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
