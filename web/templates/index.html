@@ -1175,7 +1175,30 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=24"></script>
+    <!-- ===== Camera Live Preview Modal ===== -->
+    <div id="cameraPreviewModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
+        <!-- Close Button -->
+        <button onclick="closeCameraPreviewModal()" class="absolute top-4 right-4 z-[210] bg-black/60 hover:bg-red-600 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 group shadow-2xl">
+            <svg class="w-6 h-6 transform group-hover:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+
+        <!-- Top Title Bar -->
+        <div class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-[210] pointer-events-none">
+            <div class="flex items-center gap-3 justify-center">
+                <span class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
+                <h3 id="cameraPreviewTitle" class="text-white text-base font-bold drop-shadow-lg tracking-wide uppercase truncate max-w-[70vw]">Camera Name</h3>
+            </div>
+        </div>
+
+        <!-- Player Container -->
+        <div id="cameraPreviewContent" class="w-full h-full md:w-[90vw] md:h-[85vh] md:rounded-2xl relative overflow-hidden transform scale-95 transition-transform duration-300 bg-black shadow-2xl border border-white/10">
+            <div id="cameraPreviewPlayer" class="w-full h-full relative">
+                <!-- Stream injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js?v=25"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
