@@ -8,7 +8,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Force cache invalidation for build and assets
-ARG CACHEBUST=1
+ARG CACHEBUST=2
 
 # Copy source code
 COPY . .
