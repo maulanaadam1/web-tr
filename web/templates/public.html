@@ -52,18 +52,9 @@
         .tab-hidden { opacity: 0; pointer-events: none; transform: translateY(10px); z-index: -1; position: absolute; top:0; left:0; width: 100%; height: 100%; }
         .tab-active { opacity: 1; pointer-events: auto; transform: translateY(0); z-index: 10; position: relative; width: 100%; height: 100%; overflow: auto; }
 
-        /* Subtle Marker Pulse */
+        /* Subtle Marker Display */
         .marker-pulse {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            border-radius: 9999px;
-            background-color: #6366f1;
-            animation: pulse-small 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-        @keyframes pulse-small {
-            0% { transform: scale(1); opacity: 0.8; }
-            100% { transform: scale(1.4); opacity: 0; }
+            display: none;
         }
 
         /* Fixed size for Command Center Logo to prevent jumping */
@@ -85,20 +76,11 @@
             background: rgba(59, 130, 246, 0.1);
         }
         
-        /* Marker Pulses & Custom Pin Fixes */
+        /* Marker Custom Pin Fixes */
         .custom-pin { transition: all 0.3s; }
-        .marker-pulse {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px; height: 20px;
-            border-radius: 50%;
-            pointer-events: none;
-            animation: marker-pulse 2s infinite;
-        }
-        @keyframes marker-pulse {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0; }
+        .marker-selected {
+            filter: drop-shadow(0 0 6px #6366f1);
+            z-index: 1000 !important;
         }
     </style>
 </head>
@@ -427,7 +409,7 @@
         function openPublicPlayerModal(name) {
             titleEl.textContent = name;
             // Use standard rtc mode for primary public viewing
-            const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+            const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
 
             // Loading UI inside frameless container
             videoContainer.innerHTML = `
@@ -562,7 +544,6 @@
                                 <div class="w-5 h-5 bg-brand-600 hover:bg-brand-500 rounded-full border-2 border-white shadow-lg z-10 relative flex items-center justify-center transition-none">
                                     <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
                                 </div>
-                                <div class="marker-pulse bg-brand-500/60"></div>
                                </div>`,
                         iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10]
                     });

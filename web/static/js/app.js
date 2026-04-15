@@ -231,7 +231,7 @@ function showSnapshotOverlay(name, videoContainer) {
     const snapshotBase = `${protocol}//${hostname}${port}/api/snapshot`;
 
     const snapshotUrl = `${snapshotBase}?stream=${encodeURIComponent(name)}`;
-    const iframeSrc = `${go2rtcProxy}/stream.html?src=${encodeURIComponent(name)}&mode=webrtc`;
+    const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
 
     videoContainer.innerHTML = `
         <div class="absolute inset-0 cursor-pointer flex items-center justify-center bg-gray-900 group" onclick="startLiveStream('${escapeJS(name)}', '${escapeJS(iframeSrc)}', this)">
@@ -1329,11 +1329,11 @@ async function initMaintenanceMap() {
             const updatePopup = (lat, lng) => {
                 marker.bindPopup(`
                     <div class="p-1">
-                        <div class="text-sm font-bold border-b border-slate-100 pb-1 mb-1">${s.name}</div>
-                        <div class="text-[10px] text-slate-500 mb-1 font-medium italic">Coordinate updated via drag</div>
-                        <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 p-1 rounded border border-slate-200 dark:border-slate-700">
-                            LAT: ${lat.toFixed(6)}<br>
-                            LNG: ${lng.toFixed(6)}
+                        <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.name}</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium italic">Coordinate updated via drag</div>
+                        <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
+                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
+                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">LNG:</span> ${lng.toFixed(6)}
                         </div>
                     </div>
                 `);
@@ -1430,7 +1430,7 @@ function reloadDashboardPreview(mode) {
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : "";
     const go2rtcProxy = `${protocol}//${hostname}${port}/rtc`;
-    const modeParam = mode || 'webrtc';
+    const modeParam = mode || 'webrtc,mse,hls,mp4,mjpeg';
 
     const iframe = document.createElement('iframe');
     iframe.src = `${go2rtcProxy}/stream.html?src=${encodeURIComponent(name)}&mode=${modeParam}`;

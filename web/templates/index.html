@@ -83,13 +83,20 @@
         .selected-marker {
             filter: drop-shadow(0 0 8px #6366f1) hue-rotate(180deg);
             z-index: 1000 !important;
-            animation: marker-pulse 2s infinite;
         }
 
-        @keyframes marker-pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
+        /* Leaflet Dark Mode Popups */
+        .dark .leaflet-popup-content-wrapper, 
+        .dark .leaflet-popup-tip {
+            background-color: #1e293b !important; /* slate-800 */
+            color: #f8fafc !important; /* slate-50 */
+            border: 1px solid #334155;
+        }
+        .dark .leaflet-popup-content {
+            color: #f8fafc !important;
+        }
+        .dark .leaflet-container a.leaflet-popup-close-button {
+            color: #94a3b8 !important;
         }
     </style>
 </head>
