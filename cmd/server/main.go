@@ -805,7 +805,7 @@ func main() {
 	}))
 
 	// CSV Import endpoint for bulk adding streams
-	http.HandleFunc("/api/streams/import", basicAuth(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/streams/import", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -998,7 +998,7 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": successCount})
 	}))
 
-	http.HandleFunc("/api/probe", basicAuth(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/probe", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
