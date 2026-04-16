@@ -697,9 +697,11 @@ function openAddModal() {
     document.getElementById("streamUrl").value = "";
     document.getElementById("editOriginalName").value = "";
     document.getElementById("streamBuffer").value = "10";
-    document.getElementById("timelapseEnabled").checked = false;
-    document.getElementById("timelapsePresetSelect").value = "60";
-    document.getElementById("timelapseCustomInput")?.classList.add("hidden");
+    if (document.getElementById("timelapseEnabled")) {
+        document.getElementById("timelapseEnabled").checked = false;
+        document.getElementById("timelapsePresetSelect").value = "60";
+        document.getElementById("timelapseCustomInput")?.classList.add("hidden");
+    }
     const testRes = document.getElementById("testConnectionResult");
     if(testRes) testRes.textContent = "";
 
@@ -728,24 +730,27 @@ async function openEditModal(name, url) {
         const res = await fetch(`/api/timelapse/config?name=${encodeURIComponent(name)}`);
         if (res.ok) {
             const config = await res.json();
-            document.getElementById("timelapseEnabled").checked = config.enabled;
-            const presetSel = document.getElementById("timelapsePresetSelect");
-            
-            let matched = false;
-            Array.from(presetSel.options).forEach(opt => {
-                if (parseInt(opt.value) === config.interval) matched = true;
-            });
-            if (matched) {
-                presetSel.value = config.interval;
-                document.getElementById('timelapseCustomInput')?.classList.add('hidden');
-            } else {
-                presetSel.value = 'custom';
-                document.getElementById('timelapseCustomInput')?.classList.remove('hidden');
-                document.getElementById("timelapseIntervalVal").value = config.interval;
-                document.getElementById("timelapseIntervalUnit").value = "1";
+            const tlEnabledObj = document.getElementById("timelapseEnabled");
+            if (tlEnabledObj) {
+                tlEnabledObj.checked = config.enabled;
+                const presetSel = document.getElementById("timelapsePresetSelect");
+                
+                let matched = false;
+                Array.from(presetSel.options).forEach(opt => {
+                    if (parseInt(opt.value) === config.interval) matched = true;
+                });
+                if (matched) {
+                    presetSel.value = config.interval;
+                    document.getElementById('timelapseCustomInput')?.classList.add('hidden');
+                } else {
+                    presetSel.value = 'custom';
+                    document.getElementById('timelapseCustomInput')?.classList.remove('hidden');
+                    document.getElementById("timelapseIntervalVal").value = config.interval;
+                    document.getElementById("timelapseIntervalUnit").value = "1";
+                }
+                if (config.width) document.getElementById("timelapseWidth").value = config.width;
+                if (config.height) document.getElementById("timelapseHeight").value = config.height;
             }
-            if (config.width) document.getElementById("timelapseWidth").value = config.width;
-            if (config.height) document.getElementById("timelapseHeight").value = config.height;
         }
     } catch(e) { console.error("Failed to load timelapse config", e); }
 
@@ -777,25 +782,27 @@ async function submitStreamForm(isEdit) {
             body
         });
         if (response.ok) {
-            // Save timelapse config
-            const tlEnabled = document.getElementById("timelapseEnabled").checked;
-            let tlInterval = parseInt(document.getElementById("timelapsePresetSelect").value);
-            if (isNaN(tlInterval) || document.getElementById("timelapsePresetSelect").value === 'custom') {
-                const val = parseInt(document.getElementById("timelapseIntervalVal").value);
-                const unit = parseInt(document.getElementById("timelapseIntervalUnit").value);
-                if (!isNaN(val) && !isNaN(unit)) tlInterval = val * unit;
-            }
-            if (!tlInterval || tlInterval <= 0) tlInterval = 60;
-            const tlWidth = parseInt(document.getElementById("timelapseWidth").value) || 1280;
-            const tlHeight = parseInt(document.getElementById("timelapseHeight").value) || 720;
+            // Save timelapse config if exists in DOM
+            if (document.getElementById("timelapseEnabled")) {
+                const tlEnabled = document.getElementById("timelapseEnabled").checked;
+                let tlInterval = parseInt(document.getElementById("timelapsePresetSelect").value);
+                if (isNaN(tlInterval) || document.getElementById("timelapsePresetSelect").value === 'custom') {
+                    const val = parseInt(document.getElementById("timelapseIntervalVal").value);
+                    const unit = parseInt(document.getElementById("timelapseIntervalUnit").value);
+                    if (!isNaN(val) && !isNaN(unit)) tlInterval = val * unit;
+                }
+                if (!tlInterval || tlInterval <= 0) tlInterval = 60;
+                const tlWidth = parseInt(document.getElementById("timelapseWidth").value) || 1280;
+                const tlHeight = parseInt(document.getElementById("timelapseHeight").value) || 720;
 
-            try {
-                await fetch('/api/timelapse/config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, enabled: tlEnabled, interval: tlInterval, width: tlWidth, height: tlHeight })
-                });
-            } catch(e) { console.error("Timelapse save failed", e); }
+                try {
+                    await fetch('/api/timelapse/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, enabled: tlEnabled, interval: tlInterval, width: tlWidth, height: tlHeight })
+                    });
+                } catch(e) { console.error("Timelapse save failed", e); }
+            }
 
             closeModal(); 
             loadStreams(); 
