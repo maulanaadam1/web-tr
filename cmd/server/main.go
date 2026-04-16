@@ -30,8 +30,12 @@ import (
 
 // Session Management
 type Session struct {
-	Username string
-	Expiry   time.Time
+	UserID           int
+	Username         string
+	Role             string
+	SubscriptionPlan string
+	EnableSupport    bool
+	Expiry           time.Time
 }
 
 var (
@@ -40,6 +44,9 @@ var (
 	sessionCookieName = "webtr_session"
 	go2rtcProxy       *httputil.ReverseProxy
 )
+
+type contextKey string
+const sessionContextKey = contextKey("session")
 
 // CSV Helper Functions
 func splitLines(s string) []string {
@@ -227,7 +234,8 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctx := context.WithValue(r.Context(), sessionContextKey, session)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
 
@@ -473,7 +481,14 @@ func main() {
 				expiry := time.Now().Add(24 * time.Hour)
 
 				sessionMutex.Lock()
-				activeSessions[token] = Session{Username: user, Expiry: expiry}
+				activeSessions[token] = Session{
+					UserID:           dbUser.ID,
+					Username:         dbUser.Username,
+					Role:             dbUser.Role,
+					SubscriptionPlan: dbUser.SubscriptionPlan,
+					EnableSupport:    dbUser.EnableSupport,
+					Expiry:           expiry,
+				}
 				sessionMutex.Unlock()
 
 				http.SetCookie(w, &http.Cookie{
@@ -513,6 +528,12 @@ func main() {
 
 	// --- User Management API ---
 	http.HandleFunc("/api/users", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" {
+			http.Error(w, "Forbidden: Only admins can manage users", http.StatusForbidden)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 
 		if r.Method == http.MethodGet {
@@ -616,16 +637,29 @@ func main() {
 			return
 		}
 
-		streams, err := streamMgr.GetStreams()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		sess, auth := r.Context().Value(sessionContextKey).(Session)
 
 		var enabledStreams []models.Stream
-		for _, s := range streams {
-			if s.Enabled {
-				enabledStreams = append(enabledStreams, s)
+		var allStreams []models.Stream
+
+		allStreams, err = streamMgr.GetStreams()
+		if err == nil {
+			if auth {
+				allStreams = getUserVisibleStreams(sess, allStreams, store)
+			} else {
+				// Public view: only show IsPublic == true
+				var pubs []models.Stream
+				for _, s := range allStreams {
+					if s.IsPublic {
+						pubs = append(pubs, s)
+					}
+				}
+				allStreams = pubs
+			}
+			for _, s := range allStreams {
+				if s.Enabled {
+					enabledStreams = append(enabledStreams, s)
+				}
 			}
 		}
 
@@ -648,19 +682,27 @@ func main() {
 			return
 		}
 
+		sess := r.Context().Value(sessionContextKey).(Session)
+		streams = getUserVisibleStreams(sess, streams, store)
+
 		log.Printf("Rendering admin dashboard with %d streams", len(streams))
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams": streams,
+			"Session": sess,
 		})
 	}))
 
 	http.HandleFunc("/api/streams", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+
 		if r.Method == http.MethodGet {
 			streams, err := streamMgr.GetStreams()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			
+			streams = getUserVisibleStreams(sess, streams, store)
 			
 			// Build response with online status
 			type StreamWithStatus struct {
@@ -697,10 +739,36 @@ func main() {
 				req.Backend = "go2rtc"
 			}
 
-			if err := streamMgr.AddStream(req.Name, req.URL, req.Backend, req.Lat, req.Lng, true); err != nil {
+			// Enforce subscription quota limits for non-admins
+			if sess.Role != "admin" {
+				limit := 2 // default Free
+				if sess.SubscriptionPlan == "Premium" { limit = 8 }
+				if sess.SubscriptionPlan == "Advance" { limit = 16 }
+				if sess.SubscriptionPlan == "Enterprise" { limit = 9999 }
+				
+				all, _ := streamMgr.GetStreams()
+				myStreams := getUserVisibleStreams(sess, all, store)
+				if len(myStreams) >= limit {
+					http.Error(w, fmt.Sprintf("Upgrade plan to add more cameras. Current limit is %d for %s plan.", limit, sess.SubscriptionPlan), http.StatusForbidden)
+					return
+				}
+			}
+
+			if err := store.AddStream(models.Stream{
+				Name: req.Name,
+				URL: req.URL,
+				Backend: req.Backend,
+				Lat: req.Lat,
+				Lng: req.Lng,
+				Enabled: true,
+				UserID: sess.UserID,
+				IsPublic: false,
+			}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			
+			streamMgr.SyncFromDB()
 
 			// Sync with Go2RTC only if backend is go2rtc
 			if req.Backend == "go2rtc" {
@@ -1349,7 +1417,35 @@ func main() {
 	}()
 
 	<-stop
-	log.Println("Shutting down...")
+	log.Println("Shutting down server...")
 	streamMgr.Stop()
 	timelapseMgr.Stop()
+}
+
+func getUserVisibleStreams(sess Session, streams []models.Stream, store *db.Store) []models.Stream {
+	if sess.Role == "admin" {
+		users, _ := store.GetAllUsers()
+		supportEnabledMap := make(map[int]bool)
+		for _, u := range users {
+			if u.EnableSupport {
+				supportEnabledMap[u.ID] = true
+			}
+		}
+
+		var filtered []models.Stream
+		for _, s := range streams {
+			if s.UserID == sess.UserID || supportEnabledMap[s.UserID] {
+				filtered = append(filtered, s)
+			}
+		}
+		return filtered
+	}
+
+	var filtered []models.Stream
+	for _, s := range streams {
+		if s.UserID == sess.UserID {
+			filtered = append(filtered, s)
+		}
+	}
+	return filtered
 }

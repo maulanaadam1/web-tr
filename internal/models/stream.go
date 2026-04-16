@@ -8,6 +8,8 @@ type Stream struct {
 	Lat       float64 `json:"lat,omitempty"`
 	Lng       float64 `json:"lng,omitempty"`
 	Enabled   bool    `json:"enabled"`
+	UserID    int     `json:"user_id"`
+	IsPublic  bool    `json:"is_public"`
 }
 
 type ApiConfig struct {

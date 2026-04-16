@@ -14,5 +14,7 @@ type User struct {
 	IsActive               bool      `json:"is_active"`
 	BroadcastNotifications bool      `json:"broadcast_notifications"`
 	NotificationPaid       bool      `json:"notification_paid"`
+	SubscriptionPlan       string    `json:"subscription_plan"`
+	EnableSupport          bool      `json:"enable_support"`
 	CreatedAt              time.Time `json:"created_at"`
 }

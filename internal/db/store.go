@@ -123,6 +123,8 @@ func (s *Store) Init() error {
 			"is_active BOOLEAN DEFAULT 1",
 			"broadcast_notifications BOOLEAN DEFAULT 0",
 			"notification_paid BOOLEAN DEFAULT 0",
+			"subscription_plan TEXT DEFAULT 'Free'",
+			"enable_support BOOLEAN DEFAULT 0",
 		}
 		for _, colDef := range cols {
 			name := strings.Split(colDef, " ")[0]
@@ -138,6 +140,8 @@ func (s *Store) Init() error {
 			"lat REAL DEFAULT 0",
 			"lng REAL DEFAULT 0",
 			"is_enabled BOOLEAN DEFAULT 1",
+			"user_id INTEGER DEFAULT 1",
+			"is_public BOOLEAN DEFAULT 1",
 		}
 		for _, colDef := range streamCols {
 			name := strings.Split(colDef, " ")[0]
@@ -197,7 +201,7 @@ func (s *Store) SeedDefaultAdmin() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public FROM streams ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +210,7 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled); err != nil {
+		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -226,13 +230,18 @@ func (s *Store) AddStream(st models.Stream) error {
 	}
 
 	var query string
+	// Default to user_id 1 if not set
+	if st.UserID == 0 {
+		st.UserID = 1
+	}
+
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled)
+		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ?, is_public = ?"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
 		return err
 	} else {
-		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled)
+		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6, user_id = $7, is_public = $8"
+		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
 		return err
 	}
 }
@@ -339,14 +348,18 @@ func (s *Store) CreateUserFull(u models.User, password string) error {
 	salt := GenerateSalt()
 	hash := HashPassword(password, salt)
 
-	var query string
-	if s.dbType == "sqlite" {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	} else {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)"
+	if u.SubscriptionPlan == "" {
+		u.SubscriptionPlan = "Free"
 	}
 
-	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid)
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	} else {
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+	}
+
+	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport)
 	return err
 }
 
@@ -358,13 +371,13 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), created_at FROM users WHERE username = $1"
 	}
 
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.CreatedAt)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -376,7 +389,7 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +398,7 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
@@ -412,12 +425,12 @@ func (s *Store) UpdateUserPassword(id int, newPassword string) error {
 func (s *Store) UpdateUserFull(u models.User) error {
 	var query string
 	if s.dbType == "sqlite" {
-		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ? WHERE id = ?"
+		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ? WHERE id = ?"
 	} else {
-		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7 WHERE id = $8"
+		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9 WHERE id = $10"
 	}
 
-	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.ID)
+	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.ID)
 	return err
 }
 

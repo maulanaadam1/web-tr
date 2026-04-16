@@ -441,6 +441,10 @@ function openUserModal(user = null) {
         currentPassWrapper.classList.toggle('hidden', !isEdit);
     }
     document.getElementById('userIsActive').checked = isEdit ? user.is_active : true;
+    
+    // Multi-tenant fields
+    document.getElementById('userSubscription').value = isEdit ? (user.subscription_plan || 'Free') : 'Free';
+    document.getElementById('userEnableSupport').checked = isEdit ? !!user.enable_support : false;
 
     title.textContent = isEdit ? `Edit User: ${user.full_name || user.username}` : 'Add New User';
     submitBtnText.textContent = isEdit ? 'Update User' : 'Create User';
@@ -502,6 +506,8 @@ async function submitUserForm() {
         whatsapp: document.getElementById('userWhatsapp').value,
         role: selectedRole,
         is_active: document.getElementById('userIsActive').checked,
+        subscription_plan: document.getElementById('userSubscription').value,
+        enable_support: document.getElementById('userEnableSupport').checked,
         broadcast_notifications: false,
         notification_paid: false,
     };
