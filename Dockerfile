@@ -50,7 +50,7 @@ EXPOSE 8080 8555
 RUN mkdir -p /app/data/snapshots /app/data/timelapse
 
 # Default environment variables
-ENV DATABASE_URL=file:streams.db
+ENV DATABASE_URL=file:data/streams.db
 ENV TZ=Asia/Jakarta
 
 # Run the application
