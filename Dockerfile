@@ -14,7 +14,7 @@ RUN go mod download
 # When a new commit is pushed to GitHub, this file changes → all subsequent
 # layers (COPY, go build) are automatically invalidated.
 # No manual changes needed — this is fully automatic.
-ADD https://api.github.com/repos/maulanaadam1/web-tr/commits/main /tmp/gitversion
+ADD https://api.github.com/repos/maulanaadam1/web-tr/commits/main?force=1 /tmp/gitversion
 # ---- END AUTO CACHE BUSTER ----
 
 # Copy source code and build
