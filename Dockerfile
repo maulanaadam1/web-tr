@@ -9,13 +9,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-# ---- AUTO CACHE BUSTER ----
-# Docker's ADD instruction with an HTTP URL is ALWAYS checked on every build.
-# When a new commit is pushed to GitHub, this file changes → all subsequent
-# layers (COPY, go build) are automatically invalidated.
-# No manual changes needed — this is fully automatic.
-ADD https://api.github.com/repos/maulanaadam1/web-tr/commits/main?force=1 /tmp/gitversion
-# ---- END AUTO CACHE BUSTER ----
+
 
 # Copy source code and build
 COPY . .
