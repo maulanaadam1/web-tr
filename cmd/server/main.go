@@ -459,7 +459,13 @@ func main() {
 				return
 			}
 			errorMsg := r.URL.Query().Get("error")
-			tmpl.Execute(w, map[string]interface{}{"Error": errorMsg})
+			successMsg := r.URL.Query().Get("success")
+			mode := r.URL.Query().Get("mode") // "register" or empty
+			tmpl.Execute(w, map[string]interface{}{
+				"Error":   errorMsg,
+				"Success": successMsg,
+				"Mode":    mode,
+			})
 			return
 		}
 
@@ -524,6 +530,49 @@ func main() {
 			MaxAge:   -1,
 		})
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+	})
+
+	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			username := r.FormValue("username")
+			password := r.FormValue("password")
+			fullName := r.FormValue("full_name")
+			email := r.FormValue("email")
+			whatsapp := r.FormValue("whatsapp")
+
+			if username == "" || password == "" {
+				http.Redirect(w, r, "/login?error=Username+and+password+are+required&mode=register", http.StatusSeeOther)
+				return
+			}
+
+			// Check if user exists
+			existing, _ := store.GetUserByUsername(username)
+			if existing != nil {
+				http.Redirect(w, r, "/login?error=Username+already+exists&mode=register", http.StatusSeeOther)
+				return
+			}
+
+			newUser := models.User{
+				Username:         username,
+				Role:             "user",
+				IsActive:         true,
+				SubscriptionPlan: "Free",
+				FullName:         fullName,
+				Email:            email,
+				Whatsapp:         whatsapp,
+			}
+
+			if err := store.CreateUserFull(newUser, password); err != nil {
+				log.Printf("Registration error: %v", err)
+				http.Redirect(w, r, "/login?error=Failed+to+register+user&mode=register", http.StatusSeeOther)
+				return
+			}
+
+			// Success, redirect to login
+			http.Redirect(w, r, "/login?success=Registration+successful.+Please+log+in.", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 	})
 
 	// --- User Management API ---

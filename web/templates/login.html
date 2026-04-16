@@ -114,7 +114,22 @@
                 </div>
                 {{end}}
 
-                <form action="/login" method="POST" class="space-y-6">
+                {{if .Success}}
+                <div class="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-start gap-3 backdrop-blur-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    <span>{{.Success}}</span>
+                </div>
+                {{end}}
+
+                <div class="flex p-1 mb-8 space-x-1 bg-slate-900/50 rounded-xl">
+                    <button id="tab-login" onclick="switchTab('login')" class="w-full py-2.5 text-sm font-medium rounded-lg text-white bg-brand-500 shadow transition-all">Sign In</button>
+                    <button id="tab-register" onclick="switchTab('register')" class="w-full py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">Sign Up</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="form-login" action="/login" method="POST" class="space-y-6">
                     <div class="space-y-1.5">
                         <label for="username" class="block text-sm font-medium text-slate-300">Username</label>
                         <div class="relative group">
@@ -147,6 +162,52 @@
                     </div>
                 </form>
 
+                <!-- Registration Form -->
+                <form id="form-register" action="/register" method="POST" class="space-y-5 hidden">
+                    <div class="space-y-1.5">
+                        <label for="reg-username" class="block text-sm font-medium text-slate-300">Username *</label>
+                        <input type="text" id="reg-username" name="username" required
+                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                            placeholder="johndoe123">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="reg-password" class="block text-sm font-medium text-slate-300">Password *</label>
+                        <input type="password" id="reg-password" name="password" required
+                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                            placeholder="••••••••">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label for="reg-fullname" class="block text-sm font-medium text-slate-300">Full Name</label>
+                        <input type="text" id="reg-fullname" name="full_name"
+                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                            placeholder="John Doe">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label for="reg-email" class="block text-sm font-medium text-slate-300">Email</label>
+                            <input type="email" id="reg-email" name="email"
+                                class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                                placeholder="john@example.com">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label for="reg-whatsapp" class="block text-sm font-medium text-slate-300">WhatsApp</label>
+                            <input type="text" id="reg-whatsapp" name="whatsapp"
+                                class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                                placeholder="+62812...">
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <button type="submit"
+                            class="w-full py-3.5 px-6 rounded-2xl bg-brand-600 hover:bg-brand-500 text-white font-bold tracking-wide shadow-lg shadow-brand-500/20 transform hover:-translate-y-0.5 active:translate-y-0 transition-all outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-slate-900">
+                            Create Account
+                        </button>
+                    </div>
+                </form>
+
                 <div class="mt-8 text-center bg-slate-900/40 -mx-8 -mb-8 p-6 rounded-b-3xl border-t border-slate-700/50">
                     <a href="/" class="inline-flex items-center justify-center gap-2 text-slate-400 text-sm font-medium hover:text-white transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -158,5 +219,32 @@
             </div>
         </div>
     </div>
+    <script>
+        // Use mode sent from server to select tab
+        const urlParams = new URLSearchParams(window.location.search);
+        let requestedMode = urlParams.get('mode') || "{{.Mode}}";
+        if (requestedMode === 'register') {
+            switchTab('register');
+        }
+
+        function switchTab(mode) {
+            const loginBtn = document.getElementById('tab-login');
+            const regBtn = document.getElementById('tab-register');
+            const loginForm = document.getElementById('form-login');
+            const regForm = document.getElementById('form-register');
+
+            if (mode === 'login') {
+                loginBtn.className = "w-full py-2.5 text-sm font-medium rounded-lg text-white bg-brand-500 shadow transition-all";
+                regBtn.className = "w-full py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all";
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+            } else {
+                regBtn.className = "w-full py-2.5 text-sm font-medium rounded-lg text-white bg-brand-500 shadow transition-all";
+                loginBtn.className = "w-full py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all";
+                regForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 </html>
