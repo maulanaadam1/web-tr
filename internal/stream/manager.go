@@ -206,8 +206,8 @@ func (m *Manager) SyncFromDB() error {
 	return nil
 }
 
-// ProbeStream runs ffprobe to check if the stream is reachable
-func (m *Manager) ProbeStream(url string) error {
+// ProbeStream runs ffprobe to check if the stream is reachable and returns its resolution (if found).
+func (m *Manager) ProbeStream(url string) (string, error) {
 	// Increased timeout from 5s to 15s for slow/distant streams
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -215,7 +215,8 @@ func (m *Manager) ProbeStream(url string) error {
 	// Adjust arguments. -rtsp_transport tcp is usually more reliable.
 	args := []string{
 		"-v", "error",
-		"-show_entries", "stream=codec_type",
+		"-show_entries", "stream=width,height",
+		"-of", "csv=p=0",
 		"-rtsp_transport", "tcp",
 		"-timeout", "10000000", // 10 second connection timeout (in microseconds)
 		"-i", url,
@@ -248,18 +249,33 @@ func (m *Manager) ProbeStream(url string) error {
 	if err != nil {
 		// Provide more helpful error messages
 		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("connection timeout (15s) - stream might be too slow or unreachable")
+			return "", fmt.Errorf("connection timeout (15s) - stream might be too slow or unreachable")
 		}
 
 		outputStr := string(output)
 		if outputStr != "" {
-			return fmt.Errorf("stream validation failed: %s", outputStr)
+			return "", fmt.Errorf("stream validation failed: %s", outputStr)
 		}
 
-		return fmt.Errorf("cannot connect to stream - check URL, credentials, and network connectivity")
+		return "", fmt.Errorf("cannot connect to stream - check URL, credentials, and network connectivity")
 	}
 
-	return nil
+	// Parse resolution from output
+	outputStr := strings.TrimSpace(string(output))
+	lines := strings.Split(outputStr, "\n")
+	resolution := "Unknown"
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && strings.Contains(line, ",") {
+			parts := strings.Split(line, ",")
+			if len(parts) >= 2 && parts[0] != "" && parts[1] != "" {
+				resolution = parts[0] + "x" + parts[1]
+				break
+			}
+		}
+	}
+
+	return resolution, nil
 }
 
 // DiscoveredStream holds info about a found camera

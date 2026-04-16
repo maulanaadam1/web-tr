@@ -127,6 +127,7 @@ function renderStreamsTable() {
                 <div class="text-base md:text-sm font-bold text-slate-900 dark:text-white uppercase mb-1 md:mb-0">${s.name}</div>
                 <div class="text-[11px] md:text-[10px] text-slate-500 font-mono flex items-center gap-1 mb-4 md:mb-0 truncate max-w-full">
                     <span class="text-slate-400">ID:</span> ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name} <span class="text-slate-400">(${s.backend || 'HLS'})</span>
+                    ${s.resolution ? `<span class="ml-2 font-bold text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">${s.resolution}</span>` : ''}
                 </div>
                 
                 <div class="md:hidden flex gap-2 w-full mt-3">
@@ -379,6 +380,16 @@ function renderUsersTable() {
 
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${roleBadgeClass}">${u.role}</span>
+            </td>
+            
+            <td class="hidden md:table-cell px-6 py-4">
+                <div class="flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200" title="Total Cameras">${u.total_cameras || 0}</span>
+                    <span class="text-slate-300 dark:text-slate-600">/</span>
+                    <span class="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900/30 px-1.5 py-0.5 rounded" title="Online">${u.online_cameras || 0}</span>
+                    <span class="text-slate-300 dark:text-slate-600">/</span>
+                    <span class="text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Offline/Error">${u.offline_cameras || 0}</span>
+                </div>
             </td>
 
             <td class="hidden md:table-cell px-6 py-4">
@@ -803,15 +814,20 @@ async function testStreamConnection() {
     resultSpan.textContent = "Testing connection...";
     resultSpan.className = "block text-right mt-1 text-xs font-medium text-slate-500 animate-pulse";
     
+    const nameInput = document.getElementById('originalStreamName')?.value || '';
+    
     try {
         const res = await fetch('/api/probe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: urlInput })
+            body: JSON.stringify({ url: urlInput, name: nameInput })
         });
         
         if (res.ok) {
-            resultSpan.textContent = "✓ Connection Successful";
+            const text = await res.text();
+            let resolution = '';
+            if (text.startsWith("OK|")) resolution = text.split("|")[1];
+            resultSpan.textContent = "✓ Connection Successful" + (resolution ? ` (${resolution})` : "");
             resultSpan.className = "block text-right mt-1 text-xs font-medium text-green-600";
         } else {
             const err = await res.text();
@@ -1324,6 +1340,11 @@ async function initMaintenanceMap() {
     }
     maintenanceMarkers = {};
 
+    const dashSelect = document.getElementById('dashboardCameraSelect');
+    if (dashSelect) {
+        dashSelect.innerHTML = '<option value="">-- Select Camera --</option>';
+    }
+
     const bounds = [];
     allStreams.forEach(s => {
         if (s.lat && s.lng) {
@@ -1362,6 +1383,14 @@ async function initMaintenanceMap() {
             maintenanceMarkers[s.name] = marker;
             bounds.push([s.lat, s.lng]);
         }
+        
+        // Add to dropdown even if no coordinates
+        if (dashSelect) {
+            const opt = document.createElement('option');
+            opt.value = s.name;
+            opt.textContent = `${s.name}${!s.online ? ' (Offline)' : ''}`;
+            dashSelect.appendChild(opt);
+        }
     });
 
     // Handle Popup Close - Reset Preview
@@ -1396,6 +1425,12 @@ function selectCameraOnMap(name) {
 
     selectedCameraOnMap = name;
     
+    // Update select dropdown
+    const dashSelect = document.getElementById('dashboardCameraSelect');
+    if (dashSelect) {
+        dashSelect.value = name;
+    }
+    
     // Highlight current
     if (maintenanceMarkers[name]) {
         maintenanceMarkers[name].getElement()?.classList.add('selected-marker');
@@ -1408,6 +1443,22 @@ function selectCameraOnMap(name) {
     document.getElementById('previewCamName').textContent = name;
 
     reloadDashboardPreview('webrtc');
+}
+
+function selectDashboardCamera(name) {
+    if (!name) {
+        deselectCameraOnMap();
+        return;
+    }
+    
+    // Check if the marker exists
+    if (maintenanceMarkers[name]) {
+        const marker = maintenanceMarkers[name];
+        maintenanceMap.flyTo(marker.getLatLng(), 14, { duration: 1.5 });
+        marker.openPopup();
+    }
+    
+    selectCameraOnMap(name);
 }
 
 function deselectCameraOnMap() {

@@ -149,6 +149,7 @@
             </button>
             {{ end }}
             
+            {{ if eq .Session.Role "admin" }}
             <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Environment</p>
             
             <a href="/" target="_blank" class="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400">
@@ -164,6 +165,7 @@
                 </svg>
                 Timelapse
             </button>
+            {{ end }}
             
             <div class="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
                 <a href="/logout" class="flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-medium transition-colors">
@@ -272,11 +274,15 @@
 
                     <!-- Preview Column -->
                     <div class="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[616px]">
-                        <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                        <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 flex-wrap gap-3">
                             <h3 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                                 Selected Camera Preview
                             </h3>
+                            <select id="dashboardCameraSelect" onchange="selectDashboardCamera(this.value)" class="w-full sm:w-auto px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-slate-800 dark:border-slate-700 dark:text-white transition-colors">
+                                <option value="">-- Select Camera --</option>
+                            </select>
+                        </div>
                             <div id="previewStatus" class="hidden animate-pulse px-2 py-0.5 rounded-full bg-green-100 text-green-600 text-[10px] font-bold uppercase tracking-wider">Live</div>
                         </div>
                         
@@ -425,6 +431,7 @@
                                     <th class="px-6 py-4 hidden md:table-cell">Email</th>
                                     <th class="px-6 py-4 hidden md:table-cell">WhatsApp</th>
                                     <th class="px-6 py-4 hidden md:table-cell">Role</th>
+                                    <th class="px-6 py-4 hidden md:table-cell w-32">Cameras</th>
                                     <th class="px-3 md:px-6 py-4 w-20 md:w-auto">Status</th>
                                     <th class="px-3 md:px-6 py-4 text-right w-24 md:w-auto">Actions</th>
                                 </tr>
@@ -690,6 +697,7 @@
                             </div>
 
                             <!-- Timelapse Settings -->
+                            {{ if eq .Session.Role "admin" }}
                             <div
                                 class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6 border border-blue-100 dark:border-blue-800">
                                 <h4
@@ -765,6 +773,7 @@
                                     </div>
                                 </div>
                             </div>
+                            {{ end }}
 
                             <!-- Quick Optimization Section -->
                             <div class="mb-6">
@@ -1230,7 +1239,9 @@
             </div>
         </div>
     </div>
-
+    <script>
+        window.CURRENT_ROLE = "{{ .Session.Role }}";
+    </script>
     <script src="/static/js/app.js?v=25"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed

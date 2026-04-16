@@ -542,7 +542,33 @@ func main() {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			json.NewEncoder(w).Encode(users)
+			
+			allStreams, _ := streamMgr.GetStreams()
+			
+			type UserWithStats struct {
+				models.User
+				TotalCameras   int `json:"total_cameras"`
+				OnlineCameras  int `json:"online_cameras"`
+				OfflineCameras int `json:"offline_cameras"`
+			}
+			
+			var result []UserWithStats
+			for _, u := range users {
+				stats := UserWithStats{User: u}
+				for _, s := range allStreams {
+					if s.UserID == u.ID {
+						stats.TotalCameras++
+						if streamMgr.GetOnlineStatus(s.Name) {
+							stats.OnlineCameras++
+						} else {
+							stats.OfflineCameras++
+						}
+					}
+				}
+				result = append(result, stats)
+			}
+			
+			json.NewEncoder(w).Encode(result)
 			return
 		}
 
@@ -1073,29 +1099,31 @@ func main() {
 		}
 
 		var req struct {
-			URL string `json:"url"`
+			Name string `json:"name"`
+			URL  string `json:"url"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		// Basic cleanup if user pasted internal format
 		rawUrl := req.URL
-		// Strip ffmpeg/exec prefixes for probing the source directly if possible.
-		// NOTE: if it is a complex ffmpeg command with filters, ffprobe might fail if treated as URL.
-		// For MVP, we probe the raw URL if it looks like a URL.
-		// Simple heuristic: if it starts with rtsp/http/tcp/udp
+		log.Printf("Probing stream: %s (name: %s)", rawUrl, req.Name)
 
-		log.Printf("Probing stream: %s", rawUrl)
-		if err := streamMgr.ProbeStream(rawUrl); err != nil {
+		resolution, err := streamMgr.ProbeStream(rawUrl)
+		if err != nil {
 			log.Printf("Probe failed: %v", err)
 			http.Error(w, fmt.Sprintf("Probe failed: %v", err), http.StatusBadRequest)
 			return
 		}
 
+		if req.Name != "" && resolution != "" && resolution != "Unknown" {
+			log.Printf("Updating resolution for %s: %s", req.Name, resolution)
+			store.UpdateStreamResolution(req.Name, resolution)
+		}
+
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		w.Write([]byte(fmt.Sprintf("OK|%s", resolution)))
 	}))
 
 	http.HandleFunc("/api/discover", sessionAuth(func(w http.ResponseWriter, r *http.Request) {

@@ -8,8 +8,9 @@ type Stream struct {
 	Lat       float64 `json:"lat,omitempty"`
 	Lng       float64 `json:"lng,omitempty"`
 	Enabled   bool    `json:"enabled"`
-	UserID    int     `json:"user_id"`
-	IsPublic  bool    `json:"is_public"`
+	UserID     int     `json:"user_id"`
+	IsPublic   bool    `json:"is_public"`
+	Resolution string  `json:"resolution,omitempty"`
 }
 
 type ApiConfig struct {

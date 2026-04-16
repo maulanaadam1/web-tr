@@ -142,6 +142,7 @@ func (s *Store) Init() error {
 			"is_enabled BOOLEAN DEFAULT 1",
 			"user_id INTEGER DEFAULT 1",
 			"is_public BOOLEAN DEFAULT 1",
+			"resolution TEXT DEFAULT ''",
 		}
 		for _, colDef := range streamCols {
 			name := strings.Split(colDef, " ")[0]
@@ -165,7 +166,8 @@ func (s *Store) Init() error {
 		ALTER TABLE streams
 		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
 		ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION DEFAULT 0,
-		ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT TRUE;`
+		ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT TRUE,
+		ADD COLUMN IF NOT EXISTS resolution TEXT DEFAULT '';`
 		_, _ = s.db.Exec(alterQuery)
 	}
 
@@ -201,7 +203,7 @@ func (s *Store) SeedDefaultAdmin() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution FROM streams ORDER BY name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +212,7 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic); err != nil {
+		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic, &st.Resolution); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -254,6 +256,17 @@ func (s *Store) RemoveStream(name string) error {
 		query = "DELETE FROM streams WHERE name = $1"
 	}
 	_, err := s.db.Exec(query, name)
+	return err
+}
+
+func (s *Store) UpdateStreamResolution(name string, resolution string) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE streams SET resolution = ? WHERE name = ?"
+	} else {
+		query = "UPDATE streams SET resolution = $1 WHERE name = $2"
+	}
+	_, err := s.db.Exec(query, resolution, name)
 	return err
 }
 
