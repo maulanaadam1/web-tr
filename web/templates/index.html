@@ -149,7 +149,6 @@
             </button>
             {{ end }}
             
-            {{ if eq .Session.Role "admin" }}
             <p class="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6">Environment</p>
             
             <a href="/" target="_blank" class="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400">
@@ -158,7 +157,8 @@
                 </svg>
                 Public View
             </a>
-            
+
+            {{ if eq .Session.Role "admin" }}
             <button type="button" onclick="switchView('timelapse')" data-view="timelapse" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
