@@ -1672,6 +1672,10 @@ function initCommandCenterMap() {
         lightLayer.addTo(globalCameraMap);
         document.getElementById('layeritem-Light')?.classList.add('active-layer');
     }
+    
+    window.addEventListener('resize', () => {
+        if (globalCameraMap) globalCameraMap.invalidateSize();
+    });
 
     setTimeout(() => {
         globalCameraMap.invalidateSize();
