@@ -86,23 +86,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeBtn = document.getElementById('themeToggleBtn');
     if (themeBtn) {
         themeBtn.addEventListener('click', () => {
+            // Toggle dark class atomically
             const html = document.documentElement;
-            const isDark = html.classList.contains('dark');
+            html.classList.toggle('dark');
 
-            if (isDark) {
-                html.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-                // Switch map to light style
-                if (globalCameraMap && window.mapLayers) {
-                    changeGlobalMapLayer('Light');
-                }
-            } else {
-                html.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-                // Switch map to dark style
-                if (globalCameraMap && window.mapLayers) {
-                    changeGlobalMapLayer('Dark');
-                }
+            // Persist preference AFTER toggle
+            const nowDark = html.classList.contains('dark');
+            localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+
+            // Sync map tile layer if Command Center map is initialized
+            if (globalCameraMap && window.mapLayers) {
+                changeGlobalMapLayer(nowDark ? 'Dark' : 'Light');
             }
         });
     }
