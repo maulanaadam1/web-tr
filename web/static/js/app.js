@@ -1652,8 +1652,8 @@ function initCommandCenterMap() {
 
     L.control.zoom({ position: 'bottomright' }).addTo(globalCameraMap);
 
-    const darkLayer = L.tileLayer('https://cartocdn-g9.p7s.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png', { maxZoom: 19 });
-    const lightLayer = L.tileLayer('https://cartocdn-g9.p7s.com/rastertiles/light_all/{z}/{x}/{y}@2x.png', { maxZoom: 19 });
+    const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' });
+    const lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' });
     const openMapsLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
     const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
 
