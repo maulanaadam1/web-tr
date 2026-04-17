@@ -605,18 +605,42 @@
                     #view-commandcenter .custom-pin { transition: all 0.3s; }
                     #view-commandcenter .marker-selected { filter: drop-shadow(0 0 6px #6366f1); z-index: 1000 !important; }
                 </style>
-                <div id="globalCameraMap" class="w-full flex-1 z-0 relative"></div>
 
                 <!-- Map Action Bar (Floating Filter on Top) -->
-                <div class="absolute top-4 left-4 z-[1000] flex flex-col items-start gap-2 w-[calc(100vw-5rem)] md:max-w-md transition-all duration-300 mx-auto pointer-events-none">
+                <div class="absolute top-4 left-4 z-[1000] flex flex-col items-start gap-2 w-[calc(100vw-5rem)] md:max-w-xl transition-all duration-300 mx-auto pointer-events-none">
                     <div class="pointer-events-auto flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 p-1 w-full overflow-hidden">
                         <button onclick="toggleSidePanel()" class="text-slate-500 hover:text-brand-600 p-2.5 transition-colors rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 shrink-0" title="Toggle Layers">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
                         </button>
-                        <div class="flex-1 relative flex items-center min-w-0 ml-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            <input type="text" id="mapSearchInput" oninput="debounceMapSearch(event.target.value)" placeholder="Search cameras..." class="w-full bg-transparent border-none text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 text-sm md:text-base py-2 pl-9 pr-2">
+                        
+                        <!-- Tabs -->
+                        <div class="flex items-center gap-1 border-r border-slate-200 dark:border-slate-700 pr-2 mr-2">
+                            <button id="btnCCMap" onclick="switchCCTab('map')" class="px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-colors">Map</button>
+                            <button id="btnCCGrid" onclick="switchCCTab('grid')" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">All Cameras</button>
                         </div>
+
+                        <div class="flex-1 relative flex items-center min-w-0 pr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                            <input type="text" id="mapSearchInput" oninput="debounceMapSearch(event.target.value)" placeholder="Search cameras..." class="w-full bg-transparent border-none text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 text-sm md:text-base py-2 pl-9">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 1: Map -->
+                <div id="commandcenter-map-container" class="w-full flex-1 z-0 relative flex flex-col pt-0">
+                    <div id="globalCameraMap" class="w-full flex-1 relative z-0"></div>
+                </div>
+
+                <!-- Tab 2: Grid -->
+                <div id="commandcenter-grid-container" class="hidden w-full flex-1 relative overflow-y-auto bg-slate-50 dark:bg-slate-950 pt-20 p-6">
+                    <div id="ccGridList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 content-start max-w-7xl mx-auto">
+                        <!-- Populated by JS -->
+                    </div>
+                    <!-- Pagination -->
+                    <div id="ccPaginationControls" class="flex justify-center items-center gap-4 py-8 mt-auto max-w-7xl mx-auto">
+                        <button onclick="changeCCPage(-1)" id="btnCCPrev" class="px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors text-sm font-semibold">Previous</button>
+                        <span id="ccPageIndicator" class="text-sm font-medium text-slate-500 dark:text-slate-400">Page 1 of 1</span>
+                        <button onclick="changeCCPage(1)" id="btnCCNext" class="px-4 py-2 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-colors text-sm font-semibold">Next</button>
                     </div>
                 </div>
 

@@ -1799,3 +1799,96 @@ function toggleSidePanel() {
         }
     }
 }
+
+// Command Center Grid View Logic
+let ccCurrentPage = 1;
+const ccItemsPerPage = 12;
+
+function switchCCTab(tab) {
+    const mapBtn = document.getElementById('btnCCMap');
+    const gridBtn = document.getElementById('btnCCGrid');
+    
+    if (tab === 'grid') {
+        document.getElementById('commandcenter-map-container').classList.add('hidden');
+        document.getElementById('commandcenter-grid-container').classList.remove('hidden');
+        
+        // Update styling
+        mapBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors";
+        gridBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-colors";
+        
+        renderCCGridPage(ccCurrentPage);
+    } else {
+        document.getElementById('commandcenter-grid-container').classList.add('hidden');
+        document.getElementById('commandcenter-map-container').classList.remove('hidden');
+        
+        // Update styling
+        gridBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors";
+        mapBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-colors";
+        
+        if (globalCameraMap) globalCameraMap.invalidateSize();
+    }
+}
+
+function renderCCGridPage(page) {
+    const container = document.getElementById('ccGridList');
+    if(!container) return;
+    
+    const startIndex = (page - 1) * ccItemsPerPage;
+    const endIndex = startIndex + ccItemsPerPage;
+    const streamsToShow = allStreams.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(allStreams.length / ccItemsPerPage) || 1;
+
+    container.innerHTML = '';
+
+    if (streamsToShow.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white/50 dark:bg-slate-900/50 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
+                <p class="text-slate-500">No cameras available</p>
+            </div>`;
+    } else {
+        streamsToShow.forEach(stream => {
+            const card = document.createElement('div');
+            card.className = "bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800 transition-all duration-300 group cursor-pointer";
+            card.onclick = () => previewStream(stream.name);
+            card.innerHTML = `
+                <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
+                    <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.name}">${stream.name}</h3>
+                    <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
+                </div>
+                <div class="relative w-full bg-black aspect-video group/video">
+                    <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-cover bg-center cursor-pointer group-hover/video:scale-[1.02] transition-transform" style="background-image: url('/api/snapshot?name=${encodeURIComponent(stream.name)}');">
+                        <div class="bg-black/40 absolute inset-0 text-white/10 flex items-center justify-center">
+                            <svg class="w-16 h-16 opacity-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                        </div>
+                    </div>
+                </div>`;
+            container.appendChild(card);
+        });
+    }
+
+    document.getElementById('ccPageIndicator').innerText = `Page ${page} of ${totalPages}`;
+    document.getElementById('btnCCPrev').disabled = (page === 1);
+    document.getElementById('btnCCNext').disabled = (page === totalPages || totalPages === 0);
+}
+
+function changeCCPage(delta) {
+    const totalPages = Math.ceil(allStreams.length / ccItemsPerPage) || 1;
+    ccCurrentPage += delta;
+    if (ccCurrentPage < 1) ccCurrentPage = 1;
+    if (ccCurrentPage > totalPages) ccCurrentPage = totalPages;
+    renderCCGridPage(ccCurrentPage);
+    document.getElementById('commandcenter-grid-container').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goToMapMarker(name) {
+    switchCCTab('map');
+    const marker = commandCenterMarkers[name];
+    if (marker) {
+        globalCameraMap.flyTo(marker.getLatLng(), 16, { duration: 1.5 });
+        setTimeout(() => marker.openPopup(), 1600);
+    } else {
+        alert("Location data not available for this camera.");
+    }
+}
