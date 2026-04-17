@@ -78,29 +78,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname === '/commandcenter') {
         switchView('commandcenter');
     } else {
-        // Assume /admin or fallback
         switchView('dashboard');
     }
-
-    // Theme Toggle Button: toggle dark/light mode AND sync map layer
-    const themeBtn = document.getElementById('themeToggleBtn');
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            // Toggle dark class atomically
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-
-            // Persist preference AFTER toggle
-            const nowDark = html.classList.contains('dark');
-            localStorage.setItem('theme', nowDark ? 'dark' : 'light');
-
-            // Sync map tile layer if Command Center map is initialized
-            if (globalCameraMap && window.mapLayers) {
-                changeGlobalMapLayer(nowDark ? 'Dark' : 'Light');
-            }
-        });
-    }
 });
+
+// Global theme toggle — called directly via onclick="toggleTheme()" from the button
+function toggleTheme() {
+    const html = document.documentElement;
+    html.classList.toggle('dark');
+    const nowDark = html.classList.contains('dark');
+    localStorage.setItem('theme', nowDark ? 'dark' : 'light');
+    // Sync Leaflet map tile layer if Command Center map is open
+    if (typeof globalCameraMap !== 'undefined' && globalCameraMap && window.mapLayers) {
+        changeGlobalMapLayer(nowDark ? 'Dark' : 'Light');
+    }
+}
 
 // --- Stream Management ---
 let allStreams = [];
