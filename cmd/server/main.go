@@ -706,6 +706,16 @@ func main() {
 			return
 		}
 
+		tmpl, err := template.ParseFiles("web/templates/landing.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		tmpl.Execute(w, nil)
+	})
+
+	http.HandleFunc("/commandcenter", func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/public.html", "web/templates/player.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -738,7 +748,7 @@ func main() {
 			}
 		}
 
-		log.Printf("Rendering public root with %d streams", len(enabledStreams))
+		log.Printf("Rendering command center with %d streams", len(enabledStreams))
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams": enabledStreams,
 		})
