@@ -81,6 +81,31 @@ document.addEventListener('DOMContentLoaded', () => {
         // Assume /admin or fallback
         switchView('dashboard');
     }
+
+    // Theme Toggle Button: toggle dark/light mode AND sync map layer
+    const themeBtn = document.getElementById('themeToggleBtn');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+            const html = document.documentElement;
+            const isDark = html.classList.contains('dark');
+
+            if (isDark) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+                // Switch map to light style
+                if (globalCameraMap && window.mapLayers) {
+                    changeGlobalMapLayer('Light');
+                }
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+                // Switch map to dark style
+                if (globalCameraMap && window.mapLayers) {
+                    changeGlobalMapLayer('Dark');
+                }
+            }
+        });
+    }
 });
 
 // --- Stream Management ---
