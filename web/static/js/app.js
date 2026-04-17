@@ -1017,12 +1017,9 @@ async function executeBulkAction(action) {
 
 // --- Theme & Metrics ---
 function initTheme() {
-    const html = document.documentElement;
-    if (localStorage.getItem('theme') === 'dark' || !localStorage.getItem('theme')) html.classList.add('dark');
-    document.getElementById('themeToggleBtn')?.addEventListener('click', () => {
-        if (html.classList.contains('dark')) { html.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
-        else { html.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
-    });
+    // Theme is already applied in <head> via inline script.
+    // This function is kept for any future theme-related initialization.
+    // The toggle is handled by toggleTheme() called via onclick on #themeToggleBtn.
 }
 
 async function fetchSysInfo() {
