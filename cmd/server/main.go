@@ -715,46 +715,7 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
-	http.HandleFunc("/commandcenter", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/public.html", "web/templates/player.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		sess, auth := r.Context().Value(sessionContextKey).(Session)
-
-		var enabledStreams []models.Stream
-		var allStreams []models.Stream
-
-		allStreams, err = streamMgr.GetStreams()
-		if err == nil {
-			if auth {
-				allStreams = getUserVisibleStreams(sess, allStreams, store)
-			} else {
-				// Public view: only show IsPublic == true
-				var pubs []models.Stream
-				for _, s := range allStreams {
-					if s.IsPublic {
-						pubs = append(pubs, s)
-					}
-				}
-				allStreams = pubs
-			}
-			for _, s := range allStreams {
-				if s.Enabled {
-					enabledStreams = append(enabledStreams, s)
-				}
-			}
-		}
-
-		log.Printf("Rendering command center with %d streams", len(enabledStreams))
-		tmpl.Execute(w, map[string]interface{}{
-			"Streams": enabledStreams,
-		})
-	})
-
-	http.HandleFunc("/admin", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+	adminHandler := sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -770,12 +731,15 @@ func main() {
 		sess := r.Context().Value(sessionContextKey).(Session)
 		streams = getUserVisibleStreams(sess, streams, store)
 
-		log.Printf("Rendering admin dashboard with %d streams", len(streams))
+		log.Printf("Rendering dashboard view with %d streams", len(streams))
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams": streams,
 			"Session": sess,
 		})
-	}))
+	})
+
+	http.HandleFunc("/commandcenter", adminHandler)
+	http.HandleFunc("/admin", adminHandler)
 
 	http.HandleFunc("/api/streams", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		sess := r.Context().Value(sessionContextKey).(Session)

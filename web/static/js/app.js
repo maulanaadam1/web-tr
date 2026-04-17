@@ -8,13 +8,23 @@ let selectedCameraOnMap = null;
 function switchView(viewName) {
     currentView = viewName;
 
+    // Update URL without page reload
+    if (viewName === 'commandcenter') {
+        history.pushState(null, '', '/commandcenter');
+    } else {
+        history.pushState(null, '', '/admin');
+    }
+
     // Hide all views
-    document.querySelectorAll('main > div').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('#mainContainer > div').forEach(el => el.classList.add('hidden'));
     
     // Show requested view
     const target = document.getElementById(`view-${viewName}`);
     if (target) {
         target.classList.remove('hidden');
+        if (viewName === 'commandcenter') {
+            target.classList.add('flex');
+        }
     }
 
     // Update Sidebar Styling
@@ -38,9 +48,19 @@ function switchView(viewName) {
     }
 
     // Update Breadcrumb if needed
-    const breadcrumb = document.querySelector('header .text-slate-900');
+    const breadcrumb = document.getElementById('headerBreadcrumb');
     if (breadcrumb) {
-        breadcrumb.textContent = viewName.charAt(0).toUpperCase() + viewName.slice(1);
+        breadcrumb.textContent = viewName === 'commandcenter' ? 'Command Center' : (viewName.charAt(0).toUpperCase() + viewName.slice(1));
+    }
+
+    // Handle view-specific initialization
+    if (viewName === 'commandcenter') {
+        if (allStreams.length === 0) {
+            loadStreams().then(initCommandCenterMap);
+        } else {
+            initCommandCenterMap();
+        }
+        return; // Don't run other dashboard stuff
     }
 
     // Refresh Data for specific views
@@ -52,6 +72,16 @@ function switchView(viewName) {
     if (viewName === 'users') loadUsers();
     if (viewName === 'timelapse') initTimelapseView();
 }
+
+// Ensure correct view on initial page load based on pathname
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.location.pathname === '/commandcenter') {
+        switchView('commandcenter');
+    } else {
+        // Assume /admin or fallback
+        switchView('dashboard');
+    }
+});
 
 // --- Stream Management ---
 let allStreams = [];
@@ -1599,4 +1629,169 @@ function closeCameraPreviewModal() {
     // Clear iframe to stop the stream
     setTimeout(() => { if (player) player.innerHTML = ''; }, 300);
     document.removeEventListener('keydown', _previewEscHandler);
+}
+
+// ===== Command Center Map Logic =====
+let globalCameraMap = null;
+let commandCenterMarkers = {};
+
+function initCommandCenterMap() {
+    if (globalCameraMap) {
+        setTimeout(() => {
+            globalCameraMap.invalidateSize();
+            renderCommandCenterMarkers();
+        }, 300);
+        return;
+    }
+    
+    // Default coordinates (Indonesia center)
+    globalCameraMap = L.map('globalCameraMap', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([-2.5489, 118.0149], 5);
+
+    L.control.zoom({ position: 'bottomright' }).addTo(globalCameraMap);
+
+    const darkLayer = L.tileLayer('https://cartocdn-g9.p7s.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png', { maxZoom: 19 });
+    const lightLayer = L.tileLayer('https://cartocdn-g9.p7s.com/rastertiles/light_all/{z}/{x}/{y}@2x.png', { maxZoom: 19 });
+    const openMapsLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
+
+    window.mapLayers = {
+        'Dark': darkLayer,
+        'Light': lightLayer,
+        'OpenMaps': openMapsLayer,
+        'Satellite': satelliteLayer
+    };
+
+    const isDarkMode = document.documentElement.classList.contains('dark');
+    if (isDarkMode) {
+        darkLayer.addTo(globalCameraMap);
+        document.getElementById('layeritem-Dark')?.classList.add('active-layer');
+    } else {
+        lightLayer.addTo(globalCameraMap);
+        document.getElementById('layeritem-Light')?.classList.add('active-layer');
+    }
+
+    setTimeout(() => {
+        globalCameraMap.invalidateSize();
+        renderCommandCenterMarkers();
+    }, 300);
+}
+
+function renderCommandCenterMarkers() {
+    if (!globalCameraMap) return;
+
+    // Clear existing
+    Object.values(commandCenterMarkers).forEach(m => globalCameraMap.removeLayer(m));
+    commandCenterMarkers = {};
+    const bounds = [];
+
+    allStreams.forEach(s => {
+        if (s.enabled !== false && s.lat && s.lng) {
+            const htmlIcon = `
+                <div class="custom-pin relative flex items-center justify-center w-8 h-8 group">
+                    <div class="absolute inset-0 bg-brand-500 rounded-full opacity-20 group-hover:animate-ping"></div>
+                    <div class="relative bg-white dark:bg-slate-800 p-1.5 rounded-full shadow-xl border-2 border-brand-500 flex items-center justify-center z-10 transition-transform group-hover:scale-110">
+                        <svg class="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                </div>`;
+
+            const icon = L.divIcon({
+                html: htmlIcon,
+                className: '',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+                popupAnchor: [0, -16]
+            });
+
+            const marker = L.marker([s.lat, s.lng], { icon }).addTo(globalCameraMap);
+            
+            const host = window.location.host;
+            const iframeSrc = `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+            
+            const popupContent = `
+                <div class="w-72 sm:w-80 -m-4 overflow-hidden rounded-xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
+                    <div class="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
+                        <h3 class="font-bold text-slate-800 dark:text-white truncate pr-2 text-sm max-w-[80%]">${s.name}</h3>
+                        ${s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500"></span>'}
+                    </div>
+                    <div class="bg-black w-full aspect-video relative group">
+                        <iframe src="${iframeSrc}" class="w-full h-full border-none pointer-events-auto" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+                        <div class="absolute inset-0 border border-white/10 rounded-b-xl pointer-events-none"></div>
+                    </div>
+                </div>`;
+
+            marker.bindPopup(popupContent, {
+                maxWidth: 400,
+                minWidth: 280,
+                className: 'custom-popup-container',
+                closeButton: true,
+                autoPanPadding: [50, 50]
+            });
+
+            commandCenterMarkers[s.name] = marker;
+            bounds.push([s.lat, s.lng]);
+        }
+    });
+
+    if (bounds.length > 0) {
+        globalCameraMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+    }
+}
+
+function debounceMapSearch(query) {
+    clearTimeout(window.mapSearchTimer);
+    window.mapSearchTimer = setTimeout(() => {
+        const q = String(query).toLowerCase().trim();
+        let found = false;
+        
+        Object.keys(commandCenterMarkers).forEach(name => {
+            const marker = commandCenterMarkers[name];
+            
+            // Close all popups first
+            marker.closePopup();
+
+            if (q !== '' && name.toLowerCase().includes(q)) {
+                if (!found) {
+                    globalCameraMap.flyTo(marker.getLatLng(), 15, { duration: 1.5 });
+                    setTimeout(() => marker.openPopup(), 1500);
+                    found = true;
+                }
+            }
+        });
+    }, 500);
+}
+
+function changeGlobalMapLayer(layerName) {
+    if (!globalCameraMap || !window.mapLayers) return;
+    
+    // Remove all
+    Object.values(window.mapLayers).forEach(layer => {
+        if (globalCameraMap.hasLayer(layer)) {
+            globalCameraMap.removeLayer(layer);
+        }
+    });
+    
+    // Add selected
+    window.mapLayers[layerName].addTo(globalCameraMap);
+    
+    // Update UI
+    document.querySelectorAll('#mapStyleButtons .layer-item').forEach(btn => {
+        btn.classList.remove('active-layer');
+    });
+    document.getElementById(`layeritem-${layerName}`)?.classList.add('active-layer');
+}
+
+function toggleSidePanel() {
+    const panel = document.getElementById('mapSidePanel');
+    if (panel) {
+        if (panel.classList.contains('-translate-x-full')) {
+            panel.classList.remove('-translate-x-full');
+            panel.classList.add('translate-x-0');
+        } else {
+            panel.classList.remove('translate-x-0');
+            panel.classList.add('-translate-x-full');
+        }
+    }
 }
