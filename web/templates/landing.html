@@ -143,9 +143,12 @@
         </div>
     </section>
 
-    <!-- ===== QUICK TRY SECTION ===== -->
-    <section id="try" class="py-8 pb-24 relative z-10">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- ===== QUICK TRY SLIDE ===== -->
+    <section id="try" class="min-h-[70vh] flex items-center py-20 lg:py-32 bg-slate-100/50 dark:bg-slate-900/20 relative z-10 border-y border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
+        <div class="absolute inset-0 pointer-events-none opacity-5">
+            <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px]"></div>
+        </div>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10">
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-extrabold">Coba RTSP2go Sekarang</h2>
                 <p class="mt-3 text-slate-600 dark:text-slate-400">Masukkan URL RTSP kamera Anda dan langsung broadcast ke web — gratis, tanpa registrasi.</p>
@@ -500,13 +503,15 @@
                 nav.classList.remove('bg-white/80', 'dark:bg-slate-950/80', 'backdrop-blur-md', 'shadow-sm', 'border-b', 'border-slate-200', 'dark:border-slate-800');
             }
 
-            // Show floating bar after scrolling past hero (200px)
+            // Show floating bar immediately
             const bar = document.getElementById('floatingTryBar');
-            if (window.scrollY > 200) {
-                bar.classList.add('visible');
-            } else {
-                bar.classList.remove('visible');
-            }
+            bar.classList.add('visible');
+        });
+
+        // Ensure visible on load too
+        document.addEventListener('DOMContentLoaded', () => {
+            const bar = document.getElementById('floatingTryBar');
+            bar.classList.add('visible');
         });
 
         // ===== Quick Try Logic (shared between section and floating bar) =====
