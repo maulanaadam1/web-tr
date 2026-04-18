@@ -37,7 +37,6 @@ type CameraConfig struct {
 }
 
 type Config struct {
-	VPSIP           string         `json:"vps_ip"`
 	ServerURL       string         `json:"server_url"`
 	CloudflareToken string         `json:"cloudflare_token"`
 	VPNMode         string         `json:"vpn_mode"`
@@ -236,9 +235,6 @@ func buildDashboard() fyne.CanvasObject {
 }
 
 func buildSettings() fyne.CanvasObject {
-	entryIP := widget.NewEntry()
-	entryIP.SetText(config.VPSIP)
-
 	entryURL := widget.NewEntry()
 	entryURL.SetPlaceHolder("e.g., https://stream.campod.my.id")
 	entryURL.SetText(config.ServerURL)
@@ -312,7 +308,6 @@ func buildSettings() fyne.CanvasObject {
 	}
 
 	btnSave := widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), func() {
-		config.VPSIP = entryIP.Text
 		config.ServerURL = entryURL.Text
 		config.CloudflareToken = entryCF.Text
 
@@ -344,7 +339,6 @@ func buildSettings() fyne.CanvasObject {
 			widget.NewLabelWithStyle("RTSP2go Cloud & Network", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			widget.NewForm(
 				widget.NewFormItem("Server URL", entryURL),
-				widget.NewFormItem("VPS IP (Fallback)", entryIP),
 				widget.NewFormItem("Cloudflare Token", entryCF),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
 			),
@@ -492,7 +486,7 @@ func deleteCamera(inst *TunnelInstance) {
 
 				// Remove from config slice
 				for i, c := range config.Cameras {
-					if c.Name == inst.Camera.Name && c.VPSPort == inst.Camera.VPSPort {
+					if c.Name == inst.Camera.Name {
 						config.Cameras = append(config.Cameras[:i], config.Cameras[i+1:]...)
 						break
 					}
@@ -606,7 +600,7 @@ func showEditCameraDialog(inst *TunnelInstance) {
 
 		// Update the config
 		for i, cam := range config.Cameras {
-			if cam.Name == oldName && cam.VPSPort == inst.Camera.VPSPort {
+			if cam.Name == oldName {
 				config.Cameras[i].Name = entryName.Text
 				config.Cameras[i].LocalRTSP = entryRTSP.Text
 				break
@@ -736,15 +730,12 @@ func getServerAPIURL() string {
 		}
 		return u
 	}
-	if config.VPSIP != "" {
-		return fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
-	}
 	return ""
 }
 
 func startAll() {
-	if config.VPSIP == "" {
-		dialog.ShowError(fmt.Errorf("Please set VPS IP in Settings first."), myWindow)
+	if config.ServerURL == "" {
+		dialog.ShowError(fmt.Errorf("Please set Server URL in Settings first."), myWindow)
 		return
 	}
 
@@ -1158,7 +1149,7 @@ func registerToBackend(inst *TunnelInstance) {
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
 	if apiURL == "" {
-		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL or VPS IP not set.", camName))
+		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", camName))
 		return
 	}
 	var originalRTSP string
@@ -1223,7 +1214,7 @@ func registerToBackend(inst *TunnelInstance) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		addLog(fmt.Sprintf("[%s] Auto-Register Failed: Cannot reach VPS backend via HTTP. Is port 8080 open? (%v)", camName, err))
+		addLog(fmt.Sprintf("[%s] Auto-Register Failed: Cannot reach VPS backend via HTTP. (%v)", camName, err))
 		return
 	}
 	defer resp.Body.Close()
@@ -1238,14 +1229,15 @@ func registerToBackend(inst *TunnelInstance) {
 }
 
 func deregisterFromBackend(camName string) {
-	if config == nil || config.VPSIP == "" {
+	apiURL := getServerAPIURL()
+	if apiURL == "" {
 		return
 	}
+	// Append query param to the base API URL
+	fullURL := fmt.Sprintf("%s?name=%s", apiURL, url.QueryEscape(camName))
+	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", camName, fullURL))
 
-	apiURL := fmt.Sprintf("http://%s:8080/api/streams?name=%s", config.VPSIP, url.QueryEscape(camName))
-	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", camName, apiURL))
-
-	req, err := http.NewRequest(http.MethodDelete, apiURL, nil)
+	req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
 	if err != nil {
 		addLog(fmt.Sprintf("[%s] Auto-Deregister Error: %v", camName, err))
 		return
@@ -1269,8 +1261,8 @@ func deregisterFromBackend(camName string) {
 
 // VPS Diagnostics
 func diagnoseVPS() {
-	if config == nil || config.VPSIP == "" {
-		dialog.ShowError(fmt.Errorf("VPS IP is not configured. Go to Settings first."), myWindow)
+	if config == nil || config.ServerURL == "" {
+		dialog.ShowError(fmt.Errorf("Server URL is not configured. Go to Settings first."), myWindow)
 		return
 	}
 
@@ -1279,37 +1271,29 @@ func diagnoseVPS() {
 	go func() {
 		results := ""
 
-		// 1. Check SSH Port (22)
-		addLog("[Diagnose] Testing SSH port 22...")
-		connSSH, err := net.DialTimeout("tcp", fmt.Sprintf("%s:22", config.VPSIP), 5*time.Second)
-		if err != nil {
-			results += "❌ SSH (port 22): UNREACHABLE\n    " + err.Error() + "\n\n"
-			addLog("[Diagnose] SSH port 22: UNREACHABLE")
+		// 1. Check RTSP2go API connection
+		addLog("[Diagnose] Testing RTSP2go API connection...")
+		apiURL := getServerAPIURL()
+		if apiURL == "" {
+			results += "❌ RTSP2go API: ERROR (Server URL not configured)\n\n"
 		} else {
-			connSSH.Close()
-			results += "✅ SSH (port 22): OK\n\n"
-			addLog("[Diagnose] SSH port 22: OK")
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Get(apiURL)
+			if err != nil {
+				results += "❌ RTSP2go API: UNREACHABLE\n    " + err.Error() + "\n\n"
+				addLog("[Diagnose] RTSP2go API: UNREACHABLE — Auto-Register will fail!")
+			} else {
+				body, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				results += fmt.Sprintf("✅ RTSP2go API: OK (Code: %d)\n    Cameras Registered: %s\n\n", resp.StatusCode, string(body))
+				addLog(fmt.Sprintf("[Diagnose] RTSP2go API: OK — Found streams: %s", string(body)))
+			}
 		}
 
-		// 2. Check RTSP2go API (port 8080)
-		addLog("[Diagnose] Testing RTSP2go API (port 8080)...")
-		apiURL := fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
-		client := &http.Client{Timeout: 5 * time.Second}
-		resp, err := client.Get(apiURL)
-		if err != nil {
-			results += "❌ RTSP2go API (port 8080): UNREACHABLE\n    " + err.Error() + "\n\n"
-			addLog("[Diagnose] RTSP2go API: UNREACHABLE — Auto-Register will fail!")
-		} else {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			results += fmt.Sprintf("✅ RTSP2go API (port 8080): OK (Code: %d)\n    Cameras Registered: %s\n\n", resp.StatusCode, string(body))
-			addLog(fmt.Sprintf("[Diagnose] RTSP2go API: OK — Found streams: %s", string(body)))
-		}
-
-		// 3. Show registered cameras from the local config
+		// 2. Show registered cameras from the local config
 		results += fmt.Sprintf("📋 Local Config: %d cameras configured\n", len(config.Cameras))
 		for _, cam := range config.Cameras {
-			results += fmt.Sprintf("    • %s → VPS Port %d\n", cam.Name, cam.VPSPort)
+			results += fmt.Sprintf("    • %s\n", cam.Name)
 		}
 
 		addLog("--- VPS Diagnostics Complete ---")
@@ -1319,13 +1303,20 @@ func diagnoseVPS() {
 }
 
 func openDashboard() {
-	if config == nil || config.VPSIP == "" {
-		dialog.ShowError(fmt.Errorf("VPS IP is not configured. Go to Settings first."), myWindow)
+	if config == nil || config.ServerURL == "" {
+		dialog.ShowError(fmt.Errorf("Server URL is not configured. Go to Settings first."), myWindow)
 		return
 	}
 
-	dashURL := fmt.Sprintf("http://%s:8080", config.VPSIP)
-	addLog(fmt.Sprintf("Opening VPS Dashboard: %s", dashURL))
+	dashURL := config.ServerURL
+	if !strings.HasPrefix(dashURL, "http") {
+		dashURL = "http://" + dashURL
+	}
+	// Try to get base domain (remove /api/streams if present)
+	dashURL = strings.Split(dashURL, "/api/")[0]
+	dashURL = strings.TrimSuffix(dashURL, "/")
+
+	addLog(fmt.Sprintf("Opening Dashboard: %s", dashURL))
 
 	// Open in default browser
 	exec.Command("rundll32", "url.dll,FileProtocolHandler", dashURL).Start()
