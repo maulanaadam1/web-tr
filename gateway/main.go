@@ -254,12 +254,14 @@ func buildSettings() fyne.CanvasObject {
 	entryApiPass.SetPlaceHolder("Password")
 	entryApiPass.SetText(config.ApiPassword)
 
-	vpnModes := []string{"L2TP VPN", "None (Direct/Tunnel Only)"}
+	vpnModes := []string{"ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
 	vpnModeSelect := widget.NewSelect(vpnModes, nil)
 	if config.VPNMode == "none" {
 		vpnModeSelect.SetSelected("None (Direct/Tunnel Only)")
-	} else {
+	} else if config.VPNMode == "l2tp" {
 		vpnModeSelect.SetSelected("L2TP VPN")
+	} else {
+		vpnModeSelect.SetSelected("ZeroTier VPN")
 	}
 
 	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)", "FFmpeg (Transcode/Pro)"}
@@ -326,7 +328,7 @@ func buildSettings() fyne.CanvasObject {
 		dynamicSection.Objects = nil
 		if selected == "L2TP VPN" {
 			dynamicSection.Add(l2tpSection)
-		} else {
+		} else if selected == "ZeroTier VPN" {
 			dynamicSection.Add(ztSection)
 		}
 		dynamicSection.Refresh()
@@ -340,8 +342,10 @@ func buildSettings() fyne.CanvasObject {
 
 		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
 			config.VPNMode = "none"
-		} else {
+		} else if vpnModeSelect.Selected == "L2TP VPN" {
 			config.VPNMode = "l2tp"
+		} else {
+			config.VPNMode = "zerotier"
 		}
 
 		switch engineSelect.Selected {
