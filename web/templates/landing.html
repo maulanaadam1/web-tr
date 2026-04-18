@@ -178,10 +178,10 @@
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
                             Your RTSP Link (H.264)
-                            <span class="ml-1 text-slate-400 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span>
+                            <span class="ml-1 text-brand-500 cursor-pointer hover:text-brand-600" onclick="openRtspGuide()">ⓘ Guide</span>
                         </label>
                         <div class="relative">
-                            <input id="tryRtspUrl" type="text" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
+                            <input id="tryRtspUrl" type="text" required placeholder="rtsp://admin:password@192.168.1.100:554/live" class="try-bar-input dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
                         </div>
                     </div>
                     <!-- Broadcast Button -->
@@ -409,6 +409,56 @@
     </div>
 
 
+    <!-- ===== RTSP GUIDE MODAL ===== -->
+    <div id="rtspGuideModal" class="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="relative w-full max-w-2xl mx-4 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 class="font-bold text-slate-900 dark:text-white text-lg">Panduan Format URL RTSP</h3>
+                <button onclick="closeRtspGuide()" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 max-h-[70vh] overflow-y-auto">
+                <div class="space-y-6">
+                    <div>
+                        <h4 class="font-bold text-brand-600 dark:text-brand-400 mb-2">Struktur Dasar</h4>
+                        <code class="block p-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-sm font-mono text-slate-700 dark:text-slate-300">rtsp://username:password@IPaddress:554/path</code>
+                    </div>
+                    
+                    <div>
+                        <h4 class="font-bold text-slate-900 dark:text-white mb-3">Contoh Berdasarkan Merk</h4>
+                        <div class="space-y-3">
+                            <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Generic / Umum</p>
+                                <code class="text-xs break-all text-brand-600 dark:text-brand-400">rtsp://admin:password@192.168.1.100:554/h264/ch1/main/av_stream</code>
+                            </div>
+                            <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Dahua</p>
+                                <code class="text-xs break-all text-brand-600 dark:text-brand-400">rtsp://admin:admin@10.7.6.67:554/cam/realmonitor?channel=1&subtype=1</code>
+                            </div>
+                            <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Hikvision</p>
+                                <code class="text-xs break-all text-brand-600 dark:text-brand-400">rtsp://admin:12345@192.168.1.210:554/Streaming/Channels/101</code>
+                            </div>
+                            <div class="p-4 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <p class="text-xs font-bold text-slate-400 uppercase mb-1">Samsung / Panasonic</p>
+                                <code class="text-xs break-all text-brand-600 dark:text-brand-400">rtsp://192.168.1.200/h264/media.smp</code>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                        <p class="text-sm text-blue-800 dark:text-blue-300">
+                            <strong>Tips:</strong> Sebagian besar kamera menggunakan port default **554**. Pastikan kamera Anda mendukung kompresi **H.264** agar bisa tampil lancar di browser.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 text-center">
+                <button onclick="closeRtspGuide()" class="px-6 py-2 bg-slate-900 dark:bg-white dark:text-slate-900 text-white font-bold rounded-lg text-sm">Dimengerti</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ===== FLOATING STICKY TRY BAR ===== -->
     <div id="floatingTryBar">
@@ -418,7 +468,7 @@
 
                 <!-- Label row (desktop only) -->
                 <div class="hidden md:grid grid-cols-[1fr_auto] gap-4 mb-2">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Your RTSP Link (H.264) <span class="text-slate-500 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span></span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Your RTSP Link (H.264) <span class="text-brand-400 cursor-pointer hover:text-brand-300" onclick="openRtspGuide()">ⓘ Guide</span></span>
                     <span class="w-[160px]"></span>
                 </div>
 
@@ -427,7 +477,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
                     <!-- RTSP URL -->
                     <div class="relative group/input">
-                        <input id="ftbRtspUrl" type="text" required placeholder="rtsp://root:vivo1234@10.85.50.53:554/live1s2.sdp" class="ftb-input px-4" oninput="syncFtbToMain()">
+                        <input id="ftbRtspUrl" type="text" required placeholder="rtsp://admin:password@192.168.1.100:554/live" class="ftb-input px-4" oninput="syncFtbToMain()">
                     </div>
                     <!-- Button -->
                     <button onclick="ftbBroadcast()" class="whitespace-nowrap h-[46px] px-8 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 text-sm z-20">
@@ -629,7 +679,28 @@
             if (e.target === this) closeStreamModal();
         });
 
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStreamModal(); });
+        document.addEventListener('keydown', (e) => { 
+            if (e.key === 'Escape') {
+                closeStreamModal();
+                closeRtspGuide();
+            }
+        });
+
+        function openRtspGuide() {
+            const modal = document.getElementById('rtspGuideModal');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+        }
+
+        function closeRtspGuide() {
+            const modal = document.getElementById('rtspGuideModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.classList.remove('opacity-100');
+        }
+
+        document.getElementById('rtspGuideModal').addEventListener('click', function(e) {
+            if (e.target === this) closeRtspGuide();
+        });
     </script>
 </body>
 </html>
