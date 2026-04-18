@@ -715,6 +715,15 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
+	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/gateway_docs.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tmpl.Execute(w, nil)
+	})
+
 	adminHandler := sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("web/templates/index.html")
 		if err != nil {
