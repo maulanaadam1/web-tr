@@ -1,0 +1,15 @@
+{
+  "vps_ip": "43.157.204.11",
+  "vpn_mode": "zerotier",
+  "l2tp_server": "31.56.78.5",
+  "l2tp_user": "20251024172230",
+  "l2tp_pass": "GPCEWCEKKD",
+  "l2tp_psk": "",
+  "cameras": [
+    {
+      "name": "Local Cam",
+      "local_rtsp": "rtsp://root:vivo1234@10.85.50.53:554/live1s2.sdp",
+      "vps_port": 63457
+    }
+  ]
+}

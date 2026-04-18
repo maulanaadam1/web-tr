@@ -1,0 +1,5 @@
+Name,LocalRTSP
+Kamera Depan,rtsp://admin:admin123@192.168.1.10:554/cam/realmonitor?channel=1&subtype=0
+Kamera Belakang,rtsp://admin:admin123@192.168.1.11:554/cam/realmonitor?channel=1&subtype=0
+Kamera Gudang,rtsp://admin:admin123@192.168.1.12:554/live1s2.sdp
+Kamera Parkir,rtsp://admin:admin123@192.168.1.13:554/Streaming/Channels/101
