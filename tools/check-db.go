@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"web-tr/internal/config"
 
 	_ "modernc.org/sqlite"
@@ -48,7 +49,7 @@ func main() {
 
 	// 2. Try Config File
 	fmt.Println("\n=== Checking Config (go2rtc.yaml) ===")
-	cfgMgr := config.NewConfigManager("go2rtc.yaml")
+	cfgMgr := config.NewConfigManager(filepath.Join("data", "go2rtc.yaml"))
 	streams, err := cfgMgr.GetStreams()
 	if err != nil {
 		log.Fatalf("Error reading config: %v", err)

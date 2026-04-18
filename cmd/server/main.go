@@ -377,7 +377,9 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	// Setup
-	cfgPath := "go2rtc.yaml"
+	os.MkdirAll("data", 0755)
+	
+	cfgPath := filepath.Join("data", "go2rtc.yaml")
 	cfgMgr := config.NewConfigManager(cfgPath)
 
 	log.Println("Initializing Stream Manager...")
@@ -1419,7 +1421,7 @@ func main() {
 		return ""
 	}
 
-	timelapseMgr := timelapse.NewManager("timelapse.json")
+	timelapseMgr := timelapse.NewManager(filepath.Join("data", "timelapse.json"))
 	if err := timelapseMgr.Load(); err != nil {
 		log.Printf("Warning: Failed to load timelapse config: %v", err)
 	}
