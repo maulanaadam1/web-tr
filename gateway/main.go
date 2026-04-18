@@ -649,7 +649,7 @@ func connectL2TP() error {
 
 	// Create/update the L2TP VPN entry using PowerShell
 	psScript := fmt.Sprintf(`
-$vpnName = 'WebTR-VPN'
+$vpnName = 'RTSP2go-VPN'
 Remove-VpnConnection -Name $vpnName -Force -ErrorAction SilentlyContinue
 Add-VpnConnection -Name $vpnName -ServerAddress '%s' -TunnelType L2tp -L2tpPsk '%s' -AuthenticationMethod MSChapv2 -EncryptionLevel Optional -Force
 `, config.L2TPServer, config.L2TPPSK)
@@ -662,7 +662,7 @@ Add-VpnConnection -Name $vpnName -ServerAddress '%s' -TunnelType L2tp -L2tpPsk '
 	}
 
 	addLog("L2TP: Connecting...")
-	cmd = exec.Command("rasdial", "WebTR-VPN", config.L2TPUser, config.L2TPPass)
+	cmd = exec.Command("rasdial", "RTSP2go-VPN", config.L2TPUser, config.L2TPPass)
 	out, err = cmd.CombinedOutput()
 	if err != nil {
 		addLog(fmt.Sprintf("L2TP: Connection failed: %v — %s", err, string(out)))
@@ -675,7 +675,7 @@ Add-VpnConnection -Name $vpnName -ServerAddress '%s' -TunnelType L2tp -L2tpPsk '
 
 func disconnectL2TP() {
 	addLog("L2TP: Disconnecting...")
-	cmd := exec.Command("rasdial", "WebTR-VPN", "/disconnect")
+	cmd := exec.Command("rasdial", "RTSP2go-VPN", "/disconnect")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		addLog(fmt.Sprintf("L2TP: Disconnect warning: %v — %s", err, string(out)))
@@ -1228,19 +1228,19 @@ func diagnoseVPS() {
 			addLog("[Diagnose] SSH port 22: OK")
 		}
 
-		// 2. Check Web-TR API (port 8080)
-		addLog("[Diagnose] Testing web-tr API (port 8080)...")
+		// 2. Check RTSP2go API (port 8080)
+		addLog("[Diagnose] Testing RTSP2go API (port 8080)...")
 		apiURL := fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
 		client := &http.Client{Timeout: 5 * time.Second}
 		resp, err := client.Get(apiURL)
 		if err != nil {
-			results += "❌ Web-TR API (port 8080): UNREACHABLE\n    " + err.Error() + "\n\n"
-			addLog("[Diagnose] Web-TR API: UNREACHABLE — Auto-Register will fail!")
+			results += "❌ RTSP2go API (port 8080): UNREACHABLE\n    " + err.Error() + "\n\n"
+			addLog("[Diagnose] RTSP2go API: UNREACHABLE — Auto-Register will fail!")
 		} else {
 			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			results += fmt.Sprintf("✅ Web-TR API (port 8080): OK (Status: %d)\n    Streams registered: %s\n\n", resp.StatusCode, string(body))
-			addLog(fmt.Sprintf("[Diagnose] Web-TR API: OK — Found streams: %s", string(body)))
+			results += fmt.Sprintf("✅ RTSP2go API (port 8080): OK (Code: %d)\n    Cameras Registered: %s\n\n", resp.StatusCode, string(body))
+			addLog(fmt.Sprintf("[Diagnose] RTSP2go API: OK — Found streams: %s", string(body)))
 		}
 
 		// 3. Show registered cameras from the local config
