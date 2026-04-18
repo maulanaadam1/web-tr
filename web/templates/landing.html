@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="scroll-smooth snap-y snap-mandatory scroll-pt-20">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,7 +46,7 @@
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300 antialiased overflow-x-hidden selection:bg-brand-500 selection:text-white">
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300 antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden">
 
     <!-- Background Decoration -->
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
@@ -57,8 +57,22 @@
 
     <!-- Extra bottom padding so footer content isn't behind the sticky bar -->
     <style>
-        body { padding-bottom: 90px; }
-        @media (max-width: 768px) { body { padding-bottom: 140px; } }
+        /* Body padding is handled by full-height sections */
+        body { padding-bottom: 0; }
+
+        /* Full Page Section Base */
+        .snap-slide {
+            scroll-snap-align: start;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding-top: 5rem; /* Space for fixed navbar */
+            padding-bottom: 5rem; /* Space for floating try bar */
+        }
+        @media (max-width: 768px) {
+            .snap-slide { padding-bottom: 8rem; }
+        }
 
         /* Floating Try Bar */
         #floatingTryBar {
@@ -112,7 +126,7 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="relative pt-32 pb-12 lg:pt-48 lg:pb-16 overflow-hidden">
+    <section class="snap-slide relative overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
             <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium text-sm mb-8 border border-brand-200 dark:border-brand-800">
                 <span class="flex h-2 w-2 relative">
@@ -144,7 +158,7 @@
     </section>
 
     <!-- ===== QUICK TRY SLIDE ===== -->
-    <section id="try" class="min-h-[70vh] flex items-center py-20 lg:py-32 bg-slate-100/50 dark:bg-slate-900/20 relative z-10 border-y border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
+    <section id="try" class="snap-slide bg-slate-100/50 dark:bg-slate-900/20 z-10 border-y border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
         <div class="absolute inset-0 pointer-events-none opacity-5">
             <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px]"></div>
         </div>
@@ -243,7 +257,7 @@
     </section>
 
     <!-- Features Section -->
-    <section id="features" class="py-24 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 relative z-10">
+    <section id="features" class="snap-slide bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-extrabold sm:text-4xl">Fitur Platform RTSP2go</h2>
@@ -277,7 +291,7 @@
     </section>
 
     <!-- Services / Use Cases Section -->
-    <section id="services" class="py-24 relative z-10">
+    <section id="services" class="snap-slide z-10 bg-slate-50 dark:bg-slate-950/20">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div>
@@ -301,7 +315,7 @@
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="py-24 bg-slate-900 text-white relative z-10 overflow-hidden">
+    <section id="pricing" class="snap-slide bg-slate-900 text-white z-10 overflow-hidden">
         <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-brand-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
         <div class="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-purple-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -364,7 +378,7 @@
     </section>
 
     <!-- Footer / Contact -->
-    <footer id="contact" class="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 pt-20 pb-10 z-10 relative">
+    <footer id="contact" class="snap-slide bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                 <div class="lg:col-span-2">
