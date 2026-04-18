@@ -31,13 +31,13 @@ gcc --version
 Write-Host "`nSetting CGO_ENABLED=1..." -ForegroundColor Green
 $env:CGO_ENABLED = "1"
 
-Write-Host "Building Web-TR Tunnel Gateway (this might take 1-3 minutes for the first time)..." -ForegroundColor Yellow
-go build -ldflags="-H windowsgui" -o Web-TR-Gateway.exe .
+Write-Host "Building RTSP2go Gateway (this might take 1-3 minutes for the first time)..." -ForegroundColor Yellow
+go build -ldflags="-H windowsgui" -o RTSP2go-Gateway.exe .
 
 if ($?) {
     Write-Host "`n=========================================" -ForegroundColor Green
     Write-Host "BUILD SUCCESSFUL! " -ForegroundColor Green
-    Write-Host "You can now run Web-TR-Gateway.exe" -ForegroundColor Green
+    Write-Host "You can now run RTSP2go-Gateway.exe" -ForegroundColor Green
     Write-Host "=========================================" -ForegroundColor Green
 }
 else {

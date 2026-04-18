@@ -158,7 +158,7 @@
     </section>
 
     <!-- ===== QUICK TRY SLIDE ===== -->
-    <section id="try" class="snap-slide bg-slate-100/50 dark:bg-slate-900/20 z-10 border-y border-slate-200/50 dark:border-slate-800/50 overflow-hidden">
+    <section id="try" class="snap-slide min-h-screen flex items-center bg-slate-100/50 dark:bg-slate-900/20 z-10 border-y border-slate-200/50 dark:border-slate-800/50 overflow-hidden relative">
         <div class="absolute inset-0 pointer-events-none opacity-5">
             <div class="absolute top-0 left-0 w-full h-full bg-[radial-gradient(#6366f1_1px,transparent_1px)] [background-size:24px_24px]"></div>
         </div>
@@ -173,7 +173,7 @@
                 <div class="absolute -inset-0.5 bg-gradient-to-r from-brand-500 to-purple-500 rounded-2xl blur opacity-10 pointer-events-none"></div>
                 
                 <!-- Input Row -->
-                <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-end">
                     <!-- RTSP Link -->
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
@@ -184,17 +184,12 @@
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
                             </span>
-                            <input id="tryRtspUrl" type="text" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input pl-9 dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
+                            <input id="tryRtspUrl" type="text" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input pl-9 dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
                         </div>
-                    </div>
-                    <!-- Camera Name -->
-                    <div>
-                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Camera Name</label>
-                        <input id="tryCamName" type="text" placeholder="e.g. Front Gate" class="try-bar-input dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
                     </div>
                     <!-- Broadcast Button -->
                     <div class="flex flex-col gap-2">
-                        <button onclick="tryBroadcast()" id="tryBroadcastBtn" class="h-[46px] px-6 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 whitespace-nowrap">
+                        <button onclick="tryBroadcast()" id="tryBroadcastBtn" class="h-[46px] px-8 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 whitespace-nowrap">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
                             Start Broadcast
                         </button>
@@ -257,7 +252,7 @@
     </section>
 
     <!-- Features Section -->
-    <section id="features" class="snap-slide bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 z-10">
+    <section id="features" class="snap-slide min-h-screen flex items-center bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 z-10 w-full">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-extrabold sm:text-4xl">Fitur Platform RTSP2go</h2>
@@ -281,41 +276,18 @@
                 </div>
                 <div class="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors group">
                     <div class="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-3">Cloud Timelapse Otomatis</h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Ekstrak snapshot dari stream RTSP secara terjadwal dan gabungkan menjadi timelapse MP4 berkualitas tinggi di server.</p>
+                    <h3 class="text-xl font-bold mb-3">Local Gateway Relay</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Hubungkan kamera di jaringan lokal (LAN) ke cloud tanpa port forwarding. Aman secara end-to-end melalui enkripsi VPN.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Services / Use Cases Section -->
-    <section id="services" class="snap-slide z-10 bg-slate-50 dark:bg-slate-950/20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                <div>
-                    <h2 class="text-3xl font-extrabold sm:text-4xl mb-6">Dirancang untuk Profesional Keamanan & Pemantauan</h2>
-                    <p class="text-lg text-slate-600 dark:text-slate-400 mb-8">
-                        RTSP2go mengubah kamera IP/CCTV Anda menjadi sistem pemantauan web terpadu yang bisa diakses tim Anda dari mana saja.
-                    </p>
-                    <ul class="space-y-4">
-                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Pemantauan lalu lintas jalan tol dan jalan raya</span></li>
-                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Timelapse otomatis proyek konstruksi</span></li>
-                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Agregasi CCTV publik skala kota</span></li>
-                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Embed live stream ke website tanpa biaya tambahan</span></li>
-                    </ul>
-                </div>
-                <div class="relative">
-                    <div class="absolute inset-0 bg-gradient-to-r from-brand-500 to-cyan-500 transform skew-y-3 rounded-3xl opacity-20"></div>
-                    <img src="https://images.unsplash.com/photo-1549419133-eadd6e53e4da?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Control Room" class="relative rounded-2xl shadow-xl border border-white/10 w-full object-cover aspect-square md:aspect-video lg:aspect-square">
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="snap-slide bg-slate-900 text-white z-10 overflow-hidden">
+    <section id="pricing" class="snap-slide min-h-screen flex items-center bg-slate-900 text-white z-10 overflow-hidden w-full relative">
         <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-brand-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
         <div class="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-purple-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -448,25 +420,23 @@
             <div class="max-w-5xl mx-auto px-4 py-3">
 
                 <!-- Label row (desktop only) -->
-                <div class="hidden md:grid grid-cols-[1fr_200px_auto] gap-4 mb-1.5">
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Your RTSP Link (H.264) <span class="text-slate-500 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span></span>
-                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Camera Name</span>
-                    <span></span>
+                <div class="hidden md:grid grid-cols-[1fr_auto] gap-4 mb-2">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Your RTSP Link (H.264) <span class="text-slate-500 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span></span>
+                    <span class="w-[160px]"></span>
                 </div>
 
                 <!-- Input row -->
-                <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-3 items-center">
+                <!-- Input Row -->
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
                     <!-- RTSP URL -->
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <div class="relative group/input">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-brand-500 transition-colors">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
                         </span>
-                        <input id="ftbRtspUrl" type="text" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="ftb-input pl-9" oninput="syncFtbToMain()">
+                        <input id="ftbRtspUrl" type="text" required placeholder="Paste your RTSP URL here..." class="ftb-input pl-10 pr-4" oninput="syncFtbToMain()">
                     </div>
-                    <!-- Camera Name -->
-                    <input id="ftbCamName" type="text" placeholder="e.g. Front Gate" class="ftb-input" oninput="syncFtbToMain()">
                     <!-- Button -->
-                    <button onclick="ftbBroadcast()" class="whitespace-nowrap h-[42px] px-5 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 text-sm">
+                    <button onclick="ftbBroadcast()" class="whitespace-nowrap h-[46px] px-8 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 text-sm z-20">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
                         Start Broadcast
                     </button>
@@ -535,25 +505,19 @@
         // Sync floating bar inputs → main section inputs
         function syncFtbToMain() {
             const ftbUrl = document.getElementById('ftbRtspUrl').value;
-            const ftbName = document.getElementById('ftbCamName').value;
             const mainUrl = document.getElementById('tryRtspUrl');
-            const mainName = document.getElementById('tryCamName');
             if (mainUrl) mainUrl.value = ftbUrl;
-            if (mainName) mainName.value = ftbName;
         }
 
         // Sync main section inputs → floating bar inputs
         function syncMainToFtb() {
             const mainUrl = document.getElementById('tryRtspUrl')?.value || '';
-            const mainName = document.getElementById('tryCamName')?.value || '';
             document.getElementById('ftbRtspUrl').value = mainUrl;
-            document.getElementById('ftbCamName').value = mainName;
         }
 
         // Hook main section inputs to also sync to ftb
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('tryRtspUrl')?.addEventListener('input', syncMainToFtb);
-            document.getElementById('tryCamName')?.addEventListener('input', syncMainToFtb);
         });
 
         // Float bar broadcast (reads from ftb inputs and calls shared logic)
@@ -588,7 +552,7 @@
 
         function tryBroadcast() {
             const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
-            const camName = document.getElementById('tryCamName').value.trim() || 'preview_stream';
+            const camName = 'Preview Stream';
 
             if (!rtspUrl) {
                 document.getElementById('tryRtspUrl')?.classList.add('border-red-400');
