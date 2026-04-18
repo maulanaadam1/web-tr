@@ -104,9 +104,9 @@ func main() {
 	if err != nil {
 		// Create default config if not found
 		config = &Config{
-			VPSIP:   "1.2.3.4",
-			VPNMode: "zerotier",
-			Cameras: []CameraConfig{},
+			ServerURL: "https://stream.campod.my.id",
+			VPNMode:   "zerotier",
+			Cameras:   []CameraConfig{},
 		}
 		saveConfig()
 	}
@@ -240,7 +240,7 @@ func buildSettings() fyne.CanvasObject {
 	entryIP.SetText(config.VPSIP)
 
 	entryURL := widget.NewEntry()
-	entryURL.SetPlaceHolder("e.g., https://api.rtsp2go.com")
+	entryURL.SetPlaceHolder("e.g., https://stream.campod.my.id")
 	entryURL.SetText(config.ServerURL)
 
 	entryCF := widget.NewEntry()
@@ -695,6 +695,7 @@ func disconnectL2TP() {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		addLog(fmt.Sprintf("L2TP: Disconnect warning: %v — %s", err, string(out)))
+	}
 	addLog("L2TP: Disconnected.")
 }
 
@@ -1167,8 +1168,6 @@ func registerToBackend(inst *TunnelInstance) {
 			break
 		}
 	}
-
-	apiURL := fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
 
 	var rtspSource string
 	hostPort := extractHostPort(originalRTSP)
