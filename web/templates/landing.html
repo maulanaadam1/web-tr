@@ -62,13 +62,13 @@
 
         /* Full Page Section Base */
         .snap-slide {
-            scroll-snap-align: start;
+            scroll-snap-align: center;
+            scroll-snap-stop: always;
             min-height: 100vh;
             display: flex;
             align-items: center;
             position: relative;
-            padding-top: 5rem; /* Space for fixed navbar */
-            padding-bottom: 5rem; /* Space for floating try bar */
+            width: 100%;
         }
         @media (max-width: 768px) {
             .snap-slide { padding-bottom: 8rem; }
@@ -181,10 +181,7 @@
                             <span class="ml-1 text-slate-400 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span>
                         </label>
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
-                            </span>
-                            <input id="tryRtspUrl" type="text" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input pl-9 dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
+                            <input id="tryRtspUrl" type="text" required placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
                         </div>
                     </div>
                     <!-- Broadcast Button -->
@@ -430,10 +427,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-center">
                     <!-- RTSP URL -->
                     <div class="relative group/input">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within/input:text-brand-500 transition-colors">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
-                        </span>
-                        <input id="ftbRtspUrl" type="text" required placeholder="Paste your RTSP URL here..." class="ftb-input pl-10 pr-4" oninput="syncFtbToMain()">
+                        <input id="ftbRtspUrl" type="text" required placeholder="rtsp://root:vivo1234@10.85.50.53:554/live1s2.sdp" class="ftb-input px-4" oninput="syncFtbToMain()">
                     </div>
                     <!-- Button -->
                     <button onclick="ftbBroadcast()" class="whitespace-nowrap h-[46px] px-8 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/30 flex items-center justify-center gap-2 text-sm z-20">
