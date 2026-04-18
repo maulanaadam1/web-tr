@@ -384,7 +384,45 @@ func (s *Store) CreateUserFull(u models.User, password string) error {
 	}
 
 	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.VPNPassword)
+	if err == nil {
+		// Sync with L2TP VPN Server securely
+		s.SyncVPNUserToSecrets(u.Username, u.VPNPassword)
+	}
 	return err
+}
+
+// SyncVPNUserToSecrets physically writes or updates the username and password in the Linux L2TP secrets file
+func (s *Store) SyncVPNUserToSecrets(username, vpnPass string) {
+	// Assumes /etc/ppp is mounted from Host into the Docker Container
+	path := "/etc/ppp/chap-secrets"
+	content, err := os.ReadFile(path)
+	if err != nil {
+		log.Printf("Cannot read %s: %v (Is volume mounted?)", path, err)
+		return
+	}
+
+	lines := strings.Split(string(content), "\n")
+	found := false
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), `"`+username+`"`) || strings.HasPrefix(strings.TrimSpace(line), username+" l2tpd") {
+			// Update existing
+			lines[i] = fmt.Sprintf(`"%s" l2tpd "%s" *`, username, vpnPass)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		// Append new
+		lines = append(lines, fmt.Sprintf(`"%s" l2tpd "%s" *`, username, vpnPass))
+	}
+
+	err = os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0600)
+	if err != nil {
+		log.Printf("Failed to sync VPN Secrets to disk: %v", err)
+	} else {
+		log.Printf("Successfully synced User '%s' to L2TP VPN Config!", username)
+	}
 }
 
 func (s *Store) CreateUser(username, password, role string) error {
