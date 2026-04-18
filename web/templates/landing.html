@@ -55,6 +55,37 @@
         <div class="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-cyan-400/30 dark:bg-cyan-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" style="animation-delay:4s"></div>
     </div>
 
+    <!-- Extra bottom padding so footer content isn't behind the sticky bar -->
+    <style>
+        body { padding-bottom: 90px; }
+        @media (max-width: 768px) { body { padding-bottom: 140px; } }
+
+        /* Floating Try Bar */
+        #floatingTryBar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        #floatingTryBar.visible { transform: translateY(0); }
+        #floatingTryBar .ftb-input {
+            background: rgba(255,255,255,0.08);
+            border: 1.5px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            color: #fff;
+            outline: none;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+        #floatingTryBar .ftb-input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+        #floatingTryBar .ftb-input::placeholder { color: rgba(148,163,184,0.8); }
+    </style>
+
     <!-- Navigation -->
     <nav class="fixed w-full z-50 transition-all duration-300" id="navbar">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -380,6 +411,72 @@
         </div>
     </div>
 
+
+
+    <!-- ===== FLOATING STICKY TRY BAR ===== -->
+    <div id="floatingTryBar">
+        <!-- Main bar background -->
+        <div class="bg-slate-900/95 backdrop-blur-xl border-t border-white/10 shadow-[0_-8px_32px_rgba(0,0,0,0.4)]">
+            <div class="max-w-5xl mx-auto px-4 py-3">
+
+                <!-- Label row (desktop only) -->
+                <div class="hidden md:grid grid-cols-[1fr_200px_auto] gap-4 mb-1.5">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Your RTSP Link (H.264) <span class="text-slate-500 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span></span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Camera Name</span>
+                    <span></span>
+                </div>
+
+                <!-- Input row -->
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-3 items-center">
+                    <!-- RTSP URL -->
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
+                        </span>
+                        <input id="ftbRtspUrl" type="text" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="ftb-input pl-9" oninput="syncFtbToMain()">
+                    </div>
+                    <!-- Camera Name -->
+                    <input id="ftbCamName" type="text" placeholder="e.g. Front Gate" class="ftb-input" oninput="syncFtbToMain()">
+                    <!-- Button -->
+                    <button onclick="ftbBroadcast()" class="whitespace-nowrap h-[42px] px-5 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+                        Start Broadcast
+                    </button>
+                </div>
+
+                <!-- Status row (hidden until broadcast) -->
+                <div id="ftbStatusRow" class="hidden mt-3 flex flex-col sm:flex-row items-start sm:items-center gap-3 pt-3 border-t border-white/10">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                        <span id="ftbStatusDot" class="stream-status-dot offline shrink-0"></span>
+                        <span id="ftbStatusText" class="text-xs font-medium text-slate-300 truncate">Menghubungkan...</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="testTryConnection()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white font-medium text-xs transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Test
+                        </button>
+                        <button onclick="copyBroadcastLink()" id="ftbCopyBtn" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white font-medium text-xs transition-colors">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            Copy Link
+                        </button>
+                        <button onclick="openTryPlayer()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-brand-600/80 hover:bg-brand-600 text-white font-medium text-xs transition-colors border border-brand-500/50">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Lihat Stream
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Broadcast link compact -->
+                <div id="ftbLinkBox" class="hidden mt-2">
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
+                        <svg class="w-3.5 h-3.5 text-brand-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
+                        <span id="ftbLinkText" class="text-xs font-mono text-slate-400 truncate flex-1"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
 
@@ -391,41 +488,103 @@
             } else {
                 nav.classList.remove('bg-white/80', 'dark:bg-slate-950/80', 'backdrop-blur-md', 'shadow-sm', 'border-b', 'border-slate-200', 'dark:border-slate-800');
             }
+
+            // Show floating bar after scrolling past hero (200px)
+            const bar = document.getElementById('floatingTryBar');
+            if (window.scrollY > 200) {
+                bar.classList.add('visible');
+            } else {
+                bar.classList.remove('visible');
+            }
         });
 
-        // ===== Quick Try Logic =====
+        // ===== Quick Try Logic (shared between section and floating bar) =====
         let currentStreamName = '';
         let broadcastUrl = '';
+
+        // Sync floating bar inputs → main section inputs
+        function syncFtbToMain() {
+            const ftbUrl = document.getElementById('ftbRtspUrl').value;
+            const ftbName = document.getElementById('ftbCamName').value;
+            const mainUrl = document.getElementById('tryRtspUrl');
+            const mainName = document.getElementById('tryCamName');
+            if (mainUrl) mainUrl.value = ftbUrl;
+            if (mainName) mainName.value = ftbName;
+        }
+
+        // Sync main section inputs → floating bar inputs
+        function syncMainToFtb() {
+            const mainUrl = document.getElementById('tryRtspUrl')?.value || '';
+            const mainName = document.getElementById('tryCamName')?.value || '';
+            document.getElementById('ftbRtspUrl').value = mainUrl;
+            document.getElementById('ftbCamName').value = mainName;
+        }
+
+        // Hook main section inputs to also sync to ftb
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tryRtspUrl')?.addEventListener('input', syncMainToFtb);
+            document.getElementById('tryCamName')?.addEventListener('input', syncMainToFtb);
+        });
+
+        // Float bar broadcast (reads from ftb inputs and calls shared logic)
+        function ftbBroadcast() {
+            syncFtbToMain();
+            tryBroadcast();
+            // Also update ftb status UI
+            setTimeout(() => syncStatusToFtb(), 100);
+            setTimeout(() => syncStatusToFtb(), 2200);
+        }
+
+        function syncStatusToFtb() {
+            const mainDot = document.getElementById('tryStatusDot');
+            const mainText = document.getElementById('tryStatusText');
+            const mainLinkBox = document.getElementById('broadcastLinkBox');
+            const mainLinkText = document.getElementById('broadcastLinkText');
+
+            // Show ftb status row
+            const ftbStatus = document.getElementById('ftbStatusRow');
+            ftbStatus.classList.remove('hidden');
+            ftbStatus.classList.add('flex');
+
+            document.getElementById('ftbStatusDot').className = mainDot?.className || 'stream-status-dot offline';
+            document.getElementById('ftbStatusText').textContent = mainText?.textContent || '';
+
+            // Show link box
+            if (broadcastUrl) {
+                document.getElementById('ftbLinkBox').classList.remove('hidden');
+                document.getElementById('ftbLinkText').textContent = broadcastUrl;
+            }
+        }
 
         function tryBroadcast() {
             const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
             const camName = document.getElementById('tryCamName').value.trim() || 'preview_stream';
 
             if (!rtspUrl) {
-                document.getElementById('tryRtspUrl').focus();
-                document.getElementById('tryRtspUrl').classList.add('border-red-400');
-                setTimeout(() => document.getElementById('tryRtspUrl').classList.remove('border-red-400'), 2000);
+                document.getElementById('tryRtspUrl')?.classList.add('border-red-400');
+                document.getElementById('ftbRtspUrl')?.classList.add('!border-red-400');
+                setTimeout(() => {
+                    document.getElementById('tryRtspUrl')?.classList.remove('border-red-400');
+                    document.getElementById('ftbRtspUrl')?.classList.remove('!border-red-400');
+                }, 2000);
                 return;
             }
 
             currentStreamName = camName.replace(/\s+/g, '_');
-            
-            // Show status bar
-            const statusBar = document.getElementById('tryStatusBar');
-            statusBar.classList.remove('hidden');
-            statusBar.classList.add('flex');
 
-            // Update status: connecting
+            // Show main status bar
+            const statusBar = document.getElementById('tryStatusBar');
+            if (statusBar) { statusBar.classList.remove('hidden'); statusBar.classList.add('flex'); }
+
             setTryStatus('connecting', 'Menghubungkan ke stream RTSP...');
 
-            // Build the stream URL
             broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mp4,mjpeg`;
 
-            // Show broadcast link
-            document.getElementById('broadcastLinkBox').classList.remove('hidden');
-            document.getElementById('broadcastLinkText').textContent = broadcastUrl;
+            const linkBox = document.getElementById('broadcastLinkBox');
+            if (linkBox) { linkBox.classList.remove('hidden'); }
+            const linkText = document.getElementById('broadcastLinkText');
+            if (linkText) linkText.textContent = broadcastUrl;
 
-            // Simulate connection check (real connection check via the iframe)
             setTimeout(() => {
                 setTryStatus('online', `Stream "${currentStreamName}" siap — klik Lihat Stream untuk preview.`);
             }, 2000);
@@ -434,43 +593,39 @@
         function setTryStatus(state, text) {
             const dot = document.getElementById('tryStatusDot');
             const txt = document.getElementById('tryStatusText');
-            dot.className = 'stream-status-dot ' + (state === 'online' ? 'online' : 'offline');
-            txt.textContent = text;
+            if (dot) dot.className = 'stream-status-dot ' + (state === 'online' ? 'online' : 'offline');
+            if (txt) txt.textContent = text;
         }
 
         function testTryConnection() {
             setTryStatus('offline', 'Menguji koneksi...');
-            const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
+            const rtspUrl = document.getElementById('tryRtspUrl').value.trim() || document.getElementById('ftbRtspUrl').value.trim();
             if (!rtspUrl) { setTryStatus('offline', 'Masukkan URL RTSP terlebih dahulu.'); return; }
-
-            // Open a test in small iframe
             fetch(`/api/streams`, { method: 'HEAD' })
                 .then(() => setTryStatus('online', 'Server dapat dijangkau. Uji stream via player.'))
                 .catch(() => setTryStatus('offline', 'Tidak dapat menghubungi server — periksa koneksi Anda.'));
         }
 
         function copyBroadcastLink() {
-            if (!broadcastUrl) { return; }
+            if (!broadcastUrl) return;
             navigator.clipboard.writeText(broadcastUrl).then(() => {
-                const btn = document.getElementById('copyLinkBtn');
-                btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tersalin!`;
-                setTimeout(() => {
-                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy Link`;
-                }, 2000);
+                ['copyLinkBtn', 'ftbCopyBtn'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (!btn) return;
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tersalin!`;
+                    setTimeout(() => btn.innerHTML = orig, 2000);
+                });
             });
         }
 
         function openTryPlayer() {
-            if (!broadcastUrl) { tryBroadcast(); return; }
+            if (!broadcastUrl) { ftbBroadcast(); return; }
             const modal = document.getElementById('streamPlayerModal');
             const container = document.getElementById('streamPlayerContainer');
-            const dot = document.getElementById('playerModalDot');
-            const title = document.getElementById('playerModalTitle');
-
-            title.textContent = currentStreamName || 'Live Preview';
-            dot.className = 'stream-status-dot online';
+            document.getElementById('playerModalDot').className = 'stream-status-dot online';
+            document.getElementById('playerModalTitle').textContent = currentStreamName || 'Live Preview';
             container.innerHTML = `<iframe src="${broadcastUrl}" class="w-full h-full border-none" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
-
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100');
         }
@@ -479,16 +634,13 @@
             const modal = document.getElementById('streamPlayerModal');
             modal.classList.add('opacity-0', 'pointer-events-none');
             modal.classList.remove('opacity-100');
-            // Stop the stream
             setTimeout(() => { document.getElementById('streamPlayerContainer').innerHTML = ''; }, 300);
         }
 
-        // Close modal on backdrop click
         document.getElementById('streamPlayerModal').addEventListener('click', function(e) {
             if (e.target === this) closeStreamModal();
         });
 
-        // Close modal on ESC
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStreamModal(); });
     </script>
 </body>
