@@ -1901,7 +1901,7 @@ function renderCCGridPage(page) {
         streamsToShow.forEach(stream => {
             const card = document.createElement('div');
             card.className = "bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-100 dark:border-slate-800 transition-all duration-300 group cursor-pointer";
-            card.onclick = () => previewStream(stream.name);
+            card.onclick = () => openCameraPreviewModal(stream.name);
             card.innerHTML = `
                 <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
                     <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.name}">${stream.name}</h3>
