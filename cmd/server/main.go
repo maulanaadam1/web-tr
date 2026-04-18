@@ -211,6 +211,39 @@ func syncStreamToGo2RTC(name, streamUrl string, isDelete bool) error {
 	return nil
 }
 
+// MediaMTX API Integration (Port 9997 is the default MediaMTX API port)
+func syncStreamToMediaMTX(name, streamUrl string, isDelete bool) error {
+	apiHost := "http://localhost:9997/v3/paths/add/" + url.PathEscape(name)
+	method := http.MethodPost
+
+	if isDelete {
+		apiHost = "http://localhost:9997/v3/paths/delete/" + url.PathEscape(name)
+	}
+
+	payload := fmt.Sprintf(`{"source":"%s"}`, streamUrl)
+	if isDelete {
+		payload = ""
+	}
+
+	req, err := http.NewRequest(method, apiHost, strings.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err // Note: this will fail until MediaMTX is installed on the VPS
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("MediaMTX API error %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
 func generateSessionToken() string {
 	b := make([]byte, 32)
 	rand.Read(b)
@@ -828,10 +861,20 @@ func main() {
 			
 			streamMgr.SyncFromDB()
 
-			// Sync with Go2RTC only if backend is go2rtc
-			if req.Backend == "go2rtc" {
-				if err := syncStreamToGo2RTC(req.Name, req.URL, false); err != nil {
-					log.Printf("Failed to sync stream to go2rtc: %v", err)
+			streamMgr.SyncFromDB()
+
+			// Route stream creation to the correct streaming engine
+			if req.Backend == "go2rtc" || req.Backend == "ffmpeg" {
+				urlToSync := req.URL
+				if req.Backend == "ffmpeg" {
+					urlToSync = "ffmpeg:" + req.URL + "#video=h264#hardware"
+				}
+				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
+					log.Printf("Failed to sync stream to go2rtc/ffmpeg: %v", err)
+				}
+			} else if req.Backend == "mediamtx" {
+				if err := syncStreamToMediaMTX(req.Name, req.URL, false); err != nil {
+					log.Printf("Failed to sync stream to MediaMTX: %v", err)
 				}
 			}
 
@@ -881,16 +924,22 @@ func main() {
 				return
 			}
 
-			// Handle Sync Logic for Go2RTC only
-			if req.Backend == "go2rtc" {
+			// Handle Sync Logic
+			if req.Backend == "go2rtc" || req.Backend == "ffmpeg" {
+				urlToSync := req.URL
+				if req.Backend == "ffmpeg" {
+					urlToSync = "ffmpeg:" + req.URL + "#video=h264#hardware"
+				}
 				// If name changed, delete old
 				if req.OriginalName != "" && req.OriginalName != req.Name {
 					syncStreamToGo2RTC(req.OriginalName, "", true)
 				}
-				// Add/Update new
-				if err := syncStreamToGo2RTC(req.Name, req.URL, false); err != nil {
-					log.Printf("Failed to sync stream to go2rtc: %v", err)
+				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
+					log.Printf("Failed to update stream in go2rtc: %v", err)
 				}
+			} else if req.Backend == "mediamtx" {
+				syncStreamToMediaMTX(req.OriginalName, "", true) // Delete old
+				syncStreamToMediaMTX(req.Name, req.URL, false)   // Add new
 			}
 
 			w.WriteHeader(http.StatusOK)
@@ -915,14 +964,30 @@ func main() {
 				http.Error(w, "name is required", http.StatusBadRequest)
 				return
 			}
+			
+			// Get stream info before deletion to know which backend to sync
+			streams, _ := streamMgr.GetStreams()
+			var stream models.Stream
+			for _, s := range streams {
+				if s.Name == name {
+					stream = s
+					break
+				}
+			}
+
 			if err := streamMgr.RemoveStream(name); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			// Sync with Go2RTC
-			if err := syncStreamToGo2RTC(name, "", true); err != nil {
-				log.Printf("Failed to remove stream from go2rtc: %v", err)
+			if stream.Backend == "go2rtc" || stream.Backend == "ffmpeg" {
+				if err := syncStreamToGo2RTC(stream.Name, "", true); err != nil {
+					log.Printf("Failed to delete stream from go2rtc: %v", err)
+				}
+			} else if stream.Backend == "mediamtx" {
+				if err := syncStreamToMediaMTX(stream.Name, "", true); err != nil {
+					log.Printf("Failed to delete stream from MediaMTX: %v", err)
+				}
 			}
 
 			w.WriteHeader(http.StatusOK)

@@ -40,6 +40,7 @@ type Config struct {
 	ServerURL       string         `json:"server_url"`
 	CloudflareToken string         `json:"cloudflare_token"`
 	VPNMode         string         `json:"vpn_mode"`
+	StreamEngine    string         `json:"stream_engine"` // "go2rtc", "mediamtx", "ffmpeg"
 	L2TPServer      string         `json:"l2tp_server"`
 	L2TPUser        string         `json:"l2tp_user"`
 	L2TPPass        string         `json:"l2tp_pass"`
@@ -243,6 +244,25 @@ func buildSettings() fyne.CanvasObject {
 	entryCF.SetPlaceHolder("Cloudflare Tunnel Token (Optional)")
 	entryCF.SetText(config.CloudflareToken)
 
+	vpnModes := []string{"L2TP VPN", "None (Direct/Tunnel Only)"}
+	vpnModeSelect := widget.NewSelect(vpnModes, nil)
+	if config.VPNMode == "none" {
+		vpnModeSelect.SetSelected("None (Direct/Tunnel Only)")
+	} else {
+		vpnModeSelect.SetSelected("L2TP VPN")
+	}
+
+	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)", "FFmpeg (Transcode/Pro)"}
+	engineSelect := widget.NewSelect(engineModes, nil)
+	switch config.StreamEngine {
+	case "mediamtx":
+		engineSelect.SetSelected("MediaMTX (Scalable)")
+	case "ffmpeg":
+		engineSelect.SetSelected("FFmpeg (Transcode/Pro)")
+	default:
+		engineSelect.SetSelected("Go2RTC (Balanced)")
+	}
+
 	// L2TP fields
 	entryL2TPServer := widget.NewEntry()
 	entryL2TPServer.SetPlaceHolder("e.g., 43.157.204.11")
@@ -292,33 +312,40 @@ func buildSettings() fyne.CanvasObject {
 		dynamicSection.Add(ztSection)
 	}
 
-	vpnModeSelect := widget.NewSelect([]string{"ZeroTier", "L2TP"}, func(selected string) {
+	vpnModeSelect.OnChanged = func(selected string) {
 		dynamicSection.Objects = nil
-		if selected == "L2TP" {
+		if selected == "L2TP VPN" {
 			dynamicSection.Add(l2tpSection)
 		} else {
 			dynamicSection.Add(ztSection)
 		}
 		dynamicSection.Refresh()
-	})
-	if currentMode == "l2tp" {
-		vpnModeSelect.SetSelected("L2TP")
-	} else {
-		vpnModeSelect.SetSelected("ZeroTier")
 	}
 
 	btnSave := widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), func() {
 		config.ServerURL = entryURL.Text
 		config.CloudflareToken = entryCF.Text
 
-		if vpnModeSelect.Selected == "L2TP" {
+		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
+			config.VPNMode = "none"
+		} else {
 			config.VPNMode = "l2tp"
+		}
+
+		switch engineSelect.Selected {
+		case "MediaMTX (Scalable)":
+			config.StreamEngine = "mediamtx"
+		case "FFmpeg (Transcode/Pro)":
+			config.StreamEngine = "ffmpeg"
+		default:
+			config.StreamEngine = "go2rtc"
+		}
+
+		if config.VPNMode == "l2tp" {
 			config.L2TPServer = entryL2TPServer.Text
 			config.L2TPUser = entryL2TPUser.Text
 			config.L2TPPass = entryL2TPPass.Text
 			config.L2TPPSK = entryL2TPPSK.Text
-		} else if vpnModeSelect.Selected == "ZeroTier" {
-			config.VPNMode = "zerotier"
 		} else {
 			config.VPNMode = "none"
 		}
@@ -341,6 +368,7 @@ func buildSettings() fyne.CanvasObject {
 				widget.NewFormItem("Server URL", entryURL),
 				widget.NewFormItem("Cloudflare Token", entryCF),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
+				widget.NewFormItem("Stream Engine", engineSelect),
 			),
 			dynamicSection,
 		),
@@ -1192,10 +1220,12 @@ func registerToBackend(inst *TunnelInstance) {
 	addLog(fmt.Sprintf("[%s] Auto-Registering on VPS backend: %s", camName, apiURL))
 
 	// Use POST to ADD a new stream
-	payload := map[string]string{
+	payload := map[string]interface{}{
 		"name":    camName,
 		"url":     rtspSource,
-		"backend": "go2rtc",
+		"backend": config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
+		"lat":     0,
+		"lng":     0,
 	}
 
 	jsonData, err := json.Marshal(payload)
