@@ -188,7 +188,14 @@
             {{ end }}
             
             <div class="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
-                <a href="/logout" class="nav-link flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-medium transition-colors" title="Logout">
+                <button type="button" onclick="document.getElementById('vpnProfileModal').classList.remove('hidden')" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg font-medium transition-colors" title="My VPN Profile">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4" />
+                    </svg>
+                    <span class="nav-text whitespace-nowrap">My VPN Profile</span>
+                </button>
+
+                <a href="/logout" class="nav-link mt-1 flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg font-medium transition-colors" title="Logout">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                     </svg>
@@ -1328,6 +1335,64 @@
                 <div class="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-gray-700">
                     <button type="button" onclick="submitChangePw()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 sm:ml-3 sm:w-auto sm:text-sm">Change</button>
                     <button type="button" onclick="closeChangePwModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-transparent text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My VPN Profile Modal -->
+    <div id="vpnProfileModal" class="fixed inset-0 z-[60] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" aria-hidden="true" onclick="document.getElementById('vpnProfileModal').classList.add('hidden')"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-gray-200 dark:border-slate-800">
+                <div class="bg-gradient-to-br from-brand-600 to-indigo-700 px-6 py-8 relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 text-white/10">
+                        <svg class="w-40 h-40 transform rotate-12" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center text-center">
+                        <div class="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-lg mb-4">
+                            <span class="text-3xl font-extrabold text-white">{{ slice .Session.Username 0 2 | upper }}</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-1">Your L2TP Gateway</h3>
+                        <p class="text-indigo-100/80 text-sm">Use these credentials in your local RTSP2go configuration</p>
+                    </div>
+                </div>
+                
+                <div class="px-6 py-6 border-b border-gray-100 dark:border-slate-800">
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">VPN Server IP</label>
+                        <div class="bg-gray-50 dark:bg-slate-800 border-l-4 border-indigo-500 px-4 py-3 rounded-r-lg font-mono text-gray-800 dark:text-gray-200 select-all">
+                            {{ .VPNServIP }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">VPN Username</label>
+                        <div class="bg-gray-50 dark:bg-slate-800 border-l-4 border-emerald-500 px-4 py-3 rounded-r-lg font-mono text-gray-800 dark:text-gray-200 select-all">
+                            {{ .Session.Username }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">VPN Password</label>
+                        <div class="bg-gray-50 dark:bg-slate-800 border-l-4 border-rose-500 px-4 py-3 rounded-r-lg font-mono text-gray-800 dark:text-gray-200 select-all">
+                            {{ .Session.VPNPassword }}
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">*This is automatically generated and bound to your account.</p>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">IPSec PSK (Pre-Shared Key)</label>
+                        <div class="bg-gray-50 dark:bg-slate-800 border-l-4 border-amber-500 px-4 py-3 rounded-r-lg font-mono text-gray-800 dark:text-gray-200 select-all tracking-wider text-sm">
+                            {{ .GlobalPSK }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-slate-800/80 px-6 py-4 flex justify-between items-center sm:flex-row-reverse border-t border-gray-200 dark:border-transparent">
+                    <button type="button" onclick="document.getElementById('vpnProfileModal').classList.add('hidden')" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-md px-6 py-2.5 bg-brand-600 text-sm font-semibold text-white hover:bg-brand-700 sm:w-auto transition-colors">Understood, Close</button>
+                    <p class="hidden sm:block text-xs text-slate-500 dark:text-slate-400 italic">Never share this PSK or password publicly.</p>
                 </div>
             </div>
         </div>

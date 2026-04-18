@@ -35,6 +35,7 @@ type Session struct {
 	Role             string
 	SubscriptionPlan string
 	EnableSupport    bool
+	VPNPassword      string
 	Expiry           time.Time
 }
 
@@ -551,6 +552,7 @@ func main() {
 					Role:             dbUser.Role,
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
+					VPNPassword:      dbUser.VPNPassword,
 					Expiry:           expiry,
 				}
 				sessionMutex.Unlock()
@@ -800,8 +802,10 @@ func main() {
 
 		log.Printf("Rendering dashboard view with %d streams", len(streams))
 		tmpl.Execute(w, map[string]interface{}{
-			"Streams": streams,
-			"Session": sess,
+			"Streams":   streams,
+			"Session":   sess,
+			"GlobalPSK": "jENJUbdPT49EtNG6eWkE",
+			"VPNServIP": "43.157.204.11",
 		})
 	})
 

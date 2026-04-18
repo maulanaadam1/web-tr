@@ -16,5 +16,6 @@ type User struct {
 	NotificationPaid       bool      `json:"notification_paid"`
 	SubscriptionPlan       string    `json:"subscription_plan"`
 	EnableSupport          bool      `json:"enable_support"`
+	VPNPassword            string    `json:"vpn_password"`
 	CreatedAt              time.Time `json:"created_at"`
 }
