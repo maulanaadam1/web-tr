@@ -43,6 +43,7 @@ var (
 	sessionMutex      sync.Mutex
 	sessionCookieName = "webtr_session"
 	go2rtcProxy       *httputil.ReverseProxy
+	globalStore       *db.Store
 )
 
 type contextKey string
@@ -252,6 +253,29 @@ func generateSessionToken() string {
 
 func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// 1) Gateway / API Basic Auth Fallback
+		username, password, hasBasic := r.BasicAuth()
+		if hasBasic {
+			user, err := globalStore.GetUserByUsername(username)
+			if err == nil && user != nil {
+				hash := db.HashPassword(password, user.Salt)
+				if hash == user.PasswordHash && user.IsActive {
+					sess := Session{
+						UserID:   user.ID,
+						Username: user.Username,
+						Role:     user.Role,
+						Expiry:   time.Now().Add(1 * time.Hour),
+					}
+					ctx := context.WithValue(r.Context(), sessionContextKey, sess)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+			http.Error(w, "Unauthorized API Access", http.StatusUnauthorized)
+			return
+		}
+
+		// 2) Standard Web Cookie Auth
 		cookie, err := r.Cookie(sessionCookieName)
 		if err != nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -369,6 +393,7 @@ func main() {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
 	streamMgr.Store = store
+	globalStore = store
 
 	// Ensure there is at least one admin user
 	users, _ := store.GetAllUsers()

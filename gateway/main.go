@@ -39,6 +39,8 @@ type CameraConfig struct {
 type Config struct {
 	ServerURL       string         `json:"server_url"`
 	CloudflareToken string         `json:"cloudflare_token"`
+	ApiUsername     string         `json:"api_username"`
+	ApiPassword     string         `json:"api_password"`
 	VPNMode         string         `json:"vpn_mode"`
 	StreamEngine    string         `json:"stream_engine"` // "go2rtc", "mediamtx", "ffmpeg"
 	L2TPServer      string         `json:"l2tp_server"`
@@ -244,6 +246,14 @@ func buildSettings() fyne.CanvasObject {
 	entryCF.SetPlaceHolder("Cloudflare Tunnel Token (Optional)")
 	entryCF.SetText(config.CloudflareToken)
 
+	entryApiUser := widget.NewEntry()
+	entryApiUser.SetPlaceHolder("Admin / Gateway User")
+	entryApiUser.SetText(config.ApiUsername)
+
+	entryApiPass := widget.NewPasswordEntry()
+	entryApiPass.SetPlaceHolder("Password")
+	entryApiPass.SetText(config.ApiPassword)
+
 	vpnModes := []string{"L2TP VPN", "None (Direct/Tunnel Only)"}
 	vpnModeSelect := widget.NewSelect(vpnModes, nil)
 	if config.VPNMode == "none" {
@@ -325,6 +335,8 @@ func buildSettings() fyne.CanvasObject {
 	btnSave := widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), func() {
 		config.ServerURL = entryURL.Text
 		config.CloudflareToken = entryCF.Text
+		config.ApiUsername = entryApiUser.Text
+		config.ApiPassword = entryApiPass.Text
 
 		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
 			config.VPNMode = "none"
@@ -366,6 +378,8 @@ func buildSettings() fyne.CanvasObject {
 			widget.NewLabelWithStyle("RTSP2go Cloud & Network", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			widget.NewForm(
 				widget.NewFormItem("Server URL", entryURL),
+				widget.NewFormItem("API Username", entryApiUser),
+				widget.NewFormItem("API Password", entryApiPass),
 				widget.NewFormItem("Cloudflare Token", entryCF),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
 				widget.NewFormItem("Stream Engine", engineSelect),
@@ -655,6 +669,9 @@ func showEditCameraDialog(inst *TunnelInstance) {
 				return
 			}
 			req.Header.Set("Content-Type", "application/json")
+			if config.ApiUsername != "" && config.ApiPassword != "" {
+				req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
+			}
 			client := &http.Client{Timeout: 5 * time.Second}
 			resp, err := client.Do(req)
 			if err != nil {
@@ -1240,6 +1257,9 @@ func registerToBackend(inst *TunnelInstance) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if config.ApiUsername != "" && config.ApiPassword != "" {
+		req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
+	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -1271,6 +1291,9 @@ func deregisterFromBackend(camName string) {
 	if err != nil {
 		addLog(fmt.Sprintf("[%s] Auto-Deregister Error: %v", camName, err))
 		return
+	}
+	if config.ApiUsername != "" && config.ApiPassword != "" {
+		req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
