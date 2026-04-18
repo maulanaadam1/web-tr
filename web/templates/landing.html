@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamHub - Modern CCTV Management Platform</title>
+    <title>RTSP2go - Stream Any RTSP Camera to Web in One Click</title>
+    <meta name="description" content="RTSP2go converts your RTSP camera streams into web-ready HLS, WebRTC, and MP4 broadcasts. No complex setup. One click streaming for any IP camera.">
     <script src="https://cdn.tailwindcss.com?v=3.4.1"></script>
     <script>
         tailwind.config = {
@@ -16,18 +17,12 @@
                     animation: {
                         'float': 'float 6s ease-in-out infinite',
                         'blob': 'blob 7s infinite',
+                        'fade-up': 'fadeUp 0.6s ease-out forwards',
                     },
                     keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-20px)' },
-                        },
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
-                        }
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        blob: { '0%': { transform: 'translate(0px, 0px) scale(1)' }, '33%': { transform: 'translate(30px, -50px) scale(1.1)' }, '66%': { transform: 'translate(-20px, 20px) scale(0.9)' }, '100%': { transform: 'translate(0px, 0px) scale(1)' } },
+                        fadeUp: { '0%': { opacity: '0', transform: 'translateY(24px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } }
                     }
                 }
             }
@@ -37,21 +32,18 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: 'Outfit', sans-serif; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        .dark .glass-panel {
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .text-gradient {
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        .glass-panel { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); }
+        .dark .glass-panel { background: rgba(15,23,42,0.7); border: 1px solid rgba(255,255,255,0.05); }
+        .text-gradient { background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .try-bar-input { background: rgba(15,23,42,0.05); border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; font-size: 15px; color: #0f172a; transition: border-color 0.2s, box-shadow 0.2s; outline: none; width: 100%; }
+        .try-bar-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.15); }
+        .try-bar-input::placeholder { color: #94a3b8; }
+        /* Stream player modal */
+        #streamPlayerModal { transition: opacity 0.3s, transform 0.3s; }
+        .stream-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .stream-status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34,197,94,0.6); animation: pulse 2s infinite; }
+        .stream-status-dot.offline { background: #64748b; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300 antialiased overflow-x-hidden selection:bg-brand-500 selection:text-white">
@@ -59,9 +51,8 @@
     <!-- Background Decoration -->
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-400/30 dark:bg-brand-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-        <div class="absolute top-[20%] right-[-5%] w-96 h-96 bg-purple-400/30 dark:bg-purple-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-        <div class="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-cyan-400/30 dark:bg-cyan-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjQiIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMCIvPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4wNSIvPjwvc3ZnPg==')] opacity-50 dark:opacity-20 z-0"></div>
+        <div class="absolute top-[20%] right-[-5%] w-96 h-96 bg-purple-400/30 dark:bg-purple-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" style="animation-delay:2s"></div>
+        <div class="absolute bottom-[-10%] left-[20%] w-96 h-96 bg-cyan-400/30 dark:bg-cyan-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob" style="animation-delay:4s"></div>
     </div>
 
     <!-- Navigation -->
@@ -70,18 +61,18 @@
             <div class="flex justify-between items-center h-20">
                 <div class="flex items-center gap-3">
                     <div class="bg-gradient-to-br from-brand-500 to-purple-600 p-2 rounded-xl text-white shadow-lg shadow-brand-500/30">
-                        <i data-lucide="cctv" class="w-6 h-6"></i>
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     </div>
-                    <span class="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 text-gradient">StreamHub</span>
+                    <span class="font-extrabold text-2xl tracking-tight bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 text-gradient">RTSP2go</span>
                 </div>
                 <div class="hidden md:flex items-center space-x-8">
+                    <a href="#try" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Try Now</a>
                     <a href="#features" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Features</a>
                     <a href="#pricing" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Pricing</a>
-                    <a href="#services" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Services</a>
+                    <a href="#contact" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Contact</a>
                     <a href="/login" class="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">Sign In</a>
                     <a href="/login?tab=signup" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Start Free</a>
                 </div>
-                <!-- Mobile button -->
                 <div class="md:hidden flex items-center gap-4">
                     <a href="/login" class="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium text-sm">Login</a>
                 </div>
@@ -90,54 +81,118 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+    <section class="relative pt-32 pb-12 lg:pt-48 lg:pb-16 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium text-sm mb-8 border border-brand-200 dark:border-brand-800 animate-fade-in-up">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium text-sm mb-8 border border-brand-200 dark:border-brand-800">
                 <span class="flex h-2 w-2 relative">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
                 </span>
-                Introducing Next-Gen CCTV Command Center
+                Streaming RTSP ke Web — Semudah Satu Klik
             </div>
             
             <h1 class="text-5xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]">
-                Unify Your <br/>
-                <span class="bg-gradient-to-r from-brand-600 to-purple-500 dark:from-brand-400 dark:to-purple-400 text-gradient">Security Feeds</span> Easily.
+                Stream Kamera RTSP<br/>
+                <span class="bg-gradient-to-r from-brand-600 to-purple-500 dark:from-brand-400 dark:to-purple-400 text-gradient">ke Website dalam Satu Klik.</span>
             </h1>
             
             <p class="mt-4 text-lg lg:text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto mb-10">
-                StreamHub is the ultimate SaaS platform to aggregate RTSP, HLS, and WebRTC camera feeds into a single, lightning-fast GIS map dashboard. Manage bandwidth, enable hardware acceleration, and record infinite timelapses on the cloud.
+                RTSP2go mengubah stream kamera RTSP/IP Anda menjadi broadcast web-ready via HLS, WebRTC, dan MJPEG secara instan. Tanpa konfigurasi rumit — cukup masukkan URL, langsung streaming.
             </p>
             
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="/login?tab=signup" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-xl hover:-translate-y-1 flex items-center justify-center gap-2">
-                    Get Started Free <i data-lucide="arrow-right" class="w-5 h-5"></i>
+            <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
+                <a href="#try" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
+                    Coba Sekarang Gratis
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </a>
                 <a href="#features" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                    Explore Features
+                    Lihat Fitur
                 </a>
             </div>
+        </div>
+    </section>
 
-            <!-- Hero Image/Mockup -->
-            <div class="mt-20 relative mx-auto max-w-5xl">
-                <div class="absolute -inset-1 bg-gradient-to-r from-brand-600 to-purple-600 rounded-2xl blur opacity-20 dark:opacity-40"></div>
-                <div class="relative rounded-2xl border border-slate-200 dark:border-slate-800 glass-panel overflow-hidden shadow-2xl p-2 aspect-video bg-slate-900">
-                    <!-- Placeholder UI element mimicking app -->
-                    <div class="w-full h-full bg-[url('https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center rounded-xl overflow-hidden relative border border-slate-700">
-                        <div class="absolute inset-0 bg-black/40"></div>
-                        <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black to-transparent"></div>
-                        
-                        <div class="absolute top-4 right-4 flex gap-2">
-                            <div class="bg-red-500/20 text-red-400 border border-red-500/30 px-3 py-1 rounded backdrop-blur text-xs font-bold flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> REC
-                            </div>
+    <!-- ===== QUICK TRY SECTION ===== -->
+    <section id="try" class="py-8 pb-24 relative z-10">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-extrabold">Coba RTSP2go Sekarang</h2>
+                <p class="mt-3 text-slate-600 dark:text-slate-400">Masukkan URL RTSP kamera Anda dan langsung broadcast ke web — gratis, tanpa registrasi.</p>
+            </div>
+
+            <!-- Try Bar Card -->
+            <div class="relative rounded-2xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-700 p-6 md:p-8">
+                <div class="absolute -inset-0.5 bg-gradient-to-r from-brand-500 to-purple-500 rounded-2xl blur opacity-10 pointer-events-none"></div>
+                
+                <!-- Input Row -->
+                <div class="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-4 items-end">
+                    <!-- RTSP Link -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">
+                            Your RTSP Link (H.264)
+                            <span class="ml-1 text-slate-400 cursor-help" title="Format: rtsp://user:pass@ip:port/path">ⓘ</span>
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l.1.1a4 4 0 010 5.656l-4.1 4.1a4 4 0 01-5.656 0l-1.1-1.1"/></svg>
+                            </span>
+                            <input id="tryRtspUrl" type="text" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1" class="try-bar-input pl-9 dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
                         </div>
-
-                        <!-- Faux GIS markers -->
-                        <div class="absolute top-1/3 left-1/4 w-4 h-4 bg-brand-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(99,102,241,0.8)]"></div>
-                        <div class="absolute top-1/2 right-1/3 w-4 h-4 bg-brand-500 rounded-full border-2 border-white shadow-[0_0_15px_rgba(99,102,241,0.8)]"></div>
+                    </div>
+                    <!-- Camera Name -->
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2">Camera Name</label>
+                        <input id="tryCamName" type="text" placeholder="e.g. Front Gate" class="try-bar-input dark:bg-slate-800/60 dark:border-slate-600 dark:text-white dark:placeholder-slate-500">
+                    </div>
+                    <!-- Broadcast Button -->
+                    <div class="flex flex-col gap-2">
+                        <button onclick="tryBroadcast()" id="tryBroadcastBtn" class="h-[46px] px-6 bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 whitespace-nowrap">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg>
+                            Start Broadcast
+                        </button>
                     </div>
                 </div>
+
+                <!-- Status & Action Bar (shown after submit) -->
+                <div id="tryStatusBar" class="hidden mt-5 flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-5 border-t border-slate-100 dark:border-slate-700/50">
+                    <!-- Status -->
+                    <div class="flex items-center gap-2 flex-1">
+                        <span id="tryStatusDot" class="stream-status-dot offline"></span>
+                        <span id="tryStatusText" class="text-sm font-medium text-slate-600 dark:text-slate-300">Menghubungkan ke stream...</span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <!-- Test Connection -->
+                        <button onclick="testTryConnection()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-sm transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Test Connection
+                        </button>
+                        <!-- Copy Broadcast Link -->
+                        <button onclick="copyBroadcastLink()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-sm transition-colors" id="copyLinkBtn">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            Copy Link
+                        </button>
+                        <!-- Open Player -->
+                        <button onclick="openTryPlayer()" class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-brand-50 dark:bg-brand-900/30 hover:bg-brand-100 dark:hover:bg-brand-900/50 text-brand-700 dark:text-brand-400 font-medium text-sm border border-brand-200 dark:border-brand-700 transition-colors">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Lihat Stream
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Broadcast Link Display -->
+                <div id="broadcastLinkBox" class="hidden mt-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 flex items-center gap-3">
+                    <svg class="w-4 h-4 text-brand-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
+                    <span id="broadcastLinkText" class="text-sm font-mono text-slate-700 dark:text-slate-300 truncate flex-1"></span>
+                </div>
+
+                <!-- Sign up hint -->
+                <p class="mt-5 text-center text-xs text-slate-400 dark:text-slate-500">
+                    Ingin menyimpan stream permanen? 
+                    <a href="/login?tab=signup" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">Daftar gratis</a> 
+                    dan kelola hingga 2 kamera tanpa biaya.
+                </p>
             </div>
         </div>
     </section>
@@ -146,34 +201,31 @@
     <section id="features" class="py-24 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
-                <h2 class="text-3xl font-extrabold sm:text-4xl">Platform Capabilities</h2>
-                <p class="mt-4 text-lg text-slate-600 dark:text-slate-400">Everything you need to monitor, manage, and scale your IP security camera network.</p>
+                <h2 class="text-3xl font-extrabold sm:text-4xl">Fitur Platform RTSP2go</h2>
+                <p class="mt-4 text-lg text-slate-600 dark:text-slate-400">Semua yang Anda butuhkan untuk monitor, kelola, dan scale jaringan kamera IP Anda.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
                 <div class="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 hover:border-brand-500 dark:hover:border-brand-500 transition-colors group">
                     <div class="w-14 h-14 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="satellite" class="w-7 h-7"></i>
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-3">GIS Command Center</h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Map all your cameras geolocations. Visually interact and preview live video streams instantly directly from the world map.</p>
+                    <h3 class="text-xl font-bold mb-3">Multi-Protocol Streaming</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Ubah RTSP menjadi HLS, WebRTC, MJPEG, dan MP4 secara otomatis. Kompatibel dengan semua browser modern tanpa plugin.</p>
                 </div>
-                <!-- Feature 2 -->
                 <div class="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 hover:border-purple-500 dark:hover:border-purple-500 transition-colors group">
                     <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="history" class="w-7 h-7"></i>
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-3">Cloud Timelapse Generation</h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Automatically extract snapshots from RTSP streams on schedule and stitch them into high quality MP4 timelapses on our server.</p>
+                    <h3 class="text-xl font-bold mb-3">GIS Command Center</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Petakan semua kamera Anda secara geolokasi. Klik marker di peta untuk preview video langsung secara instan.</p>
                 </div>
-                <!-- Feature 3 -->
                 <div class="p-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50 hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors group">
                     <div class="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i data-lucide="cpu" class="w-7 h-7"></i>
+                        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold mb-3">Hardware Acceleration</h3>
-                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Leverage GPU offloading (CUDA, QSV, D3D11) dynamically. Zero-latency transcoding directly over HTTP WebRTC.</p>
+                    <h3 class="text-xl font-bold mb-3">Cloud Timelapse Otomatis</h3>
+                    <p class="text-slate-600 dark:text-slate-400 leading-relaxed">Ekstrak snapshot dari stream RTSP secara terjadwal dan gabungkan menjadi timelapse MP4 berkualitas tinggi di server.</p>
                 </div>
             </div>
         </div>
@@ -184,29 +236,15 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                 <div>
-                    <h2 class="text-3xl font-extrabold sm:text-4xl mb-6">Designed for Traffic & Security Professionals</h2>
+                    <h2 class="text-3xl font-extrabold sm:text-4xl mb-6">Dirancang untuk Profesional Keamanan & Pemantauan</h2>
                     <p class="text-lg text-slate-600 dark:text-slate-400 mb-8">
-                        StreamHub transforms fragmented VMS (Video Management Systems) and NVR feeds into a seamless, high-availability web dashboard suited for multi-user scaling.
+                        RTSP2go mengubah kamera IP/CCTV Anda menjadi sistem pemantauan web terpadu yang bisa diakses tim Anda dari mana saja.
                     </p>
                     <ul class="space-y-4">
-                        <li class="flex items-center gap-3">
-                            <div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </div>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">Toll road and highway traffic monitoring</span>
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </div>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">Construction site automated timelapses</span>
-                        </li>
-                        <li class="flex items-center gap-3">
-                            <div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0">
-                                <i data-lucide="check" class="w-4 h-4"></i>
-                            </div>
-                            <span class="font-medium text-slate-700 dark:text-slate-300">City-wide public surveillance aggregation</span>
-                        </li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Pemantauan lalu lintas jalan tol dan jalan raya</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Timelapse otomatis proyek konstruksi</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Agregasi CCTV publik skala kota</span></li>
+                        <li class="flex items-center gap-3"><div class="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center shrink-0"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div><span class="font-medium text-slate-700 dark:text-slate-300">Embed live stream ke website tanpa biaya tambahan</span></li>
                     </ul>
                 </div>
                 <div class="relative">
@@ -221,76 +259,61 @@
     <section id="pricing" class="py-24 bg-slate-900 text-white relative z-10 overflow-hidden">
         <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-brand-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
         <div class="absolute bottom-[-20%] right-[-10%] w-96 h-96 bg-purple-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
-
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div class="text-center mb-16">
-                <h2 class="text-3xl font-extrabold sm:text-4xl text-white">Subscription Packages</h2>
-                <p class="mt-4 text-lg text-slate-400 mb-10 max-w-2xl mx-auto">Start free and scale exactly as your camera network expands. No hidden bandwidth costs.</p>
+                <h2 class="text-3xl font-extrabold sm:text-4xl text-white">Paket Langganan</h2>
+                <p class="mt-4 text-lg text-slate-400 mb-10 max-w-2xl mx-auto">Mulai gratis dan scale sesuai kebutuhan jaringan kamera Anda. Tanpa biaya bandwidth tersembunyi.</p>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
-                <!-- Free Plan -->
+                <!-- Free -->
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
                     <h3 class="text-xl font-bold mb-2">Free</h3>
-                    <p class="text-slate-400 text-sm mb-6 h-10">Perfect for home environments or testing.</p>
-                    <div class="mb-6">
-                        <span class="text-4xl font-extrabold">$0</span><span class="text-slate-400">/mo</span>
-                    </div>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Ideal untuk pengujian atau rumahan.</p>
+                    <div class="mb-6"><span class="text-4xl font-extrabold">$0</span><span class="text-slate-400">/mo</span></div>
                     <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Up to 2 Cameras</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Command Center Map</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300 opacity-50"><i data-lucide="x" class="text-slate-500 w-4 h-4"></i> Timelapse Engine</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Hingga 2 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Command Center Map</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-500 opacity-50"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Timelapse Engine</li>
                     </ul>
-                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Get Started</a>
+                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Mulai Gratis</a>
                 </div>
-
-                <!-- Premium Plan -->
+                <!-- Premium -->
                 <div class="bg-slate-800/50 backdrop-blur border border-brand-500 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative shadow-[0_0_30px_rgba(99,102,241,0.15)]">
-                    <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-gradient-to-r from-brand-500 to-purple-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Popular</div>
+                    <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-gradient-to-r from-brand-500 to-purple-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Populer</div>
                     <h3 class="text-xl font-bold mb-2 text-brand-400">Premium</h3>
-                    <p class="text-slate-400 text-sm mb-6 h-10">For small businesses and retail chains.</p>
-                    <div class="mb-6">
-                        <span class="text-4xl font-extrabold">$25</span><span class="text-slate-400">/mo</span>
-                    </div>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Untuk bisnis kecil dan toko ritel.</p>
+                    <div class="mb-6"><span class="text-4xl font-extrabold">$25</span><span class="text-slate-400">/mo</span></div>
                     <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Up to 8 Cameras</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Command Center Map</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Timelapse Engine</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Hingga 8 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Command Center Map</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Timelapse Engine</li>
                     </ul>
-                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-500 transition-colors text-center font-bold rounded-xl shadow-lg shadow-brand-500/25">Subscribe</a>
+                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-500 transition-colors text-center font-bold rounded-xl shadow-lg shadow-brand-500/25">Berlangganan</a>
                 </div>
-
-                <!-- Advance Plan -->
+                <!-- Advance -->
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
                     <h3 class="text-xl font-bold mb-2">Advance</h3>
-                    <p class="text-slate-400 text-sm mb-6 h-10">Advanced operations and construction tracking.</p>
-                    <div class="mb-6">
-                        <span class="text-4xl font-extrabold">$89</span><span class="text-slate-400">/mo</span>
-                    </div>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Operasional dan pemantauan konstruksi skala besar.</p>
+                    <div class="mb-6"><span class="text-4xl font-extrabold">$89</span><span class="text-slate-400">/mo</span></div>
                     <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Up to 16 Cameras</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Hardware Acceleration</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> HD Timelapse Engine</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Hingga 16 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Hardware Acceleration</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> HD Timelapse Engine</li>
                     </ul>
-                    <a href="#contact" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Contact Sales</a>
+                    <a href="#contact" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Hubungi Sales</a>
                 </div>
-
-                <!-- Enterprise Plan -->
+                <!-- Enterprise -->
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
                     <h3 class="text-xl font-bold mb-2 text-purple-400">Enterprise</h3>
-                    <p class="text-slate-400 text-sm mb-6 h-10">City-wide or massive scale deployments.</p>
-                    <div class="mb-6">
-                        <span class="text-4xl font-extrabold">Custom</span>
-                    </div>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Deployment skala kota atau enterprise masif.</p>
+                    <div class="mb-6"><span class="text-4xl font-extrabold">Custom</span></div>
                     <ul class="space-y-3 mb-8 flex-1">
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Unlimited Cameras</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Dedicated GPU Servers</li>
-                        <li class="flex items-center gap-2 text-sm text-slate-300"><i data-lucide="check" class="text-brand-400 w-4 h-4"></i> Custom Branding</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Unlimited Cameras</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Dedicated GPU Servers</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> White Label / Custom Branding</li>
                     </ul>
-                    <a href="#contact" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Contact Sales</a>
+                    <a href="#contact" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl">Hubungi Sales</a>
                 </div>
-
             </div>
         </div>
     </section>
@@ -301,46 +324,63 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
                 <div class="lg:col-span-2">
                     <div class="flex items-center gap-3 mb-6">
-                        <div class="bg-brand-600 p-1.5 rounded-lg text-white">
-                            <i data-lucide="cctv" class="w-5 h-5"></i>
+                        <div class="bg-gradient-to-br from-brand-500 to-purple-600 p-1.5 rounded-lg text-white">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                         </div>
-                        <span class="font-extrabold text-xl tracking-tight text-slate-900 dark:text-white">StreamHub</span>
+                        <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-600 to-purple-600 text-gradient">RTSP2go</span>
                     </div>
-                    <p class="text-slate-500 dark:text-slate-400 max-w-sm mb-6">Redefining cloud infrastructure for seamless traffic & corporate surveillance monitoring securely.</p>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-sm mb-6">Platform streaming RTSP-to-Web terpadu untuk keamanan, lalu lintas, dan pemantauan profesional.</p>
                 </div>
-                
                 <div>
-                    <h4 class="font-bold mb-4 text-slate-900 dark:text-white">Quick Links</h4>
+                    <h4 class="font-bold mb-4 text-slate-900 dark:text-white">Navigasi</h4>
                     <ul class="space-y-2 text-slate-500 dark:text-slate-400">
-                        <li><a href="#features" class="hover:text-brand-600 dark:hover:text-brand-400">Features</a></li>
-                        <li><a href="#pricing" class="hover:text-brand-600 dark:hover:text-brand-400">Pricing</a></li>
+                        <li><a href="#try" class="hover:text-brand-600 dark:hover:text-brand-400">Coba Sekarang</a></li>
+                        <li><a href="#features" class="hover:text-brand-600 dark:hover:text-brand-400">Fitur</a></li>
+                        <li><a href="#pricing" class="hover:text-brand-600 dark:hover:text-brand-400">Harga</a></li>
                         <li><a href="/login" class="hover:text-brand-600 dark:hover:text-brand-400">Login</a></li>
                     </ul>
                 </div>
-
                 <div>
-                    <h4 class="font-bold mb-4 text-slate-900 dark:text-white">Contact Person</h4>
+                    <h4 class="font-bold mb-4 text-slate-900 dark:text-white">Kontak</h4>
                     <div class="space-y-3 text-slate-500 dark:text-slate-400">
-                        <p class="flex items-center gap-3"><i data-lucide="mail" class="w-4 h-4"></i> hello@streamhub.io</p>
-                        <p class="flex items-center gap-3"><i data-lucide="phone" class="w-4 h-4"></i> +62 821 1234 5678</p>
-                        <p class="flex items-center gap-3"><i data-lucide="message-circle" class="w-4 h-4"></i> WhatsApp Support</p>
+                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> hello@rtsp2go.com</p>
+                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> +62 821 1234 5678</p>
+                        <a href="https://wa.me/6282112345678" target="_blank" class="flex items-center gap-3 text-green-500 hover:text-green-600 font-medium"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg> WhatsApp Support</a>
                     </div>
                 </div>
             </div>
-            
             <div class="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p class="text-sm text-slate-500 dark:text-slate-500">© 2026 StreamHub Technologies. Built for speed.</p>
-                <div class="flex items-center gap-4 text-slate-400">
-                    <a href="#" class="hover:text-brand-600"><i data-lucide="twitter" class="w-5 h-5"></i></a>
-                    <a href="#" class="hover:text-brand-600"><i data-lucide="github" class="w-5 h-5"></i></a>
-                    <a href="#" class="hover:text-brand-600"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
-                </div>
+                <p class="text-sm text-slate-500 dark:text-slate-500">© 2026 RTSP2go. Streaming made simple.</p>
             </div>
         </div>
     </footer>
 
+    <!-- ===== STREAM PLAYER MODAL ===== -->
+    <div id="streamPlayerModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
+        <div class="relative w-full max-w-3xl mx-4 bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-700/50 bg-slate-800/50">
+                <div class="flex items-center gap-3">
+                    <span id="playerModalDot" class="stream-status-dot offline"></span>
+                    <h3 id="playerModalTitle" class="font-bold text-white text-base">Live Preview</h3>
+                </div>
+                <button onclick="closeStreamModal()" class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Player -->
+            <div class="bg-black w-full aspect-video relative">
+                <div id="streamPlayerContainer" class="w-full h-full"></div>
+            </div>
+            <!-- Footer -->
+            <div class="px-5 py-3 bg-slate-800/50 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
+                <span>WebRTC / HLS / MJPEG — auto-negotiated</span>
+                <a href="/login?tab=signup" class="text-brand-400 font-semibold hover:underline">Simpan stream ini →</a>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Init Lucide Icons
         lucide.createIcons();
 
         // Navbar blur on scroll
@@ -352,6 +392,104 @@
                 nav.classList.remove('bg-white/80', 'dark:bg-slate-950/80', 'backdrop-blur-md', 'shadow-sm', 'border-b', 'border-slate-200', 'dark:border-slate-800');
             }
         });
+
+        // ===== Quick Try Logic =====
+        let currentStreamName = '';
+        let broadcastUrl = '';
+
+        function tryBroadcast() {
+            const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
+            const camName = document.getElementById('tryCamName').value.trim() || 'preview_stream';
+
+            if (!rtspUrl) {
+                document.getElementById('tryRtspUrl').focus();
+                document.getElementById('tryRtspUrl').classList.add('border-red-400');
+                setTimeout(() => document.getElementById('tryRtspUrl').classList.remove('border-red-400'), 2000);
+                return;
+            }
+
+            currentStreamName = camName.replace(/\s+/g, '_');
+            
+            // Show status bar
+            const statusBar = document.getElementById('tryStatusBar');
+            statusBar.classList.remove('hidden');
+            statusBar.classList.add('flex');
+
+            // Update status: connecting
+            setTryStatus('connecting', 'Menghubungkan ke stream RTSP...');
+
+            // Build the stream URL
+            broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+
+            // Show broadcast link
+            document.getElementById('broadcastLinkBox').classList.remove('hidden');
+            document.getElementById('broadcastLinkText').textContent = broadcastUrl;
+
+            // Simulate connection check (real connection check via the iframe)
+            setTimeout(() => {
+                setTryStatus('online', `Stream "${currentStreamName}" siap — klik Lihat Stream untuk preview.`);
+            }, 2000);
+        }
+
+        function setTryStatus(state, text) {
+            const dot = document.getElementById('tryStatusDot');
+            const txt = document.getElementById('tryStatusText');
+            dot.className = 'stream-status-dot ' + (state === 'online' ? 'online' : 'offline');
+            txt.textContent = text;
+        }
+
+        function testTryConnection() {
+            setTryStatus('offline', 'Menguji koneksi...');
+            const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
+            if (!rtspUrl) { setTryStatus('offline', 'Masukkan URL RTSP terlebih dahulu.'); return; }
+
+            // Open a test in small iframe
+            fetch(`/api/streams`, { method: 'HEAD' })
+                .then(() => setTryStatus('online', 'Server dapat dijangkau. Uji stream via player.'))
+                .catch(() => setTryStatus('offline', 'Tidak dapat menghubungi server — periksa koneksi Anda.'));
+        }
+
+        function copyBroadcastLink() {
+            if (!broadcastUrl) { return; }
+            navigator.clipboard.writeText(broadcastUrl).then(() => {
+                const btn = document.getElementById('copyLinkBtn');
+                btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tersalin!`;
+                setTimeout(() => {
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy Link`;
+                }, 2000);
+            });
+        }
+
+        function openTryPlayer() {
+            if (!broadcastUrl) { tryBroadcast(); return; }
+            const modal = document.getElementById('streamPlayerModal');
+            const container = document.getElementById('streamPlayerContainer');
+            const dot = document.getElementById('playerModalDot');
+            const title = document.getElementById('playerModalTitle');
+
+            title.textContent = currentStreamName || 'Live Preview';
+            dot.className = 'stream-status-dot online';
+            container.innerHTML = `<iframe src="${broadcastUrl}" class="w-full h-full border-none" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100');
+        }
+
+        function closeStreamModal() {
+            const modal = document.getElementById('streamPlayerModal');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.classList.remove('opacity-100');
+            // Stop the stream
+            setTimeout(() => { document.getElementById('streamPlayerContainer').innerHTML = ''; }, 300);
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('streamPlayerModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStreamModal();
+        });
+
+        // Close modal on ESC
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeStreamModal(); });
     </script>
 </body>
 </html>
