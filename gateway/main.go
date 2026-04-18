@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ type Config struct {
 	L2TPUser        string         `json:"l2tp_user"`
 	L2TPPass        string         `json:"l2tp_pass"`
 	L2TPPSK         string         `json:"l2tp_psk"`
+	WireGuardConfig string         `json:"wireguard_config"`
 	Cameras         []CameraConfig `json:"cameras"`
 }
 
@@ -254,12 +256,14 @@ func buildSettings() fyne.CanvasObject {
 	entryApiPass.SetPlaceHolder("Password")
 	entryApiPass.SetText(config.ApiPassword)
 
-	vpnModes := []string{"ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
+	vpnModes := []string{"WireGuard VPN", "ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
 	vpnModeSelect := widget.NewSelect(vpnModes, nil)
 	if config.VPNMode == "none" {
 		vpnModeSelect.SetSelected("None (Direct/Tunnel Only)")
 	} else if config.VPNMode == "l2tp" {
 		vpnModeSelect.SetSelected("L2TP VPN")
+	} else if config.VPNMode == "wireguard" {
+		vpnModeSelect.SetSelected("WireGuard VPN")
 	} else {
 		vpnModeSelect.SetSelected("ZeroTier VPN")
 	}
@@ -310,16 +314,28 @@ func buildSettings() fyne.CanvasObject {
 		widget.NewLabelWithStyle("Ensure ZeroTier app is running. IP will be auto-detected.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
 	)
 
+	entryWG := widget.NewMultiLineEntry()
+	entryWG.SetPlaceHolder("[Interface]\nPrivateKey=...\nAddress=...\n\n[Peer]\nPublicKey=...\nEndpoint=...")
+	entryWG.SetText(config.WireGuardConfig)
+	wgSection := container.NewVBox(
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("WireGuard Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("Paste your entire wg0.conf text below:", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		container.NewGridWrap(fyne.NewSize(450, 150), entryWG),
+	)
+
 	// VPN Mode selector
 	currentMode := config.VPNMode
 	if currentMode == "" {
 		currentMode = "zerotier"
 	}
 
-	// Dynamic section that toggles between ZeroTier and L2TP
+	// Dynamic section that toggles between ZeroTier, WireGuard, and L2TP
 	dynamicSection := container.NewVBox()
 	if currentMode == "l2tp" {
 		dynamicSection.Add(l2tpSection)
+	} else if currentMode == "wireguard" {
+		dynamicSection.Add(wgSection)
 	} else {
 		dynamicSection.Add(ztSection)
 	}
@@ -328,6 +344,8 @@ func buildSettings() fyne.CanvasObject {
 		dynamicSection.Objects = nil
 		if selected == "L2TP VPN" {
 			dynamicSection.Add(l2tpSection)
+		} else if selected == "WireGuard VPN" {
+			dynamicSection.Add(wgSection)
 		} else if selected == "ZeroTier VPN" {
 			dynamicSection.Add(ztSection)
 		}
@@ -344,6 +362,8 @@ func buildSettings() fyne.CanvasObject {
 			config.VPNMode = "none"
 		} else if vpnModeSelect.Selected == "L2TP VPN" {
 			config.VPNMode = "l2tp"
+		} else if vpnModeSelect.Selected == "WireGuard VPN" {
+			config.VPNMode = "wireguard"
 		} else {
 			config.VPNMode = "zerotier"
 		}
@@ -356,6 +376,8 @@ func buildSettings() fyne.CanvasObject {
 		default:
 			config.StreamEngine = "go2rtc"
 		}
+
+		config.WireGuardConfig = entryWG.Text
 
 		if config.VPNMode == "l2tp" {
 			config.L2TPServer = entryL2TPServer.Text
@@ -742,6 +764,55 @@ func disconnectL2TP() {
 	addLog("L2TP: Disconnected.")
 }
 
+func connectWireGuard() error {
+	if config.WireGuardConfig == "" {
+		return fmt.Errorf("WireGuard configuration is empty. Go to Settings and paste your wg0.conf content.")
+	}
+
+	// Save to wg0.conf inside the application directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("could not get current directory: %w", err)
+	}
+	confPath := filepath.Join(currentDir, "wg0.conf")
+	err = ioutil.WriteFile(confPath, []byte(config.WireGuardConfig), 0600)
+	if err != nil {
+		return fmt.Errorf("failed to save wg0.conf: %w", err)
+	}
+
+	addLog("WireGuard: Installing and connecting tunnel...")
+
+	// Execute wireguard install command
+	// Note: wireguard command line needs the absolute path
+	cmd := exec.Command("wireguard", "/installtunnelservice", confPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		// Ignore error if it's already installed, so try uninstalling and reinstalling just in case
+		addLog(fmt.Sprintf("WireGuard Start Warning: %v — %s", err, string(out)))
+		exec.Command("wireguard", "/uninstalltunnelservice", "wg0").Run()
+		time.Sleep(1 * time.Second)
+		cmd = exec.Command("wireguard", "/installtunnelservice", confPath)
+		out, err = cmd.CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("failed to install wireguard service: %v — %s", err, string(out))
+		}
+	}
+	
+	addLog("WireGuard: ✅ Tunnel active!")
+	return nil
+}
+
+func disconnectWireGuard() {
+	addLog("WireGuard: Stopping tunnel...")
+	cmd := exec.Command("wireguard", "/uninstalltunnelservice", "wg0")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		addLog(fmt.Sprintf("WireGuard: Stop warning: %v — %s", err, string(out)))
+	} else {
+		addLog("WireGuard: Disconnected.")
+	}
+}
+
 func startCloudflareTunnel() error {
 	if config.CloudflareToken == "" {
 		return nil
@@ -804,6 +875,15 @@ func startAll() {
 			}
 			// Wait for interface to get an IP
 			time.Sleep(3 * time.Second)
+		} else if vpnMode == "wireguard" {
+			addLog("Global: Connecting WireGuard VPN...")
+			err := connectWireGuard()
+			if err != nil {
+				dialog.ShowError(fmt.Errorf("WireGuard Connection Failed:\n%v\nEnsure wireguard.exe is installed globally on your machine.", err), myWindow)
+				addLog(fmt.Sprintf("Global ❌ WireGuard connection failed: %v", err))
+				return
+			}
+			time.Sleep(3 * time.Second)
 		} else if vpnMode == "zerotier" {
 			addLog("Global: Validating ZeroTier VPN Connection...")
 		}
@@ -851,10 +931,12 @@ func stopAll() {
 		}
 		wg.Wait()
 
-		// If L2TP mode, disconnect the VPN after stopping all streams
+		// If L2TP or WG mode, disconnect the VPN after stopping all streams
 		vpnMode := config.VPNMode
 		if vpnMode == "l2tp" {
 			disconnectL2TP()
+		} else if vpnMode == "wireguard" {
+			disconnectWireGuard()
 		}
 		stopCloudflareTunnel()
 
@@ -1053,6 +1135,9 @@ func getVpnIP() string {
 	if vpnMode == "l2tp" {
 		// L2TP creates a PPP adapter; detect its IP
 		psCommand = "(Get-NetIPAddress -InterfaceAlias '*PPP*','*VPN*','*L2TP*','*WebTR*','*RAS*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
+	} else if vpnMode == "wireguard" {
+		// WireGuard creates an interface named after the config file (e.g. wg0)
+		psCommand = "(Get-NetIPAddress -InterfaceAlias 'wg0','*WireGuard*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
 	} else {
 		// ZeroTier interface
 		psCommand = "(Get-NetIPAddress -InterfaceAlias 'ZeroTier*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
