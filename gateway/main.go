@@ -37,13 +37,15 @@ type CameraConfig struct {
 }
 
 type Config struct {
-	VPSIP      string         `json:"vps_ip"`
-	VPNMode    string         `json:"vpn_mode"`
-	L2TPServer string         `json:"l2tp_server"`
-	L2TPUser   string         `json:"l2tp_user"`
-	L2TPPass   string         `json:"l2tp_pass"`
-	L2TPPSK    string         `json:"l2tp_psk"`
-	Cameras    []CameraConfig `json:"cameras"`
+	VPSIP           string         `json:"vps_ip"`
+	ServerURL       string         `json:"server_url"`
+	CloudflareToken string         `json:"cloudflare_token"`
+	VPNMode         string         `json:"vpn_mode"`
+	L2TPServer      string         `json:"l2tp_server"`
+	L2TPUser        string         `json:"l2tp_user"`
+	L2TPPass        string         `json:"l2tp_pass"`
+	L2TPPSK         string         `json:"l2tp_psk"`
+	Cameras         []CameraConfig `json:"cameras"`
 }
 
 type TunnelInstance struct {
@@ -237,6 +239,14 @@ func buildSettings() fyne.CanvasObject {
 	entryIP := widget.NewEntry()
 	entryIP.SetText(config.VPSIP)
 
+	entryURL := widget.NewEntry()
+	entryURL.SetPlaceHolder("e.g., https://api.rtsp2go.com")
+	entryURL.SetText(config.ServerURL)
+
+	entryCF := widget.NewEntry()
+	entryCF.SetPlaceHolder("Cloudflare Tunnel Token (Optional)")
+	entryCF.SetText(config.CloudflareToken)
+
 	// L2TP fields
 	entryL2TPServer := widget.NewEntry()
 	entryL2TPServer.SetPlaceHolder("e.g., 43.157.204.11")
@@ -303,6 +313,8 @@ func buildSettings() fyne.CanvasObject {
 
 	btnSave := widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), func() {
 		config.VPSIP = entryIP.Text
+		config.ServerURL = entryURL.Text
+		config.CloudflareToken = entryCF.Text
 
 		if vpnModeSelect.Selected == "L2TP" {
 			config.VPNMode = "l2tp"
@@ -310,8 +322,10 @@ func buildSettings() fyne.CanvasObject {
 			config.L2TPUser = entryL2TPUser.Text
 			config.L2TPPass = entryL2TPPass.Text
 			config.L2TPPSK = entryL2TPPSK.Text
-		} else {
+		} else if vpnModeSelect.Selected == "ZeroTier" {
 			config.VPNMode = "zerotier"
+		} else {
+			config.VPNMode = "none"
 		}
 
 		err := saveConfig()
@@ -319,7 +333,7 @@ func buildSettings() fyne.CanvasObject {
 			dialog.ShowError(err, myWindow)
 		} else {
 			dialog.ShowInformation("Success", "Settings saved successfully.", myWindow)
-			addLog(fmt.Sprintf("Settings updated. VPN Mode: %s", config.VPNMode))
+			addLog(fmt.Sprintf("Settings updated. Server: %s, VPN: %s", config.ServerURL, config.VPNMode))
 		}
 	})
 	btnSave.Importance = widget.HighImportance
@@ -327,9 +341,11 @@ func buildSettings() fyne.CanvasObject {
 	content := container.NewBorder(
 		nil, container.NewPadded(btnSave), nil, nil,
 		container.NewVBox(
-			widget.NewLabelWithStyle("VPS & VPN Configuration", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+			widget.NewLabelWithStyle("RTSP2go Cloud & Network", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			widget.NewForm(
-				widget.NewFormItem("VPS Server IP", entryIP),
+				widget.NewFormItem("Server URL", entryURL),
+				widget.NewFormItem("VPS IP (Fallback)", entryIP),
+				widget.NewFormItem("Cloudflare Token", entryCF),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
 			),
 			dynamicSection,
@@ -600,10 +616,10 @@ func showEditCameraDialog(inst *TunnelInstance) {
 
 		// Update VPS backend via PUT (originalName is the old name)
 		go func() {
-			if config.VPSIP == "" {
+			apiURL := getServerAPIURL()
+			if apiURL == "" {
 				return
 			}
-			apiURL := fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
 			payload := map[string]string{
 				"name":         entryName.Text,
 				"url":          entryRTSP.Text,
@@ -679,9 +695,50 @@ func disconnectL2TP() {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		addLog(fmt.Sprintf("L2TP: Disconnect warning: %v — %s", err, string(out)))
-	} else {
-		addLog("L2TP: Disconnected.")
+	addLog("L2TP: Disconnected.")
+}
+
+func startCloudflareTunnel() error {
+	if config.CloudflareToken == "" {
+		return nil
 	}
+	addLog("Cloudflare: Starting tunnel...")
+	// Try to execute cloudflared
+	cmd := exec.Command("cloudflared", "tunnel", "--no-autoupdate", "run", "--token", config.CloudflareToken)
+	err := cmd.Start()
+	if err != nil {
+		addLog(fmt.Sprintf("Cloudflare: ❌ Failed to start cloudflared: %v. Please ensure it is installed.", err))
+		return err
+	}
+	addLog("Cloudflare: ✅ Tunnel process started in background.")
+	return nil
+}
+
+func stopCloudflareTunnel() {
+	addLog("Cloudflare: Stopping tunnel...")
+	// On Windows we usually taskkill or let OS handle it, but for a simple implementation:
+	if os.Getenv("OS") == "Windows_NT" {
+		exec.Command("taskkill", "/F", "/IM", "cloudflared.exe").Run()
+	} else {
+		exec.Command("pkill", "cloudflared").Run()
+	}
+}
+
+func getServerAPIURL() string {
+	if config.ServerURL != "" {
+		u := config.ServerURL
+		if !strings.HasPrefix(u, "http") {
+			u = "http://" + u
+		}
+		if !strings.Contains(u, "/api/streams") {
+			u = strings.TrimSuffix(u, "/") + "/api/streams"
+		}
+		return u
+	}
+	if config.VPSIP != "" {
+		return fmt.Sprintf("http://%s:8080/api/streams", config.VPSIP)
+	}
+	return ""
 }
 
 func startAll() {
@@ -706,12 +763,17 @@ func startAll() {
 			}
 			// Wait for interface to get an IP
 			time.Sleep(3 * time.Second)
-		} else {
+		} else if vpnMode == "zerotier" {
 			addLog("Global: Validating ZeroTier VPN Connection...")
 		}
 
+		// Cloudflare Tunnel
+		if config.CloudflareToken != "" {
+			startCloudflareTunnel()
+		}
+
 		ip := getVpnIP()
-		if ip == "" {
+		if ip == "" && vpnMode != "none" {
 			if vpnMode == "l2tp" {
 				dialog.ShowError(fmt.Errorf("L2TP VPN IP not found after connecting.\nCheck your L2TP server and credentials."), myWindow)
 				addLog("Global ❌ L2TP IP detection failed.")
@@ -722,9 +784,11 @@ func startAll() {
 			return
 		}
 
-		addLog(fmt.Sprintf("Global ✅ VPN Connected — Mode: %s (IP: %s)", strings.ToUpper(vpnMode), ip))
+		if ip != "" {
+			addLog(fmt.Sprintf("Global ✅ VPN Connected — Mode: %s (IP: %s)", strings.ToUpper(vpnMode), ip))
+		}
 
-		addLog("Global: Registering all cameras to VPS...")
+		addLog("Global: Registering all cameras to backend...")
 		for _, inst := range instances {
 			go inst.Start()
 		}
@@ -751,8 +815,9 @@ func stopAll() {
 		if vpnMode == "l2tp" {
 			disconnectL2TP()
 		}
+		stopCloudflareTunnel()
 
-		addLog("Global ✅ All Streams Stopped.")
+		addLog("Global ✅ All Processes Stopped.")
 	}()
 }
 
@@ -1089,13 +1154,12 @@ func registerToBackend(inst *TunnelInstance) {
 	// Give the tunnel a brief moment to stabilize
 	time.Sleep(2 * time.Second)
 
-	// Ensure we have a VPS IP configured
-	if config == nil || config.VPSIP == "" {
-		addLog(fmt.Sprintf("[%s] Skip Auto-Register: VPS IP not set.", camName))
+	// Ensure we have a backend configured
+	apiURL := getServerAPIURL()
+	if apiURL == "" {
+		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL or VPS IP not set.", camName))
 		return
 	}
-
-	// Find the camera's RTSP URL from config
 	var originalRTSP string
 	for _, cam := range config.Cameras {
 		if cam.Name == camName {
