@@ -769,14 +769,15 @@
                                 <!-- Backend Selector -->
                                 <div>
                                     <label for="streamBackend"
-                                        class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Streaming
-                                        Backend</label>
-                                    <select id="streamBackend" name="backend"
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Streaming Backend Engine</label>
+                                    <select id="streamBackend" name="backend" onchange="updateBackendHelperText()"
                                         class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="go2rtc">Go2RTC (WebRTC - Ultra Low Latency)</option>
+                                        <option value="ffmpeg">FFmpeg (Transcoding / Hardware Acceleration)</option>
+                                        <option value="mediamtx">MediaMTX (Enterprise Scalable Server)</option>
                                     </select>
-                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                        <span class="font-semibold">Go2RTC:</span> Real-time (0.5-2s)
+                                    <p id="backendHelperText" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        <span class="font-semibold text-blue-500">Default:</span> Fastest real-time streaming directly to web browsers.
                                     </p>
                                 </div>
                             </div>
@@ -1360,6 +1361,19 @@
     <script src="/static/js/app.js?v=30"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
+    </script>
+    <script>
+        function updateBackendHelperText() {
+            const val = document.getElementById('streamBackend').value;
+            const helper = document.getElementById('backendHelperText');
+            if (val === 'go2rtc') {
+                helper.innerHTML = '<span class="font-semibold text-blue-500">Go2RTC:</span> Fastest real-time streaming to the Command Center (0.5 - 2s latency).';
+            } else if (val === 'ffmpeg') {
+                helper.innerHTML = '<span class="font-semibold text-purple-500">FFmpeg:</span> Re-encodes stream via hardware before sending to Go2RTC. Fixes broken codecs, adds 5-10s delay.';
+            } else if (val === 'mediamtx') {
+                helper.innerHTML = '<span class="font-semibold text-emerald-500">MediaMTX:</span> Enterprise streaming to separate MTX server on port 8554. <br/> <b class="text-red-400">Note:</b> Stream will not be playable in this web dashboard directly.';
+            }
+        }
     </script>
 </body>
 </html>
