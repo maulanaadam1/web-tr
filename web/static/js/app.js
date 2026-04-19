@@ -1967,9 +1967,14 @@ function renderCCGridPage(page) {
             card.innerHTML = `
                 <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
                     <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.name}">${stream.name}</h3>
-                    <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </button>
+                    <div class="flex items-center gap-1">
+                        <button onclick="event.stopPropagation(); openShareModal('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg transition-colors shrink-0 z-10" title="Share Camera">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        </button>
+                        <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div class="relative w-full bg-black aspect-video group/video">
                     <div class="absolute inset-0 w-full h-full flex items-center justify-center bg-cover bg-center cursor-pointer group-hover/video:scale-[1.02] transition-transform" style="background-image: url('/api/snapshot?name=${encodeURIComponent(stream.name)}');">
@@ -2007,13 +2012,19 @@ function goToMapMarker(name) {
     }
 }
 
-function openShareModal() {
+function openShareModal(manualName) {
     // Check which view we are in to get the correct selected camera
-    let name = "";
-    if (selectedCameraOnMap) {
-        name = selectedCameraOnMap;
-    } else if (document.getElementById('cameraPreviewTitle')) {
-        name = document.getElementById('cameraPreviewTitle').textContent;
+    let name = manualName || "";
+    
+    if (!name) {
+        if (selectedCameraOnMap) {
+            name = selectedCameraOnMap;
+        } else {
+            const previewTitle = document.getElementById('cameraPreviewTitle');
+            if (previewTitle && previewTitle.textContent !== "Camera Name") {
+                name = previewTitle.textContent.trim();
+            }
+        }
     }
 
     if (!name || name === "--" || name === "Camera Name") {
