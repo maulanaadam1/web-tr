@@ -58,7 +58,31 @@ func (cm *ConfigManager) Load() (*models.Config, error) {
 		cfg.Api.Listen = ":1984"
 	}
 	cfg.Api.Username = adminUser
+	cfg.Api.Username = adminUser
 	cfg.Api.Password = adminPass
+
+	// Ensure WebRTC section exists for NAT/Docker reliability
+	if cfg.Rest == nil {
+		cfg.Rest = make(map[string]interface{})
+	}
+	if _, ok := cfg.Rest["webrtc"]; !ok {
+		publicIP := os.Getenv("PUBLIC_IP")
+		if publicIP == "" {
+			publicIP = "43.157.204.11" // Default for this VPS
+		}
+		cfg.Rest["webrtc"] = map[string]interface{}{
+			"listen": ":8555",
+			"candidates": []string{
+				publicIP + ":8555",
+				"stun:8555",
+			},
+			"ice_servers": []map[string]interface{}{
+				{
+					"urls": []string{"stun:stun.l.google.com:19302"},
+				},
+			},
+		}
+	}
 
 	return &cfg, nil
 }
