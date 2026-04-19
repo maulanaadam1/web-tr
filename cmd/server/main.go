@@ -262,10 +262,13 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 				hash := db.HashPassword(password, user.Salt)
 				if hash == user.PasswordHash && user.IsActive {
 					sess := Session{
-						UserID:   user.ID,
-						Username: user.Username,
-						Role:     user.Role,
-						Expiry:   time.Now().Add(1 * time.Hour),
+						UserID:           user.ID,
+						Username:         user.Username,
+						Role:             user.Role,
+						SubscriptionPlan: user.SubscriptionPlan,
+						EnableSupport:    user.EnableSupport,
+						VPNPassword:      user.VPNPassword,
+						Expiry:           time.Now().Add(1 * time.Hour),
 					}
 					ctx := context.WithValue(r.Context(), sessionContextKey, sess)
 					next.ServeHTTP(w, r.WithContext(ctx))
