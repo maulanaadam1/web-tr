@@ -397,11 +397,18 @@ func main() {
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
 		dbURL = "data/web-tr.db"
+	} else if strings.HasPrefix(dbURL, "file:") {
+		// Ensure relative file paths go into the 'data/' volume for persistence
+		path := strings.TrimPrefix(dbURL, "file:")
+		if !filepath.IsAbs(path) && !strings.Contains(path, "/") && !strings.Contains(path, "\\") {
+			dbURL = "file:data/" + path
+			log.Printf("Persistence Warning: Redirecting relative DB path '%s' to 'data/%s' for volume safety.", path, path)
+		}
 	}
 	
 	// If it's a file DSN, log the absolute path for mount debugging
 	dsn := dbURL
-	if strings.HasPrefix(dsn, "file:") { dsn = dsn[5:] }
+	dsn = strings.TrimPrefix(dsn, "file:")
 	if !strings.HasPrefix(dsn, "postgres://") {
 		absDB, _ := filepath.Abs(dsn)
 		log.Printf("Using SQLite Database at: %s", absDB)
