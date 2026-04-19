@@ -1494,9 +1494,16 @@ async function initMaintenanceMap() {
     const bounds = [];
     allStreams.forEach(s => {
         if (s.lat && s.lng) {
+            const roundIcon = L.divIcon({
+                className: 'round-marker',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+
             const marker = L.marker([s.lat, s.lng], {
                 draggable: true,
-                title: s.name
+                title: s.name,
+                icon: roundIcon
             }).addTo(maintenanceMap);
 
             const updatePopup = (lat, lng) => {
@@ -1555,6 +1562,12 @@ async function initMaintenanceMap() {
 
     if (bounds.length > 0) {
         maintenanceMap.fitBounds(bounds, { padding: [20, 20] });
+    } else {
+        // Fallback to Current Location if no markers
+        maintenanceMap.locate({ setView: true, maxZoom: 14 });
+        maintenanceMap.on('locationerror', () => {
+            maintenanceMap.setView([-6.2000, 106.8166], 12); // Fallback to Jakarta
+        });
     }
 
     // Force resize to fix gray tile issue
@@ -1634,7 +1647,7 @@ function reloadDashboardPreview(mode) {
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : "";
     const go2rtcProxy = `${protocol}//${hostname}${port}/rtc`;
-    const modeParam = mode || 'webrtc,mse,hls,mp4,mjpeg';
+    const modeParam = mode || 'mse,webrtc,hls,mp4,mjpeg';
 
     const iframe = document.createElement('iframe');
     iframe.src = `${go2rtcProxy}/stream.html?src=${encodeURIComponent(name)}&mode=${modeParam}`;
@@ -1705,7 +1718,8 @@ function openCameraPreviewModal(name) {
         </div>`;
 
     // Inject stream iframe
-    const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+    // Default to MSE for better compatibility with H.265
+    const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
     const iframe = document.createElement('iframe');
     iframe.src = iframeSrc;
     iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;z-index:20;';
@@ -1803,26 +1817,16 @@ function renderCommandCenterMarkers() {
 
     allStreams.forEach(s => {
         if (s.enabled !== false && s.lat && s.lng) {
-            const htmlIcon = `
-                <div class="custom-pin relative flex items-center justify-center w-8 h-8 group">
-                    <div class="absolute inset-0 bg-brand-500 rounded-full opacity-20 group-hover:animate-ping"></div>
-                    <div class="relative bg-white dark:bg-slate-800 p-1.5 rounded-full shadow-xl border-2 border-brand-500 flex items-center justify-center z-10 transition-transform group-hover:scale-110">
-                        <svg class="w-4 h-4 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-                    </div>
-                </div>`;
-
-            const icon = L.divIcon({
-                html: htmlIcon,
-                className: '',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16],
-                popupAnchor: [0, -16]
+            const roundIcon = L.divIcon({
+                className: 'round-marker',
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
             });
 
-            const marker = L.marker([s.lat, s.lng], { icon }).addTo(globalCameraMap);
+            const marker = L.marker([s.lat, s.lng], { icon: roundIcon }).addTo(globalCameraMap);
             
             const host = window.location.host;
-            const iframeSrc = `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+            const iframeSrc = `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
             
             const popupContent = `
                 <div class="w-72 sm:w-80 -m-4 overflow-hidden rounded-xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">

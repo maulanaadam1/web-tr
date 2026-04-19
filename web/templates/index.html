@@ -674,6 +674,40 @@
                 <style>
                     #view-commandcenter .custom-pin { transition: all 0.3s; }
                     #view-commandcenter .marker-selected { filter: drop-shadow(0 0 6px #6366f1); z-index: 1000 !important; }
+                    
+                    /* Round Marker Style */
+                    .round-marker {
+                        background: rgba(99, 102, 241, 0.4);
+                        border: 2px solid white;
+                        border-radius: 50%;
+                        width: 14px !important;
+                        height: 14px !important;
+                        box-shadow: 0 0 8px rgba(0,0,0,0.3);
+                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    }
+                    .round-marker::after {
+                        content: '';
+                        display: block;
+                        width: 6px;
+                        height: 6px;
+                        background: #6366f1;
+                        border-radius: 50%;
+                        margin: 2px;
+                        box-shadow: 0 0 5px rgba(99, 102, 241, 0.8);
+                    }
+                    .selected-marker {
+                        transform: scale(1.8) !important;
+                        background: #6366f1 !important;
+                        box-shadow: 0 0 20px rgba(99, 102, 241, 0.9) !important;
+                        z-index: 1000 !important;
+                        border-width: 3px !important;
+                    }
+                    .selected-marker::after {
+                        background: white !important;
+                        width: 4px !important;
+                        height: 4px !important;
+                        margin: 3px !important;
+                    }
                 </style>
 
                 <!-- Map Action Bar (Floating Filter on Top) -->
