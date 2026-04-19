@@ -1,7 +1,10 @@
 {
   "server_url": "https://stream.campod.my.id",
   "cloudflare_token": "",
-  "vpn_mode": "zerotier",
+  "api_username": "admin",
+  "api_password": "admin123",
+  "vpn_mode": "none",
+  "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",
   "l2tp_user": "20251024172230",
   "l2tp_pass": "GPCEWCEKKD",

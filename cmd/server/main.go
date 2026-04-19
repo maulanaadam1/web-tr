@@ -35,11 +35,13 @@ type Session struct {
 	Role             string
 	SubscriptionPlan string
 	EnableSupport    bool
+	EnableVPNGateway bool
 	VPNPassword      string
 	Expiry           time.Time
 }
 
 var (
+	startTime         = time.Now()
 	activeSessions    = make(map[string]Session)
 	sessionMutex      sync.Mutex
 	sessionCookieName = "webtr_session"
@@ -267,6 +269,7 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 						Role:             user.Role,
 						SubscriptionPlan: user.SubscriptionPlan,
 						EnableSupport:    user.EnableSupport,
+						EnableVPNGateway: user.EnableVPNGateway,
 						VPNPassword:      user.VPNPassword,
 						Expiry:           time.Now().Add(1 * time.Hour),
 					}
@@ -577,6 +580,7 @@ func main() {
 					Role:             dbUser.Role,
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
+					EnableVPNGateway: dbUser.EnableVPNGateway,
 					VPNPassword:      dbUser.VPNPassword,
 					Expiry:           expiry,
 				}
@@ -777,7 +781,12 @@ func main() {
 	http.HandleFunc("/api/sysinfo", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			stats := sysinfo.GetStats()
-			stats.StreamCount = streamMgr.GetActiveCount()
+			sess := r.Context().Value(sessionContextKey).(Session)
+			
+			// For CCTV Count, we should show what they are allowed to see
+			streams, _ := streamMgr.GetStreams()
+			visible := getUserVisibleStreams(sess, streams, globalStore)
+			stats.StreamCount = len(visible)
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(stats)
@@ -1605,6 +1614,24 @@ func main() {
 }
 
 func getUserVisibleStreams(sess Session, streams []models.Stream, store *db.Store) []models.Stream {
+	if sess.Role == "admin" {
+		users, _ := store.GetAllUsers()
+		supportEnabledMap := make(map[int]bool)
+		for _, u := range users {
+			if u.EnableSupport {
+				supportEnabledMap[u.ID] = true
+			}
+		}
+
+		var filtered []models.Stream
+		for _, s := range streams {
+			if s.UserID == sess.UserID || supportEnabledMap[s.UserID] {
+				filtered = append(filtered, s)
+			}
+		}
+		return filtered
+	}
+
 	var filtered []models.Stream
 	for _, s := range streams {
 		if s.UserID == sess.UserID {
