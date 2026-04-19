@@ -41,7 +41,7 @@ COPY --from=builder /app/go2rtc.yaml /app/data/go2rtc.yaml
 # Expose ports
 # 8080: Web Dashboard
 # 8555: WebRTC UDP/TCP
-EXPOSE 8080 8555
+EXPOSE 8080 8555 8555/udp
 
 # Default environment variables
 ENV DATABASE_URL=file:data/web-tr.db

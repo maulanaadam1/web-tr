@@ -81,7 +81,6 @@ func (cm *ConfigManager) Load() (*models.Config, error) {
 	webrtc["listen"] = ":8555"
 	webrtc["candidates"] = []string{
 		publicIP + ":8555",
-		"stun:8555",
 	}
 	
 	// Add common STUN servers if missing for better ICE negotiation
@@ -89,6 +88,9 @@ func (cm *ConfigManager) Load() (*models.Config, error) {
 		{ "urls": []string{"stun:stun.l.google.com:19302"} },
 		{ "urls": []string{"stun:stun1.l.google.com:19302"} },
 		{ "urls": []string{"stun:stun2.l.google.com:19302"} },
+		{ "urls": []string{"stun:stun3.l.google.com:19302"} },
+		{ "urls": []string{"stun:stun4.l.google.com:19302"} },
+		{ "urls": []string{"stun:stun.relay.metered.ca:80"} },
 	}
 
 	return &cfg, nil
