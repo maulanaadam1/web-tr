@@ -379,7 +379,12 @@ func main() {
 	// Setup
 	os.MkdirAll("data", 0755)
 	
+	cwd, _ := os.Getwd()
+	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
+
 	cfgPath := filepath.Join("data", "go2rtc.yaml")
+	absCfgPath, _ := filepath.Abs(cfgPath)
+	log.Printf("Loading Go2RTC config from: %s", absCfgPath)
 	cfgMgr := config.NewConfigManager(cfgPath)
 
 	log.Println("Initializing Stream Manager...")
@@ -391,6 +396,14 @@ func main() {
 		dbURL = "data/web-tr.db"
 	}
 	
+	// If it's a file DSN, log the absolute path for mount debugging
+	dsn := dbURL
+	if strings.HasPrefix(dsn, "file:") { dsn = dsn[5:] }
+	if !strings.HasPrefix(dsn, "postgres://") {
+		absDB, _ := filepath.Abs(dsn)
+		log.Printf("Using SQLite Database at: %s", absDB)
+	}
+
 	store, err := db.NewStore(dbURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)

@@ -33,18 +33,18 @@ RUN chmod +x /usr/local/bin/go2rtc
 COPY --from=builder /app/web-tr .
 COPY --from=builder /app/web/templates ./web/templates
 COPY --from=builder /app/web/static ./web/static
-COPY --from=builder /app/go2rtc.yaml .
+
+# Create data directory and place default config there
+RUN mkdir -p /app/data/snapshots /app/data/timelapse
+COPY --from=builder /app/go2rtc.yaml /app/data/go2rtc.yaml
 
 # Expose ports
 # 8080: Web Dashboard
 # 8555: WebRTC UDP/TCP
 EXPOSE 8080 8555
 
-# Create data directories for snapshots and timelapse
-RUN mkdir -p /app/data/snapshots /app/data/timelapse
-
 # Default environment variables
-ENV DATABASE_URL=file:data/streams.db
+ENV DATABASE_URL=file:data/web-tr.db
 ENV TZ=Asia/Jakarta
 
 # Run the application
