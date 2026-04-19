@@ -2035,8 +2035,6 @@ function openShareModal(manualName) {
     const modal = document.getElementById('shareModal');
     const nameSpan = document.getElementById('shareStreamName');
     const urlInput = document.getElementById('shareUrl');
-    const rtspInput = document.getElementById('shareRtsp');
-    const snapInput = document.getElementById('shareSnapshot');
     const iframeText = document.getElementById('shareIframe');
     
     if (!modal || !urlInput || !iframeText) return;
@@ -2049,24 +2047,12 @@ function openShareModal(manualName) {
     const port = window.location.port ? `:${window.location.port}` : "";
     const baseUrl = `${protocol}//${hostname}${port}`;
     
-    // Direct Player Link
-    const streamUrl = `${baseUrl}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=mse,webrtc`;
-    // Embed Code
+    // We point to the proxied stream.html
+    const streamUrl = `${baseUrl}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse`;
     const embedCode = `<iframe src="${streamUrl}" width="100%" height="450" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
-    // RTSP Link (Proxy)
-    const rtspUrl = `rtsp://${hostname}:8554/${encodeURIComponent(name)}`;
-    // Snapshot Link
-    const snapUrl = `${baseUrl}/api/snapshot?name=${encodeURIComponent(name)}`;
     
     urlInput.value = streamUrl;
     iframeText.value = embedCode;
-    if (rtspInput) rtspInput.value = rtspUrl;
-    if (snapInput) snapInput.value = snapUrl;
     
     modal.classList.remove('hidden');
-}
-
-function closeShareModal() {
-    const modal = document.getElementById('shareModal');
-    if (modal) modal.classList.add('hidden');
 }
