@@ -207,19 +207,20 @@ func (m *Manager) SyncFromDB() error {
 	return nil
 }
 
-// ProbeStream runs ffprobe to check if the stream is reachable and returns its resolution (if found).
-func (m *Manager) ProbeStream(url string) (string, error) {
+// ProbeStream runs ffprobe to check if the stream is reachable and returns its resolution and raw output.
+func (m *Manager) ProbeStream(url string) (string, string, error) {
 	// Increased timeout from 5s to 15s for slow/distant streams
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// Adjust arguments. -rtsp_transport tcp is usually more reliable.
+	// Capture more detailed info (codecs, bitrate, etc)
 	args := []string{
-		"-v", "error",
-		"-show_entries", "stream=width,height",
-		"-of", "csv=p=0",
+		"-v", "quiet",
+		"-show_streams",
+		"-show_format",
+		"-print_format", "flat", // flat is easy to read as raw text
 		"-rtsp_transport", "tcp",
-		"-timeout", "10000000", // 10 second connection timeout (in microseconds)
+		"-timeout", "10000000",
 		"-i", url,
 	}
 
@@ -230,53 +231,51 @@ func (m *Manager) ProbeStream(url string) (string, error) {
 	}
 
 	path := binaryName
-	// Check if it exists in current directory first
 	if _, err := os.Stat(binaryName); err == nil {
 		if abs, err := filepath.Abs(binaryName); err == nil {
 			path = abs
-		} else {
-			path = "." + string(os.PathSeparator) + binaryName
 		}
-	} else {
-		// If not in current dir, look in PATH
-		if p, err := exec.LookPath(binaryName); err == nil {
-			path = p
-		}
+	} else if p, err := exec.LookPath(binaryName); err == nil {
+		path = p
 	}
 
 	cmd := exec.CommandContext(ctx, path, args...)
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		// Provide more helpful error messages
 		if ctx.Err() == context.DeadlineExceeded {
-			return "", fmt.Errorf("connection timeout (15s) - stream might be too slow or unreachable")
+			return "", "", fmt.Errorf("connection timeout (15s) - stream unreachable")
 		}
-
 		outputStr := string(output)
 		if outputStr != "" {
-			return "", fmt.Errorf("stream validation failed: %s", outputStr)
+			return "", outputStr, fmt.Errorf("validation failed: %s", outputStr)
 		}
-
-		return "", fmt.Errorf("cannot connect to stream - check URL, credentials, and network connectivity")
+		return "", "", fmt.Errorf("cannot connect to stream")
 	}
 
-	// Parse resolution from output
-	outputStr := strings.TrimSpace(string(output))
+	outputStr := string(output)
+	
+	// Try to find resolution in the flat output
+	// streams.stream.0.width=1920
+	// streams.stream.0.height=1080
+	width := ""
+	height := ""
 	lines := strings.Split(outputStr, "\n")
-	resolution := "Unknown"
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && strings.Contains(line, ",") {
-			parts := strings.Split(line, ",")
-			if len(parts) >= 2 && parts[0] != "" && parts[1] != "" {
-				resolution = parts[0] + "x" + parts[1]
-				break
-			}
+		if strings.Contains(line, ".width=") {
+			width = strings.Split(line, "=")[1]
+		}
+		if strings.Contains(line, ".height=") {
+			height = strings.Split(line, "=")[1]
 		}
 	}
 
-	return resolution, nil
+	resolution := "Unknown"
+	if width != "" && height != "" {
+		resolution = strings.Trim(width, "\"") + "x" + strings.Trim(height, "\"")
+	}
+
+	return resolution, outputStr, nil
 }
 
 // DiscoveredStream holds info about a found camera

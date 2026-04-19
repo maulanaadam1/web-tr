@@ -816,8 +816,19 @@
                                             class="text-xs bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded transition-colors w-full sm:w-auto">
                                             Test Connection
                                         </button>
-                                        <span id="testConnectionResult"
-                                            class="block text-right mt-1 text-xs font-medium"></span>
+                                        <div class="flex items-center justify-end gap-2 mt-1">
+                                            <span id="testConnectionResult" class="text-xs font-medium"></span>
+                                            <button type="button" id="showProbeDetailBtn" onclick="toggleProbeDetail()" class="hidden text-[10px] text-blue-500 hover:underline font-bold">Show Technical Details</button>
+                                        </div>
+                                        
+                                        <!-- Raw Probe View -->
+                                        <div id="probeDetailContainer" class="hidden mt-2 p-3 bg-slate-900 rounded-lg border border-slate-700 text-left">
+                                            <div class="flex justify-between items-center mb-1 border-b border-slate-700/50 pb-1">
+                                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Full Technical Output (ffprobe)</span>
+                                                <button type="button" onclick="copyToClipboard(document.getElementById('probeRawOutput').textContent)" class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded hover:text-white transition-colors">Copy</button>
+                                            </div>
+                                            <pre id="probeRawOutput" class="text-[10px] font-mono text-slate-300 overflow-x-auto whitespace-pre-wrap max-h-48 custom-scrollbar"></pre>
+                                        </div>
                                     </div>
 
                                     <div class="mt-2">

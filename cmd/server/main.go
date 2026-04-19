@@ -1270,10 +1270,16 @@ func main() {
 		rawUrl := req.URL
 		log.Printf("Probing stream: %s (name: %s)", rawUrl, req.Name)
 
-		resolution, err := streamMgr.ProbeStream(rawUrl)
+		resolution, rawOutput, err := streamMgr.ProbeStream(rawUrl)
 		if err != nil {
 			log.Printf("Probe failed: %v", err)
-			http.Error(w, fmt.Sprintf("Probe failed: %v", err), http.StatusBadRequest)
+			// Still return 200 but with error info in JSON so frontend can show raw detail
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status": "failed",
+				"error":  err.Error(),
+				"raw":    rawOutput,
+			})
 			return
 		}
 
@@ -1282,8 +1288,12 @@ func main() {
 			store.UpdateStreamResolution(req.Name, resolution)
 		}
 
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf("OK|%s", resolution)))
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":     "success",
+			"resolution": resolution,
+			"raw":        rawOutput,
+		})
 	}))
 
 	http.HandleFunc("/api/discover", sessionAuth(func(w http.ResponseWriter, r *http.Request) {

@@ -809,12 +809,20 @@ async function testStreamConnection() {
     if (!urlInput) { alert("Please enter a URL first"); return; }
     
     const resultSpan = document.getElementById('testConnectionResult');
+    const detailBtn = document.getElementById('showProbeDetailBtn');
+    const detailOutput = document.getElementById('probeRawOutput');
+    const detailContainer = document.getElementById('probeDetailContainer');
+    
     if (!resultSpan) return;
     
+    // Reset UI
     resultSpan.textContent = "Testing connection...";
-    resultSpan.className = "block text-right mt-1 text-xs font-medium text-slate-500 animate-pulse";
+    resultSpan.className = "text-xs font-medium text-slate-500 animate-pulse";
+    detailBtn.classList.add('hidden');
+    detailContainer.classList.add('hidden');
+    detailOutput.textContent = '';
     
-    const nameInput = document.getElementById('originalStreamName')?.value || '';
+    const nameInput = document.getElementById('editStreamName')?.value || '';
     
     try {
         const res = await fetch('/api/probe', {
@@ -823,21 +831,53 @@ async function testStreamConnection() {
             body: JSON.stringify({ url: urlInput, name: nameInput })
         });
         
-        if (res.ok) {
-            const text = await res.text();
-            let resolution = '';
-            if (text.startsWith("OK|")) resolution = text.split("|")[1];
+        const data = await res.json();
+        
+        // Always show raw output if present
+        if (data.raw) {
+            detailOutput.textContent = data.raw;
+            detailBtn.classList.remove('hidden');
+            detailBtn.textContent = 'Show Technical Details';
+        }
+
+        if (data.status === "success") {
+            const resolution = data.resolution;
             resultSpan.textContent = "✓ Connection Successful" + (resolution ? ` (${resolution})` : "");
-            resultSpan.className = "block text-right mt-1 text-xs font-medium text-green-600";
+            resultSpan.className = "text-xs font-medium text-green-600";
         } else {
-            const err = await res.text();
-            resultSpan.textContent = "✗ Probe Failed: " + err;
-            resultSpan.className = "block text-right mt-1 text-xs font-medium text-red-600";
+            resultSpan.textContent = "✗ Probe Failed: " + (data.error || "Unknown Error");
+            resultSpan.className = "text-xs font-medium text-red-600";
         }
     } catch (e) {
-        resultSpan.textContent = "✗ Error: " + e.message;
-        resultSpan.className = "block text-right mt-1 text-xs font-medium text-red-600";
+        resultSpan.textContent = "✗ Network Error: " + e.message;
+        resultSpan.className = "text-xs font-medium text-red-600";
     }
+}
+
+function toggleProbeDetail() {
+    const container = document.getElementById('probeDetailContainer');
+    const btn = document.getElementById('showProbeDetailBtn');
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        btn.textContent = 'Hide Details';
+    } else {
+        container.classList.add('hidden');
+        btn.textContent = 'Show Technical Details';
+    }
+}
+
+function copyToClipboard(text) {
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.replace('text-slate-400', 'text-green-400');
+        setTimeout(() => {
+            btn.textContent = originalText;
+            btn.classList.replace('text-green-400', 'text-slate-400');
+        }, 2000);
+    });
 }
 
 async function deleteStream(name) {
