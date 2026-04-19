@@ -277,7 +277,7 @@ func (s *Store) ClearAllStreams() error {
 	return err
 }
 
-func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64, enabled bool) error {
+func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64, enabled bool, userID int) error {
 	newName = strings.TrimSpace(newName)
 	oldName = strings.TrimSpace(oldName)
 
@@ -295,12 +295,12 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng flo
 	var checkQuery, updateNameQuery, updateUrlQuery string
 	if s.dbType == "sqlite" {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = ?)"
-		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ? WHERE name = ?"
-		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ? WHERE name = ?"
+		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
+		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
 	} else {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = $1)"
-		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6 WHERE name = $7"
-		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4, is_enabled = $5 WHERE name = $6"
+		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6, user_id = $7 WHERE name = $8"
+		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4, is_enabled = $5, user_id = $6 WHERE name = $7"
 	}
 
 	if oldName != newName {
@@ -314,14 +314,14 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng flo
 			return fmt.Errorf("stream name '%s' already exists", newName)
 		}
 
-		// Update name, url, and backend
-		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, enabled, oldName)
+		// Update name, url, backend, and user_id
+		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, enabled, userID, oldName)
 		if err != nil {
 			return err
 		}
 	} else {
-		// Just update url and backend
-		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, enabled, newName)
+		// Just update url, backend, and user_id
+		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, enabled, userID, newName)
 		if err != nil {
 			return err
 		}

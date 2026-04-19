@@ -972,7 +972,7 @@ func main() {
 					break
 				}
 			}
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, isEnabled); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, isEnabled, sess.UserID); err != nil {
 				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1123,8 +1123,11 @@ func main() {
 				continue
 			}
 
+			// Get session for user ownership
+			sess, _ := r.Context().Value(sessionContextKey).(Session)
+
 			// Add stream (default to go2rtc for CSV imports)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true); err != nil {
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true, sess.UserID); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
