@@ -1423,6 +1423,21 @@ async function initMaintenanceMap() {
         };
 
         L.control.layers(baseMaps).addTo(maintenanceMap);
+
+        // Map Click: If a camera is selected from dropdown but doesn't have a marker, set it here
+        maintenanceMap.on('click', async (e) => {
+            const dashSelect = document.getElementById('dashboardCameraSelect');
+            if (dashSelect && dashSelect.value) {
+                const name = dashSelect.value;
+                // If marker doesn't exist, we can create it
+                if (!maintenanceMarkers[name]) {
+                    const { lat, lng } = e.latlng;
+                    await updateCameraLocation(name, lat, lng);
+                    initMaintenanceMap(); // Re-init to show new marker
+                    setTimeout(() => selectDashboardCamera(name), 500);
+                }
+            }
+        });
     }
 
     // Clear existing markers
@@ -1479,7 +1494,8 @@ async function initMaintenanceMap() {
         if (dashSelect) {
             const opt = document.createElement('option');
             opt.value = s.name;
-            opt.textContent = `${s.name}${!s.online ? ' (Offline)' : ''}`;
+            const status = !s.lat || !s.lng ? ' (No Marker - Click map to place)' : '';
+            opt.textContent = `${s.name}${status}`;
             dashSelect.appendChild(opt);
         }
     });

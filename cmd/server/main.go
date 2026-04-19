@@ -778,7 +778,12 @@ func main() {
 	http.HandleFunc("/api/sysinfo", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			stats := sysinfo.GetStats()
-			stats.StreamCount = streamMgr.GetActiveCount()
+			
+			// Count only streams visible to this user
+			sess := r.Context().Value(sessionContextKey).(Session)
+			allStoreStreams, _ := streamMgr.GetStreams()
+			visibleStreams := getUserVisibleStreams(sess, allStoreStreams, store)
+			stats.StreamCount = len(visibleStreams)
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(stats)
