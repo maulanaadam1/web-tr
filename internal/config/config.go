@@ -65,23 +65,30 @@ func (cm *ConfigManager) Load() (*models.Config, error) {
 	if cfg.Rest == nil {
 		cfg.Rest = make(map[string]interface{})
 	}
-	if _, ok := cfg.Rest["webrtc"]; !ok {
-		publicIP := os.Getenv("PUBLIC_IP")
-		if publicIP == "" {
-			publicIP = "43.157.204.11" // Default for this VPS
-		}
-		cfg.Rest["webrtc"] = map[string]interface{}{
-			"listen": ":8555",
-			"candidates": []string{
-				publicIP + ":8555",
-				"stun:8555",
-			},
-			"ice_servers": []map[string]interface{}{
-				{
-					"urls": []string{"stun:stun.l.google.com:19302"},
-				},
-			},
-		}
+	
+	publicIP := os.Getenv("PUBLIC_IP")
+	if publicIP == "" {
+		publicIP = "43.157.204.11" // Default for this VPS
+	}
+
+	webrtc, ok := cfg.Rest["webrtc"].(map[string]interface{})
+	if !ok {
+		webrtc = make(map[string]interface{})
+		cfg.Rest["webrtc"] = webrtc
+	}
+
+	// Always ensure these critical fields are set correctly for the environment
+	webrtc["listen"] = ":8555"
+	webrtc["candidates"] = []string{
+		publicIP + ":8555",
+		"stun:8555",
+	}
+	
+	// Add common STUN servers if missing for better ICE negotiation
+	webrtc["ice_servers"] = []map[string]interface{}{
+		{ "urls": []string{"stun:stun.l.google.com:19302"} },
+		{ "urls": []string{"stun:stun1.l.google.com:19302"} },
+		{ "urls": []string{"stun:stun2.l.google.com:19302"} },
 	}
 
 	return &cfg, nil
