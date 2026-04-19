@@ -340,6 +340,10 @@
                                     <div class="flex gap-2">
                                         <button onclick="reloadDashboardPreview('webrtc')" class="px-2 py-1 rounded-lg bg-blue-500/80 hover:bg-blue-600 text-[10px] font-bold text-white backdrop-blur">WebRTC</button>
                                         <button onclick="reloadDashboardPreview('mse')" class="px-2 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-800 text-[10px] font-bold text-white backdrop-blur">MSE</button>
+                                        <button onclick="openShareModal()" class="px-2 py-1 rounded-lg bg-emerald-500/80 hover:bg-emerald-600 text-[10px] font-bold text-white backdrop-blur flex items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                                            Share
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1407,6 +1411,10 @@
     </div>
 
     <!-- ===== Camera Live Preview Modal ===== -->
+    </div>
+
+    <!-- ===== Share Stream Modal ===== -->
+    <!-- ===== Camera Live Preview Modal ===== -->
     <div id="cameraPreviewModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
         <!-- Close Button -->
         <button onclick="closeCameraPreviewModal()" class="absolute top-4 right-4 z-[210] bg-black/60 hover:bg-red-600 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 group shadow-2xl">
@@ -1414,17 +1422,67 @@
         </button>
 
         <!-- Top Title Bar -->
-        <div class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-[210] pointer-events-none">
-            <div class="flex items-center gap-3 justify-center">
+        <div class="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-[210] flex justify-between items-center px-8">
+            <div class="flex items-center gap-3">
                 <span class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></span>
-                <h3 id="cameraPreviewTitle" class="text-white text-base font-bold drop-shadow-lg tracking-wide uppercase truncate max-w-[70vw]">Camera Name</h3>
+                <h3 id="cameraPreviewTitle" class="text-white text-base font-bold drop-shadow-lg tracking-wide uppercase truncate max-w-[50vw]">Camera Name</h3>
             </div>
+            <button onclick="openShareModal()" class="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-emerald-500/80 text-white rounded-xl backdrop-blur-md border border-white/10 transition-all text-xs font-bold pointer-events-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                Share This Camera
+            </button>
         </div>
 
         <!-- Player Container -->
         <div id="cameraPreviewContent" class="w-full h-full md:w-[90vw] md:h-[85vh] md:rounded-2xl relative overflow-hidden transform scale-95 transition-transform duration-300 bg-black shadow-2xl border border-white/10">
             <div id="cameraPreviewPlayer" class="w-full h-full relative">
                 <!-- Stream injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Share Stream Modal ===== -->
+    <div id="shareModal" class="hidden fixed inset-0 z-[250] overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true" onclick="document.getElementById('shareModal').classList.add('hidden')">
+                <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-middle bg-white dark:bg-slate-900 rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-200 dark:border-slate-800">
+                <div class="px-8 pt-8 pb-6 bg-gradient-to-br from-brand-600 to-indigo-700">
+                    <h3 class="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        Share Stream
+                    </h3>
+                    <p class="text-brand-100/80 text-sm font-medium">Link and Embed code for <span id="shareStreamName" class="text-white font-bold">--</span></p>
+                </div>
+                
+                <div class="p-8 space-y-6">
+                    <!-- URL Share -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Direct Link (WebRTC)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="shareUrl" readonly class="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-sm font-mono text-slate-700 dark:text-slate-300 focus:outline-none">
+                            <button onclick="copyToClipboard(document.getElementById('shareUrl').value)" class="px-5 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-lg shadow-brand-500/20 transition-all font-bold text-sm">Copy</button>
+                        </div>
+                    </div>
+
+                    <!-- Iframe Share -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">Iframe Embed Code</label>
+                        <div class="relative group">
+                            <textarea id="shareIframe" readonly rows="3" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-700 dark:text-slate-300 focus:outline-none resize-none"></textarea>
+                            <button onclick="copyToClipboard(document.getElementById('shareIframe').value)" class="absolute top-2 right-2 p-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 hover:text-brand-600 transition-colors shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                            </button>
+                        </div>
+                        <p class="mt-2 text-[10px] text-slate-400 italic font-medium">*Recipients must be logged in to RTSP2go to view this stream.</p>
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                    <button type="button" onclick="document.getElementById('shareModal').classList.add('hidden')" class="px-8 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">Close</button>
+                </div>
             </div>
         </div>
     </div>

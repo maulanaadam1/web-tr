@@ -2002,3 +2002,42 @@ function goToMapMarker(name) {
         alert("Location data not available for this camera.");
     }
 }
+
+function openShareModal() {
+    // Check which view we are in to get the correct selected camera
+    let name = "";
+    if (selectedCameraOnMap) {
+        name = selectedCameraOnMap;
+    } else if (document.getElementById('cameraPreviewTitle')) {
+        name = document.getElementById('cameraPreviewTitle').textContent;
+    }
+
+    if (!name || name === "--" || name === "Camera Name") {
+        alert("Please select a camera first.");
+        return;
+    }
+    
+    const modal = document.getElementById('shareModal');
+    const nameSpan = document.getElementById('shareStreamName');
+    const urlInput = document.getElementById('shareUrl');
+    const iframeText = document.getElementById('shareIframe');
+    
+    if (!modal || !urlInput || !iframeText) return;
+    
+    nameSpan.textContent = name;
+    
+    // Construct URLs
+    const protocol = window.location.protocol;
+    const hostname = window.location.hostname;
+    const port = window.location.port ? `:${window.location.port}` : "";
+    const baseUrl = `${protocol}//${hostname}${port}`;
+    
+    // We point to the proxied stream.html
+    const streamUrl = `${baseUrl}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse`;
+    const embedCode = `<iframe src="${streamUrl}" width="100%" height="450" frameborder="0" allowfullscreen allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+    
+    urlInput.value = streamUrl;
+    iframeText.value = embedCode;
+    
+    modal.classList.remove('hidden');
+}
