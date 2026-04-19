@@ -35,13 +35,12 @@ type Session struct {
 	Role             string
 	SubscriptionPlan string
 	EnableSupport    bool
-	EnableVPNGateway bool
+	EnableVPN        bool
 	VPNPassword      string
 	Expiry           time.Time
 }
 
 var (
-	startTime         = time.Now()
 	activeSessions    = make(map[string]Session)
 	sessionMutex      sync.Mutex
 	sessionCookieName = "webtr_session"
@@ -269,7 +268,6 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 						Role:             user.Role,
 						SubscriptionPlan: user.SubscriptionPlan,
 						EnableSupport:    user.EnableSupport,
-						EnableVPNGateway: user.EnableVPNGateway,
 						VPNPassword:      user.VPNPassword,
 						Expiry:           time.Now().Add(1 * time.Hour),
 					}
@@ -580,7 +578,6 @@ func main() {
 					Role:             dbUser.Role,
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
-					EnableVPNGateway: dbUser.EnableVPNGateway,
 					VPNPassword:      dbUser.VPNPassword,
 					Expiry:           expiry,
 				}
@@ -781,12 +778,7 @@ func main() {
 	http.HandleFunc("/api/sysinfo", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			stats := sysinfo.GetStats()
-			sess := r.Context().Value(sessionContextKey).(Session)
-			
-			// For CCTV Count, we should show what they are allowed to see
-			streams, _ := streamMgr.GetStreams()
-			visible := getUserVisibleStreams(sess, streams, globalStore)
-			stats.StreamCount = len(visible)
+			stats.StreamCount = streamMgr.GetActiveCount()
 
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(stats)
@@ -1618,6 +1610,7 @@ func getUserVisibleStreams(sess Session, streams []models.Stream, store *db.Stor
 		users, _ := store.GetAllUsers()
 		supportEnabledMap := make(map[int]bool)
 		for _, u := range users {
+			// Admin can see cameras if user has explicitly enabled support
 			if u.EnableSupport {
 				supportEnabledMap[u.ID] = true
 			}

@@ -125,7 +125,7 @@ func (s *Store) Init() error {
 			"notification_paid BOOLEAN DEFAULT 0",
 			"subscription_plan TEXT DEFAULT 'Free'",
 			"enable_support BOOLEAN DEFAULT 0",
-			"enable_vpn_gateway BOOLEAN DEFAULT 0",
+			"enable_vpn BOOLEAN DEFAULT 0",
 			"vpn_password TEXT DEFAULT ''",
 		}
 		for _, colDef := range cols {
@@ -163,9 +163,10 @@ func (s *Store) Init() error {
 		ADD COLUMN IF NOT EXISTS email TEXT DEFAULT '',
 		ADD COLUMN IF NOT EXISTS whatsapp TEXT DEFAULT '',
 		ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE,
-		ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'Free',
+		ADD COLUMN IF NOT EXISTS broadcast_notifications BOOLEAN DEFAULT FALSE,
+		ADD COLUMN IF NOT EXISTS notification_paid BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS enable_support BOOLEAN DEFAULT FALSE,
-		ADD COLUMN IF NOT EXISTS enable_vpn_gateway BOOLEAN DEFAULT FALSE,
+		ADD COLUMN IF NOT EXISTS enable_vpn BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS vpn_password TEXT DEFAULT '';
 		ALTER TABLE streams
 		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
@@ -380,12 +381,12 @@ func (s *Store) CreateUserFull(u models.User, password string) error {
 
 	var query string
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, enable_vpn_gateway, vpn_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, enable_vpn, vpn_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	} else {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, enable_vpn_gateway, vpn_password) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, enable_vpn, vpn_password) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
 	}
 
-	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.EnableVPNGateway, u.VPNPassword)
+	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.EnableVPN, u.VPNPassword)
 	if err == nil {
 		// Sync with L2TP VPN Server securely
 		s.SyncVPNUserToSecrets(u.Username, u.VPNPassword)
@@ -435,13 +436,13 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(enable_vpn_gateway, 0), COALESCE(vpn_password, ''), created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(enable_vpn, 0), COALESCE(vpn_password, ''), created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(enable_vpn_gateway, false), COALESCE(vpn_password, ''), created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(enable_vpn, false), COALESCE(vpn_password, ''), created_at FROM users WHERE username = $1"
 	}
 
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.EnableVPNGateway, &user.VPNPassword, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.EnableVPN, &user.VPNPassword, &user.CreatedAt)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -453,7 +454,7 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(enable_vpn_gateway, 0), COALESCE(vpn_password, ''), created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(enable_vpn, 0), COALESCE(vpn_password, ''), created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +463,7 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.EnableVPNGateway, &u.VPNPassword, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.EnableVPN, &u.VPNPassword, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
@@ -489,12 +490,12 @@ func (s *Store) UpdateUserPassword(id int, newPassword string) error {
 func (s *Store) UpdateUserFull(u models.User) error {
 	var query string
 	if s.dbType == "sqlite" {
-		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, enable_vpn_gateway = ?, vpn_password = ? WHERE id = ?"
+		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, enable_vpn = ?, vpn_password = ? WHERE id = ?"
 	} else {
-		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, enable_vpn_gateway = $10, vpn_password = $11 WHERE id = $12"
+		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, enable_vpn = $10, vpn_password = $11 WHERE id = $12"
 	}
 
-	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.EnableVPNGateway, u.VPNPassword, u.ID)
+	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.EnableVPN, u.VPNPassword, u.ID)
 	return err
 }
 

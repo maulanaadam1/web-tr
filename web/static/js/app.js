@@ -497,7 +497,7 @@ function openUserModal(user = null) {
     // Multi-tenant fields
     document.getElementById('userSubscription').value = isEdit ? (user.subscription_plan || 'Free') : 'Free';
     document.getElementById('userEnableSupport').checked = isEdit ? !!user.enable_support : false;
-    document.getElementById('userEnableVPNGateway').checked = isEdit ? !!user.enable_vpn_gateway : false;
+    document.getElementById('userEnableVPN').checked = isEdit ? !!user.enable_vpn : false;
 
     title.textContent = isEdit ? `Edit User: ${user.full_name || user.username}` : 'Add New User';
     submitBtnText.textContent = isEdit ? 'Update User' : 'Create User';
@@ -561,7 +561,7 @@ async function submitUserForm() {
         is_active: document.getElementById('userIsActive').checked,
         subscription_plan: document.getElementById('userSubscription').value,
         enable_support: document.getElementById('userEnableSupport').checked,
-        enable_vpn_gateway: document.getElementById('userEnableVPNGateway').checked,
+        enable_vpn: document.getElementById('userEnableVPN').checked,
         broadcast_notifications: false,
         notification_paid: false,
     };
@@ -1396,76 +1396,86 @@ async function initMaintenanceMap() {
     const mapContainer = document.getElementById('maintenanceMap');
     if (!mapContainer) return;
 
-    if (allStreams.length === 0) { await loadStreams(); }
+    // Ensure we have streams data
+    if (allStreams.length === 0) {
+        await loadStreams();
+    }
 
     if (!maintenanceMap) {
-        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' });
-        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        // Base Layers
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap'
+        });
+        
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+        });
 
         maintenanceMap = L.map('maintenanceMap', {
             center: [-7.250445, 112.768845],
             zoom: 11,
-            layers: [osm]
+            layers: [osm] // Default
         });
 
-        L.control.layers({ "Road": osm, "Satellite": satellite }).addTo(maintenanceMap);
+        const baseMaps = {
+            "Road": osm,
+            "Satellite": satellite
+        };
+
+        L.control.layers(baseMaps).addTo(maintenanceMap);
     }
 
-    // Reset markers
-    for (let id in maintenanceMarkers) { maintenanceMap.removeLayer(maintenanceMarkers[id]); }
+    // Clear existing markers
+    for (let id in maintenanceMarkers) {
+        maintenanceMap.removeLayer(maintenanceMarkers[id]);
+    }
     maintenanceMarkers = {};
 
     const dashSelect = document.getElementById('dashboardCameraSelect');
-    if (dashSelect) dashSelect.innerHTML = '<option value="">-- Select Camera --</option>';
+    if (dashSelect) {
+        dashSelect.innerHTML = '<option value="">-- Select Camera --</option>';
+    }
 
-    const pendingList = document.getElementById('pendingLocationList');
-    const pendingPanel = document.getElementById('pendingLocationPanel');
-    if (pendingList) pendingList.innerHTML = '';
-    
-    let hasPending = false;
     const bounds = [];
-
     allStreams.forEach(s => {
         if (s.lat && s.lng) {
-            const marker = L.marker([s.lat, s.lng], { draggable: true, title: s.name }).addTo(maintenanceMap);
-            
-            const upPop = (lat, lng) => {
+            const marker = L.marker([s.lat, s.lng], {
+                draggable: true,
+                title: s.name
+            }).addTo(maintenanceMap);
+
+            const updatePopup = (lat, lng) => {
                 marker.bindPopup(`
                     <div class="p-1">
                         <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.name}</div>
-                        <div class="text-[10px] text-slate-500 mb-1 italic">Coordinate updated via drag</div>
-                        <div class="text-[10px] font-mono bg-slate-50 dark:bg-slate-900/50 p-1.5 rounded leading-relaxed">
-                            Lat: <span class="text-brand-600 font-bold">${lat.toFixed(6)}</span><br>
-                            Lng: <span class="text-brand-600 font-bold">${lng.toFixed(6)}</span>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium italic">Coordinate updated via drag</div>
+                        <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
+                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
+                            <span class="text-indigo-600 dark:text-indigo-400 font-bold">LNG:</span> ${lng.toFixed(6)}
                         </div>
                     </div>
-                `).openPopup();
+                `);
             };
 
-            marker.on('click', () => selectCameraOnMap(s.name));
-            marker.on('dragend', async () => {
-                const pos = marker.getLatLng();
-                upPop(pos.lat, pos.lng);
-                await updateCameraLocation(s.name, pos.lat, pos.lng);
+            updatePopup(s.lat, s.lng);
+
+            // Marker Click - Show Preview
+            marker.on('click', () => {
+                selectCameraOnMap(s.name);
+            });
+
+            marker.on('dragend', async (event) => {
+                const position = marker.getLatLng();
+                updatePopup(position.lat, position.lng);
+                marker.openPopup();
+                await updateCameraLocation(s.name, position.lat, position.lng);
             });
 
             maintenanceMarkers[s.name] = marker;
             bounds.push([s.lat, s.lng]);
-        } else {
-            hasPending = true;
-            if (pendingList) {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group";
-                div.innerHTML = `
-                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">${s.name}</span>
-                    <button onclick='placePendingMarker(${JSON.stringify(s)})' class="p-1 rounded bg-brand-500 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    </button>
-                `;
-                pendingList.appendChild(div);
-            }
         }
-
+        
+        // Add to dropdown even if no coordinates
         if (dashSelect) {
             const opt = document.createElement('option');
             opt.value = s.name;
@@ -1474,27 +1484,25 @@ async function initMaintenanceMap() {
         }
     });
 
-    if (pendingPanel) pendingPanel.classList.toggle('hidden', !hasPending);
-    if (bounds.length > 0) maintenanceMap.fitBounds(bounds, { padding: [20, 20] });
-    setTimeout(() => maintenanceMap.invalidateSize(), 300);
-}
-
-function placePendingMarker(s) {
-    const center = maintenanceMap.getCenter();
-    const marker = L.marker([center.lat, center.lng], { draggable: true, title: s.name }).addTo(maintenanceMap);
-    
-    marker.bindPopup(`
-        <div class="p-3">
-            <p class="text-xs font-bold mb-2">New Marker: ${s.name}</p>
-            <p class="text-[10px] text-slate-500 mb-3">Drag me to the location, then release to save.</p>
-        </div>
-    `).openPopup();
-
-    marker.on('dragend', async () => {
-        const pos = marker.getLatLng();
-        await updateCameraLocation(s.name, pos.lat, pos.lng);
-        initMaintenanceMap();
+    // Handle Popup Close - Reset Preview
+    // We listen on the map itself to catch all ways a popup can close (X button, background click, etc)
+    maintenanceMap.off('popupclose'); // Prevent multiple listeners
+    maintenanceMap.on('popupclose', () => {
+        // Small delay to check if another popup is about to open (e.g. switching markers)
+        // Actually, just deselecting is fine as selectCameraOnMap will run immediately after if a marker was clicked
+        setTimeout(() => {
+            if (!maintenanceMap.hasLayer(maintenanceMap._popup)) {
+                deselectCameraOnMap();
+            }
+        }, 50);
     });
+
+    if (bounds.length > 0) {
+        maintenanceMap.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    // Force resize to fix gray tile issue
+    setTimeout(() => maintenanceMap.invalidateSize(), 300);
 }
 
 function selectCameraOnMap(name) {
