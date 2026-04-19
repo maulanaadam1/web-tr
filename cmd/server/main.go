@@ -1605,24 +1605,6 @@ func main() {
 }
 
 func getUserVisibleStreams(sess Session, streams []models.Stream, store *db.Store) []models.Stream {
-	if sess.Role == "admin" {
-		users, _ := store.GetAllUsers()
-		supportEnabledMap := make(map[int]bool)
-		for _, u := range users {
-			if u.EnableSupport {
-				supportEnabledMap[u.ID] = true
-			}
-		}
-
-		var filtered []models.Stream
-		for _, s := range streams {
-			if s.UserID == sess.UserID || supportEnabledMap[s.UserID] {
-				filtered = append(filtered, s)
-			}
-		}
-		return filtered
-	}
-
 	var filtered []models.Stream
 	for _, s := range streams {
 		if s.UserID == sess.UserID {
