@@ -1602,7 +1602,7 @@ function selectCameraOnMap(name) {
     document.getElementById('previewStatus').classList.remove('hidden');
     document.getElementById('previewCamName').textContent = name;
 
-    reloadDashboardPreview('webrtc');
+    reloadDashboardPreview('mse');
 }
 
 function selectDashboardCamera(name) {
