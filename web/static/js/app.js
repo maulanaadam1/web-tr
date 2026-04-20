@@ -87,6 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         switchView('dashboard');
     }
+
+    // Auto-collapse CC Map Sidebar when clicking outside
+    document.addEventListener('mousedown', (e) => {
+        const panel = document.getElementById('mapSidePanel');
+        const toggleBtn = document.getElementById('ccSidePanelToggleBtn');
+        if (panel && panel.classList.contains('translate-x-0')) {
+            if (!panel.contains(e.target) && (!toggleBtn || !toggleBtn.contains(e.target))) {
+                toggleSidePanel();
+            }
+        }
+    });
 });
 
 // Global theme toggle — called directly via onclick="toggleTheme()" from the button
@@ -2069,6 +2080,7 @@ const ccItemsPerPage = 12;
 function switchCCTab(tab) {
     const mapBtnHeader = document.getElementById('btnCCMapHeader');
     const gridBtnHeader = document.getElementById('btnCCGridHeader');
+    const toggleBtn = document.getElementById('ccSidePanelToggleBtn');
     
     const activeHeaderClass = ['bg-white', 'dark:bg-slate-600', 'shadow-sm', 'text-brand-600', 'dark:text-white'];
     const inactiveHeaderClass = ['text-slate-500', 'dark:text-slate-400', 'hover:text-slate-700', 'dark:hover:text-slate-200', 'bg-transparent', 'shadow-none'];
@@ -2077,6 +2089,12 @@ function switchCCTab(tab) {
         document.getElementById('commandcenter-map-container').classList.add('hidden');
         document.getElementById('commandcenter-grid-container').classList.remove('hidden');
         
+        if (toggleBtn) {
+            toggleBtn.disabled = true;
+            toggleBtn.classList.add('opacity-30', 'cursor-not-allowed');
+            toggleBtn.classList.remove('hover:text-brand-600', 'hover:bg-slate-50', 'dark:hover:bg-slate-800');
+        }
+
         if(mapBtnHeader) {
             mapBtnHeader.classList.remove(...activeHeaderClass);
             mapBtnHeader.classList.add(...inactiveHeaderClass);
@@ -2091,6 +2109,12 @@ function switchCCTab(tab) {
         document.getElementById('commandcenter-grid-container').classList.add('hidden');
         document.getElementById('commandcenter-map-container').classList.remove('hidden');
         
+        if (toggleBtn) {
+            toggleBtn.disabled = false;
+            toggleBtn.classList.remove('opacity-30', 'cursor-not-allowed');
+            toggleBtn.classList.add('hover:text-brand-600', 'hover:bg-slate-50', 'dark:hover:bg-slate-800');
+        }
+
         if(mapBtnHeader) {
             mapBtnHeader.classList.remove(...inactiveHeaderClass);
             mapBtnHeader.classList.add(...activeHeaderClass);
