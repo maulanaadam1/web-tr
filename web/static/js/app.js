@@ -407,7 +407,7 @@ function renderUsersTable() {
     pagedUsers.forEach((u, i) => {
         const index = startIndex + i;
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors';
+        tr.className = 'block md:table-row bg-white dark:bg-slate-900 md:bg-transparent rounded-2xl md:rounded-none border border-slate-200 dark:border-slate-800 md:border-none md:border-b mb-4 p-5 md:p-0 relative shadow-sm md:shadow-none transition-all';
         
         const nameInitial = (u.full_name || u.username).charAt(0).toUpperCase();
         const roleBadgeClass = u.role === 'admin'
@@ -418,26 +418,30 @@ function renderUsersTable() {
             ? '<span class="px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold">ACTIVE</span>'
             : '<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] font-bold">DISABLED</span>';
 
+        // Check if user has public token
+        const hasToken = !!u.public_token;
+
         tr.innerHTML = `
+            <!-- DESKTOP COLUMNS -->
             <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-400 font-medium">${index + 1}</td>
             
-            <td class="px-6 py-4">
+            <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex items-center gap-3">
                     <div class="shrink-0 w-9 h-9 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold shadow">
                         ${nameInitial}
                     </div>
                     <div>
-                        <div class="text-sm font-bold text-slate-800 dark:text-white">${u.full_name || '—'}</div>
+                        <div class="text-sm font-bold text-slate-800 dark:text-white uppercase truncate max-w-[150px]" title="${u.full_name || u.username}">${u.full_name || u.username}</div>
                         <div class="text-[11px] text-slate-400">@${u.username}</div>
                     </div>
                 </div>
             </td>
 
-            <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
-                ${u.email ? `<a href="mailto:${u.email}" class="hover:text-brand-500 transition-colors">${u.email}</a>` : '<span class="text-slate-300">—</span>'}
+            <td class="hidden 2xl:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+                ${u.email ? `<a href="mailto:${u.email}" class="hover:text-brand-500 transition-colors truncate block max-w-[180px]" title="${u.email}">${u.email}</a>` : '<span class="text-slate-300">—</span>'}
             </td>
 
-            <td class="hidden md:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
+            <td class="hidden 2xl:table-cell px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                 ${u.whatsapp || '<span class="text-slate-300">—</span>'}
             </td>
 
@@ -453,23 +457,25 @@ function renderUsersTable() {
                     <span class="text-slate-300 dark:text-slate-600">/</span>
                     <span class="text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Offline/Error">${u.offline_cameras || 0}</span>
                 </div>
-            <            <td class="hidden md:table-cell px-6 py-4">
+            </td>
+
+            <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex items-center gap-2">
-                    ${u.public_token ? `
-                        <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-                             COPY LINK
+                    ${hasToken ? `
+                        <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                             <span class="hidden 2xl:inline">COPY LINK</span>
                         </button>
                         <a href="/view/${u.public_token}" target="_blank" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                         </a>
                         <button onclick="generatePublicLink(${u.id})" class="p-1.5 text-slate-300 hover:text-amber-500 transition-colors" title="Regenerate Link">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                         </button>
                     ` : `
-                        <button onclick="generatePublicLink(${u.id})" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-brand-500 hover:text-white transition-all" title="Create Public Link">
-                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.823a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" /></svg>
-                             GENERATE
+                        <button onclick="generatePublicLink(${u.id})" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-brand-500 hover:text-white transition-all" title="Create Public Link">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.823a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" /></svg>
+                             <span class="hidden 2xl:inline">GENERATE</span>
                         </button>
                     `}
                 </div>
@@ -479,7 +485,8 @@ function renderUsersTable() {
                 ${statusHtml}
             </td>
 
-            <td class="px-6 py-4">
+            <!-- DESKTOP ACTIONS -->
+            <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex justify-end gap-1">
                     <button onclick='openUserModal(${JSON.stringify(u)})' class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 rounded-lg transition-colors" title="Edit User">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
@@ -490,6 +497,53 @@ function renderUsersTable() {
                     </button>`}
                 </div>
             </td>
+
+            <!-- MOBILE CARD VIEW -->
+            <div class="md:hidden">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <div class="text-[10px] font-bold text-brand-600 mb-1">#${index + 1}</div>
+                        <h3 class="text-lg font-black text-slate-800 dark:text-white uppercase leading-tight">${u.full_name || u.username}</h3>
+                        <p class="text-xs text-slate-400 font-medium">${u.email || '@' + u.username}</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                    </div>
+                </div>
+
+                <div class="space-y-3 mb-6">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Role</p>
+                        <p class="text-xs font-bold text-brand-600 uppercase">${u.role}</p>
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Cameras</p>
+                        <div class="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <svg class="w-4 h-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                            ${u.total_cameras || 0} Cameras
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <a href="/view/${u.public_token || ''}" target="_blank" class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-500 ${!u.public_token ? 'opacity-20 pointer-events-none' : ''}">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Manage</span>
+                    </a>
+                    <button onclick='openUserModal(${JSON.stringify(u)})' class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-amber-500">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Pass</span>
+                    </button>
+                    <button onclick='openUserModal(${JSON.stringify(u)})' class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-blue-500">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Edit</span>
+                    </button>
+                    <button onclick="deleteUser(${u.id})" class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-red-500 ${u.username === 'admin' ? 'opacity-20 pointer-events-none' : ''}">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Delete</span>
+                    </button>
+                </div>
+            </div>
         `;
         tableBody.appendChild(tr);
     });
