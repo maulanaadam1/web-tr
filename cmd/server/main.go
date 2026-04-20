@@ -37,6 +37,7 @@ type Session struct {
 	EnableSupport    bool
 	EnableVPN        bool
 	VPNPassword      string
+	PublicToken      string
 	Expiry           time.Time
 }
 
@@ -579,6 +580,7 @@ func main() {
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
 					VPNPassword:      dbUser.VPNPassword,
+					PublicToken:      dbUser.PublicToken,
 					Expiry:           expiry,
 				}
 				sessionMutex.Unlock()
