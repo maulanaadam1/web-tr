@@ -56,12 +56,18 @@ function switchView(viewName) {
 
     // Handle view-specific initialization
     if (viewName === 'commandcenter') {
+        const ccTabs = document.getElementById('ccTabControlsHeader');
+        if(ccTabs) ccTabs.classList.remove('hidden');
+
         if (allStreams.length === 0) {
             loadStreams().then(initCommandCenterMap);
         } else {
             initCommandCenterMap();
         }
         return; // Don't run other dashboard stuff
+    } else {
+        const ccTabs = document.getElementById('ccTabControlsHeader');
+        if(ccTabs) ccTabs.classList.add('hidden');
     }
 
     // Refresh Data for specific views
@@ -2071,25 +2077,38 @@ let ccCurrentPage = 1;
 const ccItemsPerPage = 12;
 
 function switchCCTab(tab) {
-    const mapBtn = document.getElementById('btnCCMap');
-    const gridBtn = document.getElementById('btnCCGrid');
+    const mapBtnHeader = document.getElementById('btnCCMapHeader');
+    const gridBtnHeader = document.getElementById('btnCCGridHeader');
     
+    const activeHeaderClass = ['bg-white', 'dark:bg-slate-600', 'shadow-sm', 'text-brand-600', 'dark:text-white'];
+    const inactiveHeaderClass = ['text-slate-500', 'dark:text-slate-400', 'hover:text-slate-700', 'dark:hover:text-slate-200', 'bg-transparent', 'shadow-none'];
+
     if (tab === 'grid') {
         document.getElementById('commandcenter-map-container').classList.add('hidden');
         document.getElementById('commandcenter-grid-container').classList.remove('hidden');
         
-        // Update styling
-        mapBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors";
-        gridBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-colors";
+        if(mapBtnHeader) {
+            mapBtnHeader.classList.remove(...activeHeaderClass);
+            mapBtnHeader.classList.add(...inactiveHeaderClass);
+        }
+        if(gridBtnHeader) {
+            gridBtnHeader.classList.remove(...inactiveHeaderClass);
+            gridBtnHeader.classList.add(...activeHeaderClass);
+        }
         
         renderCCGridPage(ccCurrentPage);
     } else {
         document.getElementById('commandcenter-grid-container').classList.add('hidden');
         document.getElementById('commandcenter-map-container').classList.remove('hidden');
         
-        // Update styling
-        gridBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors";
-        mapBtn.className = "px-3 py-1.5 rounded-lg text-sm font-semibold bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 transition-colors";
+        if(mapBtnHeader) {
+            mapBtnHeader.classList.remove(...inactiveHeaderClass);
+            mapBtnHeader.classList.add(...activeHeaderClass);
+        }
+        if(gridBtnHeader) {
+            gridBtnHeader.classList.remove(...activeHeaderClass);
+            gridBtnHeader.classList.add(...inactiveHeaderClass);
+        }
         
         if (globalCameraMap) globalCameraMap.invalidateSize();
     }
@@ -2233,18 +2252,31 @@ function renderMapSidebarCameraList(streams) {
     }
 
     listContainer.innerHTML = streams.map(s => `
-        <div onclick="focusCameraOnMap('${escapeJS(s.name)}')" class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 transition-all cursor-pointer group/item">
-            <div class="w-10 h-10 rounded-lg ${s.enabled === false ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-brand-50 dark:bg-brand-900/40 text-brand-500'} flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-slate-700/50 transition-colors group-hover/item:border-brand-500/50 relative">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                ${s.online ? '<span class="absolute -top-1 -right-1 flex h-3 w-3 rounded-full border-2 border-white dark:border-slate-900"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-full w-full bg-green-500"></span></span>' : ''}
+        <div onclick="focusCameraOnMap('${escapeJS(s.name)}')" class="group/item flex flex-col bg-white dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden transition-all hover:shadow-lg hover:border-brand-500/50 cursor-pointer mb-2 shadow-sm">
+            <div class="aspect-video w-full bg-slate-900 relative overflow-hidden">
+                ${s.enabled !== false ? `
+                <img src="/api/snapshot?name=${encodeURIComponent(s.name)}" 
+                     class="w-full h-full object-cover opacity-90 group-hover/item:scale-110 transition-transform duration-700"
+                     onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJncmF5Ij48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTZsNC41ODYtNC41ODZhMiAyIDAgMDEyLjgyODAwTDE2IDE2bS0yLTJsMS41ODYtMS41ODZhMiAyIDAgMDEyLjgyODAwTDIwIDE0bS02LTZoLjAxTTYgMjBoMTJhMiAyIDAgMDAyLTJWNmEyIDIgMCAwMC0yLTJINmEyIDIgMDAwLTIgMTJoMiAwIDAwMiAyekkiLz48L3N2Zz4='">
+                ` : `
+                <div class="w-full h-full flex flex-col items-center justify-center text-slate-600 italic">
+                    <svg class="h-8 w-8 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </div>
+                `}
+                
+                <div class="absolute top-2 right-2">
+                    ${s.online ? '<span class="flex h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] border-2 border-white dark:border-slate-900"></span>' : '<span class="flex h-2.5 w-2.5 rounded-full bg-slate-400 border-2 border-white dark:border-slate-900"></span>'}
+                </div>
+                
+                ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
             </div>
-            <div class="min-w-0 pr-2">
-                <div class="text-xs font-black text-slate-800 dark:text-white uppercase truncate mb-0.5 group-hover/item:text-brand-500 transition-colors">${s.name}</div>
-                <div class="flex items-center gap-2">
+            <div class="p-2.5">
+                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-0.5">${s.name}</div>
+                <div class="flex items-center justify-between">
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
-                    ${s.enabled === false ? '<span class="text-[8px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1 rounded uppercase tracking-tighter">Disabled</span>' : ''}
+                    <div class="flex gap-1.5 items-center">
+                        <svg class="w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2274,6 +2306,14 @@ function focusCameraOnMap(name) {
     if (mapToUse) {
         mapToUse.setView([stream.lat, stream.lng], 18, { animate: false });
         
+        // Auto-close sidebar on mobile/tablet when focusing camera
+        if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
+            const panel = document.getElementById('mapSidePanel');
+            if (panel && panel.classList.contains('open')) {
+                toggleSidePanel();
+            }
+        }
+
         // Find marker and open popup
         const marker = markersToSearch.find(m => {
             // Some markers are stored differently (Leaflet object vs manual array)
