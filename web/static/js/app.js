@@ -2306,17 +2306,19 @@ function focusCameraOnMap(name) {
         const isGrid = gridContainer && !gridContainer.classList.contains('hidden');
         
         if (isGrid) {
-            // Requirement 3: Grid View behavior - open player and close sidebar
+            // Grid View behavior - open player and close sidebar
             openCameraPreviewModal(name);
             if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
                 const panel = document.getElementById('mapSidePanel');
-            if (panel && panel.classList.contains('translate-x-0')) toggleSidePanel();
+                if (panel && panel.classList.contains('translate-x-0')) toggleSidePanel();
             }
             return;
         }
     }
 
-    if (stream.lat === 0 && stream.lng === 0) return;
+    const lat = parseFloat(stream.lat);
+    const lng = parseFloat(stream.lng);
+    if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return;
 
     // Determine which map is active
     let mapToUse = null;
@@ -2334,9 +2336,10 @@ function focusCameraOnMap(name) {
     }
 
     if (mapToUse) {
-        mapToUse.setView([stream.lat, stream.lng], 18, { animate: false });
+        // Requirement: Ensure marker is centered in area
+        mapToUse.setView([lat, lng], 18, { animate: true, duration: 1 });
         
-        // Requirement 3: Map View behavior - close sidebar and open popup
+        // Map View behavior - close sidebar and open popup
         if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
             const panel = document.getElementById('mapSidePanel');
             if (panel && panel.classList.contains('translate-x-0')) toggleSidePanel();
@@ -2353,6 +2356,6 @@ function focusCameraOnMap(name) {
             });
             
             if (marker) marker.openPopup();
-        }, 100);
+        }, 300); // 300ms to allow some movement
     }
 }
