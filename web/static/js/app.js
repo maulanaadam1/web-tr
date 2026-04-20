@@ -1522,8 +1522,48 @@ async function initMaintenanceMap() {
                 if (!maintenanceMarkers[name]) {
                     const { lat, lng } = e.latlng;
                     await updateCameraLocation(name, lat, lng);
-                    initMaintenanceMap(); // Re-init to show new marker
-                    setTimeout(() => selectDashboardCamera(name), 500);
+                    
+                    // Update local data
+                    const stream = allStreams.find(s => s.name === name);
+                    if (stream) {
+                        stream.lat = lat;
+                        stream.lng = lng;
+                    }
+
+                    // Add marker manually without reload
+                    const roundIcon = L.divIcon({
+                        className: 'round-marker',
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7]
+                    });
+                    const marker = L.marker([lat, lng], { icon: roundIcon }).addTo(maintenanceMap);
+                    
+                    // Cleanup name for ID
+                    const safeId = name.replace(/[^a-z0-9]/gi, '_');
+                    const popupContent = `
+                        <div class="custom-card-popup p-3 rounded-xl bg-white dark:bg-slate-900 shadow-2xl">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                <h4 class="font-bold text-xs text-slate-800 dark:text-white uppercase">${name}</h4>
+                            </div>
+                            <button onclick="selectDashboardCamera('${escapeJS(name)}')" class="w-full py-1.5 bg-brand-500 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-brand-600 transition-all shadow-lg shadow-brand-500/30">
+                                View Stream
+                            </button>
+                        </div>
+                    `;
+                    marker.bindPopup(popupContent, {
+                        closeButton: false,
+                        className: 'custom-popup-container-dash',
+                        minWidth: 160
+                    });
+
+                    maintenanceMarkers[name] = marker;
+                    
+                    // Refresh the select dropdown text (remove "No Marker" status)
+                    const opt = dashSelect.querySelector(`option[value="${name}"]`);
+                    if (opt) opt.textContent = name;
+
+                    setTimeout(() => selectDashboardCamera(name), 100);
                 }
             }
         });
@@ -1920,7 +1960,7 @@ function renderCommandCenterMarkers() {
     });
 
     if (bounds.length > 0 && commandCenterFirstLoad) {
-        globalCameraMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+        globalCameraMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 22 });
         commandCenterFirstLoad = false;
     }
 }
