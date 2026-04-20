@@ -114,6 +114,27 @@ func (s *Store) Init() error {
 		return err
 	}
 
+	// Create interests table for pre-launch
+	var interestQuery string
+	if s.dbType == "sqlite" {
+		interestQuery = `
+		CREATE TABLE IF NOT EXISTS interests (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT UNIQUE NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);`
+	} else {
+		interestQuery = `
+		CREATE TABLE IF NOT EXISTS interests (
+			id SERIAL PRIMARY KEY,
+			email TEXT UNIQUE NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`
+	}
+	if _, err := s.db.Exec(interestQuery); err != nil {
+		return err
+	}
+
 	// Add backend column if it doesn't exist (migration)
 	if s.dbType == "sqlite" {
 		cols := []string{
@@ -545,5 +566,16 @@ func (s *Store) DeleteUser(id int) error {
 	}
 
 	_, err := s.db.Exec(query, id)
+	return err
+}
+
+func (s *Store) AddInterest(email string) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO interests (email) VALUES (?) ON CONFLICT(email) DO NOTHING"
+	} else {
+		query = "INSERT INTO interests (email) VALUES ($1) ON CONFLICT(email) DO NOTHING"
+	}
+	_, err := s.db.Exec(query, email)
 	return err
 }

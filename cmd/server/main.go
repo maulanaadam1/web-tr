@@ -384,6 +384,7 @@ func main() {
 	// Setup
 	os.MkdirAll("data", 0755)
 	
+	prelaunch := os.Getenv("APP_PRELAUNCH") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
 
@@ -526,6 +527,10 @@ func main() {
 	})
 
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		if prelaunch && r.URL.Query().Get("tab") == "signup" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
 		if r.Method == http.MethodGet {
 			// If already logged in, redirect to admin
 			cookie, err := r.Cookie(sessionCookieName)
@@ -829,6 +834,16 @@ func main() {
 			return
 		}
 
+		if prelaunch {
+			tmpl, err := template.ParseFiles("web/templates/coming_soon.html")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			tmpl.Execute(w, nil)
+			return
+		}
+
 		tmpl, err := template.ParseFiles("web/templates/landing.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -838,7 +853,34 @@ func main() {
 		tmpl.Execute(w, nil)
 	})
 
+	http.HandleFunc("/api/interest", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var data struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+		if data.Email == "" {
+			http.Error(w, "Email required", http.StatusBadRequest)
+			return
+		}
+		if err := store.AddInterest(data.Email); err != nil {
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
+		if prelaunch {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
 		tmpl, err := template.ParseFiles("web/templates/gateway_docs.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
