@@ -376,40 +376,33 @@
                     const bar = document.getElementById('floatingTryBar');
                     
                     btn.disabled = true;
-                    btn.innerHTML = '<span class="flex h-2 w-2 rounded-full bg-white animate-ping mr-2"></span> Loading...';
+                    btn.innerHTML = '<span class="flex h-2 w-2 rounded-full bg-white animate-ping mr-2"></span> Connecting...';
                     
-                    try {
-                        const res = await fetch('/api/public/test-rtsp', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: 'test-' + Date.now().toString().slice(-4), url: url })
-                        });
-                        const data = await res.json();
-                        if (data.name) {
-                            currentStreamName = data.name;
-                            broadcastUrl = window.location.origin + '/share/' + data.name;
-                            statusBar.classList.remove('hidden');
-                            bar.classList.add('active'); // Keep bar open
-                            updateTryStatus();
-                        }
-                    } catch (e) { console.error(e); }
+                    // Directly use go2rtc player URL with the RTSP src - same as landing page
+                    currentStreamName = "Direct Preview";
+                    broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(url)}&mode=webrtc,mse,hls,mp4,mjpeg`;
                     
-                    btn.disabled = false;
-                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg> Start Broadcast';
+                    setTimeout(() => {
+                        statusBar.classList.remove('hidden');
+                        bar.classList.add('active'); // Keep bar open
+                        updateTryStatus();
+                        btn.disabled = false;
+                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg> Start Broadcast';
+                    }, 1500);
                 }
 
                 function updateTryStatus() {
                     const dot = document.getElementById('tryStatusDot');
                     const text = document.getElementById('tryStatusText');
                     dot.className = "w-2 h-2 rounded-full bg-green-500 animate-pulse";
-                    text.textContent = "Broadcast Active: " + currentStreamName;
+                    text.textContent = "Broadcast Active: Direct Preview";
                 }
 
                 function openTryPlayer() {
-                    if (!currentStreamName) return;
+                    if (!broadcastUrl) return;
                     const modal = document.getElementById('streamPlayerModal');
                     const container = document.getElementById('streamPlayerContainer');
-                    container.innerHTML = `<iframe src="/share/${currentStreamName}" class="w-full h-full border-0" allowfullscreen></iframe>`;
+                    container.innerHTML = `<iframe src="${broadcastUrl}" class="w-full h-full border-0" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
                     modal.classList.remove('opacity-0', 'pointer-events-none');
                 }
 
