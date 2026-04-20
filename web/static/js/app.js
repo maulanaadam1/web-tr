@@ -4,6 +4,7 @@ let maintenanceMap = null;
 let maintenanceMarkers = {};
 let maintenanceFirstLoad = true;
 let selectedCameraOnMap = null;
+let markersLocked = true;
 
 // --- View Management ---
 function switchView(viewName) {
@@ -1640,6 +1641,37 @@ async function handleTlExport() {
     }
 }
 
+function toggleMarkerLock() {
+    markersLocked = !markersLocked;
+    const btn = document.getElementById('btnLockMarkers');
+    const icon = document.getElementById('lockIcon');
+    const text = document.getElementById('lockStatusText');
+    
+    if (!btn || !icon || !text) return;
+
+    if (markersLocked) {
+        icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>`;
+        text.textContent = 'LOCKED';
+        btn.classList.remove('bg-brand-500', 'text-white', 'border-brand-500');
+        btn.classList.add('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'dark:border-slate-700');
+        icon.classList.remove('text-white');
+        icon.classList.add('text-brand-500');
+    } else {
+        icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M8 11V7a4 4 0 118 0m-4 8v2M5 21h14a2 2 0 002-2v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>`;
+        text.textContent = 'UNLOCKED';
+        btn.classList.add('bg-brand-500', 'text-white', 'border-brand-500');
+        btn.classList.remove('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'dark:border-slate-700');
+        icon.classList.add('text-white');
+        icon.classList.remove('text-brand-500');
+    }
+
+    // Apply to all markers
+    Object.values(maintenanceMarkers).forEach(marker => {
+        if (markersLocked) marker.dragging.disable();
+        else marker.dragging.enable();
+    });
+}
+
 // --- Maintenance Map logic ---
 async function initMaintenanceMap() {
     const mapContainer = document.getElementById('maintenanceMap');
@@ -1764,7 +1796,7 @@ async function initMaintenanceMap() {
             });
 
             const marker = L.marker([s.lat, s.lng], {
-                draggable: true,
+                draggable: !markersLocked,
                 title: s.name,
                 icon: roundIcon
             }).addTo(maintenanceMap);
