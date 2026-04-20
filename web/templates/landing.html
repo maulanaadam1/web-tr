@@ -676,7 +676,23 @@
             const container = document.getElementById('streamPlayerContainer');
             document.getElementById('playerModalDot').className = 'stream-status-dot online';
             document.getElementById('playerModalTitle').textContent = currentStreamName || 'Live Preview';
-            container.innerHTML = `<iframe src="${broadcastUrl}" class="w-full h-full border-none" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+            
+            const ifr = document.createElement('iframe');
+            ifr.src = broadcastUrl;
+            ifr.className = "w-full h-full border-none";
+            ifr.allow = "autoplay; fullscreen; picture-in-picture";
+            ifr.onload = () => {
+                try {
+                    const style = document.createElement('style');
+                    style.innerHTML = '.mode { display:none !important; } .retry { display:none !important; }';
+                    ifr.contentDocument.head.appendChild(style);
+                } catch (e) {
+                    console.warn("Status removal failed", e);
+                }
+            };
+            
+            container.innerHTML = '';
+            container.appendChild(ifr);
             modal.classList.remove('opacity-0', 'pointer-events-none');
             modal.classList.add('opacity-100');
         }

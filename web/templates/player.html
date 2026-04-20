@@ -62,7 +62,19 @@
 
         // 4. Masukkan ke iframe
         console.log("Memuat player dari:", playerUrl);
-        document.getElementById("go2rtc-player").src = playerUrl;
+        const ifr = document.getElementById("go2rtc-player");
+        ifr.src = playerUrl;
+
+        // 5. Hide MSE/RTC status after load
+        ifr.onload = () => {
+            try {
+                const style = document.createElement('style');
+                style.innerHTML = '.mode { display:none !important; } .retry { display:none !important; }';
+                ifr.contentDocument.head.appendChild(style);
+            } catch (e) {
+                console.warn("Could not inject CSS to block status (cross-origin maybe?)", e);
+            }
+        };
     </script>
 </body>
 

@@ -402,7 +402,23 @@
                     if (!broadcastUrl) return;
                     const modal = document.getElementById('streamPlayerModal');
                     const container = document.getElementById('streamPlayerContainer');
-                    container.innerHTML = `<iframe src="${broadcastUrl}" class="w-full h-full border-0" allow="autoplay; fullscreen; picture-in-picture"></iframe>`;
+                    
+                    const ifr = document.createElement('iframe');
+                    ifr.src = broadcastUrl;
+                    ifr.className = "w-full h-full border-0";
+                    ifr.allow = "autoplay; fullscreen; picture-in-picture";
+                    ifr.onload = () => {
+                        try {
+                            const style = document.createElement('style');
+                            style.innerHTML = '.mode { display:none !important; } .retry { display:none !important; }';
+                            ifr.contentDocument.head.appendChild(style);
+                        } catch (e) {
+                            console.warn("Status removal failed", e);
+                        }
+                    };
+                    
+                    container.innerHTML = '';
+                    container.appendChild(ifr);
                     modal.classList.remove('opacity-0', 'pointer-events-none');
                 }
 
