@@ -58,7 +58,7 @@
         }
 
         // 3. Susun URL Player
-        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}`;
+        const playerUrl = `${go2rtcBase}/stream.html?src=${encodeURIComponent(streamName)}&mode=mse,webrtc,hls,mp4,mjpeg`;
 
         // 4. Masukkan ke iframe
         console.log("Memuat player dari:", playerUrl);
