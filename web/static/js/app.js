@@ -198,9 +198,9 @@ function renderStreamsTable() {
                         <p class="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Method</p>
                         <p class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase">${s.type === 'ffmpeg' ? 'FFmpeg' : 'Direct'}</p>
                     </div>
-                    <div class="flex-1 bg-slate-50 dark:bg-slate-800 p-2.5 rounded border border-slate-100 dark:border-slate-700">
-                        <p class="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Timelapse</p>
-                        <p class="text-xs font-bold uppercase ${s.timelapse_enabled ? 'text-green-600 dark:text-green-400' : 'text-slate-500'}">${s.timelapse_enabled ? 'Enabled' : 'Disabled'}</p>
+                    <div class="flex-1 bg-slate-50 dark:bg-slate-800 p-2.5 rounded border border-slate-100 dark:border-slate-700 overflow-hidden">
+                        <p class="text-[9px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Source</p>
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${s.url}">${s.url}</p>
                     </div>
                 </div>
 
@@ -213,8 +213,8 @@ function renderStreamsTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-tighter">${s.type === 'ffmpeg' ? 'FFmpeg' : 'Direct'}</span>
             </td>
-            <td class="hidden md:table-cell px-6 py-4">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.timelapse_enabled ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-800'} uppercase tracking-tighter cursor-help" title="${s.timelapse_enabled ? 'Interval: ' + s.timelapse_interval + 's' : 'Off'}">${s.timelapse_enabled ? 'Enabled' : 'Disabled'}</span>
+            <td class="hidden md:table-cell px-6 py-4 max-w-[200px]">
+                <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded inline-block w-full" title="${s.url}">${s.url}</div>
             </td>
 
             <td class="block md:table-cell md:px-6 py-3 mt-4 pt-4 md:mt-0 md:pt-3 border-t md:border-none border-slate-100 dark:border-slate-800">
