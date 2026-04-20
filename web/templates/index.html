@@ -1424,26 +1424,26 @@
     <!-- ===== Camera Live Preview Modal ===== -->
     <div id="cameraPreviewModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
         <!-- Top Controls Overlay -->
-        <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-black/90 via-black/40 to-transparent z-[210] flex justify-between items-center px-8 transition-opacity duration-300 opacity-100">
+        <div class="absolute top-0 left-0 right-0 p-3 md:p-6 bg-gradient-to-b from-black/90 via-black/40 to-transparent z-[210] flex justify-between items-center px-4 md:px-8 transition-opacity duration-300 opacity-100">
             <div class="flex items-center gap-3">
                 <span class="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_12px_rgba(239,68,68,0.9)]"></span>
-                <h3 id="cameraPreviewTitle" class="text-white text-lg font-black drop-shadow-2xl tracking-wider uppercase truncate max-w-[50vw]">Camera Name</h3>
+                <h3 id="cameraPreviewTitle" class="text-white text-xs sm:text-base md:text-lg font-black drop-shadow-2xl tracking-wider uppercase truncate max-w-[40vw] md:max-w-[50vw]">Camera Name</h3>
             </div>
             
             <div class="flex items-center gap-3">
                 <!-- Snapshot Button -->
-                <button onclick="takeSnapshotFromPreview()" class="bg-white/10 hover:bg-blue-500 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl group/btn pointer-events-auto" title="Take Snapshot">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                <button onclick="takeSnapshotFromPreview()" class="bg-white/10 hover:bg-blue-500 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl group/btn pointer-events-auto" title="Take Snapshot">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 </button>
                 
                 <!-- Share Button (Icon Only) -->
-                <button onclick="openShareModal()" class="bg-white/10 hover:bg-emerald-500 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl group/btn pointer-events-auto" title="Share Camera">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                <button onclick="openShareModal()" class="bg-white/10 hover:bg-emerald-500 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl group/btn pointer-events-auto" title="Share Camera">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                 </button>
 
                 <!-- Exit Button -->
-                <button onclick="closeCameraPreviewModal()" class="bg-black/40 hover:bg-red-600 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 group/exit shadow-2xl pointer-events-auto border border-white/5" title="Exit Fullscreen">
-                    <svg class="w-6 h-6 transform group-hover/exit:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <button onclick="closeCameraPreviewModal()" class="bg-black/40 hover:bg-red-600 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 group/exit shadow-2xl pointer-events-auto border border-white/5" title="Exit Fullscreen">
+                    <svg class="w-5 h-5 md:w-6 md:h-6 transform group-hover/exit:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
         </div>
