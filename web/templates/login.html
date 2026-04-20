@@ -219,7 +219,59 @@
                     </a>
                 </div>
             </div>
+
+            {{if .SkipLanding}}
+            <div class="mt-8 pt-8 border-t border-slate-800/80">
+                <div class="text-center mb-6">
+                    <h3 class="text-lg font-bold text-white flex items-center justify-center gap-2">
+                        <span class="flex h-2 w-2 rounded-full bg-brand-500"></span>
+                        Segera Hadir
+                    </h3>
+                    <p class="text-slate-400 text-sm">Daftarkan email Anda untuk info peluncuran resmi.</p>
+                </div>
+                <form id="interest-form" class="flex gap-2">
+                    <input type="email" id="interest-email" required placeholder="nama@email.com" 
+                        class="flex-1 px-4 py-2.5 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-all">
+                    <button type="submit" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-500/20 active:scale-95">Kirim</button>
+                </form>
+                <div id="interest-message" class="mt-3 text-center text-sm font-medium hidden"></div>
+            </div>
+            
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    const form = document.getElementById('interest-form');
+                    if (!form) return;
+                    
+                    form.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        const email = document.getElementById('interest-email').value;
+                        const msg = document.getElementById('interest-message');
+                        
+                        try {
+                            const res = await fetch('/api/interest', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ email })
+                            });
+                            if (res.ok) {
+                                msg.textContent = "Terima kasih! Kami akan mengabari Anda.";
+                                msg.classList.remove('hidden', 'text-red-400');
+                                msg.classList.add('text-green-400', 'animate-bounce');
+                                form.reset();
+                            } else {
+                                throw new Error();
+                            }
+                        } catch (err) {
+                            msg.textContent = "Ups, terjadi kesalahan. Coba lagi nanti.";
+                            msg.classList.remove('hidden', 'text-green-400');
+                            msg.classList.add('text-red-400');
+                        }
+                    });
+                });
+            </script>
+            {{end}}
         </div>
+    </div>
     </div>
     <script>
         // Use mode sent from server to select tab

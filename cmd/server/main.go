@@ -556,10 +556,11 @@ func main() {
 			successMsg := r.URL.Query().Get("success")
 			mode := r.URL.Query().Get("mode") // "register" or empty
 			tmpl.Execute(w, map[string]interface{}{
-				"Error":      errorMsg,
-				"Success":    successMsg,
-				"Mode":       mode,
-				"HideSignup": prelaunch || hideSignup,
+				"Error":       errorMsg,
+				"Success":     successMsg,
+				"Mode":        mode,
+				"HideSignup":  prelaunch || hideSignup,
+				"SkipLanding": skipLanding,
 			})
 			return
 		}
