@@ -834,6 +834,19 @@ func main() {
 			visibleStreams := getUserVisibleStreams(sess, allStoreStreams, store)
 			stats.StreamCount = len(visibleStreams)
 
+			// Detailed counts
+			active := 0
+			disabled := 0
+			for _, s := range visibleStreams {
+				if s.Enabled != false {
+					active++
+				} else {
+					disabled++
+				}
+			}
+			stats.ActiveStreams = active
+			stats.DisabledStreams = disabled
+
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(stats)
 			return

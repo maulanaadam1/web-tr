@@ -1237,6 +1237,8 @@ async function fetchSysInfo() {
         update('stat-cpuused', Math.round(data.cpuUsagePct) + '%');
         const cp = document.getElementById('stat-cpuprogress'); if(cp) cp.style.width = Math.round(data.cpuUsagePct) + '%';
         update('stat-streams', data.streamCount);
+        update('stat-active', data.activeStreams);
+        update('stat-disabled', data.disabledStreams);
     } catch (e) {}
 }
 

@@ -304,6 +304,7 @@
 
                 <!-- SYSTEM STATS GRID -->
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6" id="sysMetricsContainer">
+                    {{ if eq .Session.Role "admin" }}
                     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
                         <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Server Uptime</p>
                         <h4 class="text-2xl font-bold text-slate-800 dark:text-white" id="stat-uptime">--</h4>
@@ -328,8 +329,18 @@
                         <h4 class="text-xl font-bold text-slate-800 dark:text-white mb-2"><span id="stat-memused">0</span> <span class="text-xs text-slate-400">/ <span id="stat-memtotal">0</span> MB</span></h4>
                         <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5"><div class="bg-brand-500 h-1.5 rounded-full transition-all duration-1000" style="width: 0%" id="stat-memprogress"></div></div>
                     </div>
+                    {{ else }}
                     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
-                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">CCTV Count</p>
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">CCTV Active</p>
+                        <h4 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="stat-active">0</h4>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">CCTV Disabled</p>
+                        <h4 class="text-2xl font-bold text-slate-400" id="stat-disabled">0</h4>
+                    </div>
+                    {{ end }}
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-5">
+                        <p class="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Total CCTV</p>
                         <h4 class="text-2xl font-bold text-slate-800 dark:text-white" id="stat-streams">0</h4>
                     </div>
                 </div>

@@ -18,7 +18,9 @@ type SysStats struct {
 	MemUsagePct  float64 `json:"memUsagePct"`
 	CpuUsagePct  float64 `json:"cpuUsagePct"`
 	AppUptime    string  `json:"appUptime"`
-	StreamCount  int     `json:"streamCount"`
+	StreamCount     int     `json:"streamCount"`
+	ActiveStreams   int     `json:"activeStreams"`
+	DisabledStreams int     `json:"disabledStreams"`
 }
 
 func GetStats() SysStats {
