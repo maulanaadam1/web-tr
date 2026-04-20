@@ -197,6 +197,14 @@
             </button>
             {{ end }}
             
+            <button type="button" onclick="window.open('/view/' + (window.USER_PUBLIC_TOKEN || ''), '_blank')" data-view="publicview" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Public View">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">Public View</span>
+            </button>
+            
             {{ if or (eq .Session.Role "admin") .Session.EnableVPN }}
             <div class="pt-6 mt-6 border-t border-slate-200 dark:border-slate-800">
                 <button type="button" onclick="document.getElementById('vpnProfileModal').classList.remove('hidden')" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-lg font-medium transition-colors" title="My VPN Profile">
@@ -1522,6 +1530,8 @@
     </div>
     <script>
         window.CURRENT_ROLE = "{{ .Session.Role }}";
+        window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
+        window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
     <script src="/static/js/app.js?v=30"></script>
     <script>

@@ -80,8 +80,61 @@ function switchView(viewName) {
     if (viewName === 'timelapse') initTimelapseView();
 }
 
+function applySubscriptionRestrictions() {
+    const plan = window.CURRENT_PLAN || 'Free';
+    const role = window.CURRENT_ROLE || 'user';
+    
+    // Admins have no restrictions
+    if (role === 'admin') return;
+
+    // 1. Sidemenu Restrictions
+    const dashboardLink = document.querySelector('.nav-link[data-view="dashboard"]');
+    const ccLink = document.querySelector('.nav-link[data-view="commandcenter"]');
+    const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
+    
+    if (publicViewLink) {
+        publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Premium');
+    }
+
+    if (plan === 'Free' || plan === 'Premium') {
+        if (dashboardLink) dashboardLink.classList.add('hidden');
+        if (ccLink) ccLink.classList.add('hidden');
+        // If they are on a hidden view, move them to cameras
+        if (currentView === 'dashboard' || currentView === 'commandcenter') {
+            switchView('cameras');
+        }
+    } else {
+        if (dashboardLink) dashboardLink.classList.remove('hidden');
+        if (ccLink) ccLink.classList.remove('hidden');
+    }
+
+    // 2. Manage Camera Restrictions (Import/Export)
+    const exportBtn = document.querySelector('button[onclick*="export"]');
+    const importBtn = document.querySelector('button[onclick="openCSVImportModal()"]');
+    if (plan !== 'Enterprise') {
+        if (exportBtn) exportBtn.classList.add('hidden');
+        if (importBtn) importBtn.classList.add('hidden');
+    }
+
+    // 3. Add Camera Button Visibility
+    const addCamBtn = document.querySelector('button[onclick="openAddModal()"]');
+    if (addCamBtn) {
+        let limit = 2;
+        if (plan === 'Premium') limit = 8;
+        if (plan === 'Advance') limit = 16;
+        if (plan === 'Enterprise') limit = 9999;
+        
+        if (allStreams.length >= limit) {
+            addCamBtn.classList.add('hidden');
+        } else {
+            addCamBtn.classList.remove('hidden');
+        }
+    }
+}
+
 // Ensure correct view on initial page load based on pathname
 document.addEventListener('DOMContentLoaded', () => {
+    applySubscriptionRestrictions();
     if (window.location.pathname === '/commandcenter') {
         switchView('commandcenter');
     } else {
@@ -126,6 +179,7 @@ async function loadStreams() {
         // Populate sidebar camera list for maps
         renderMapSidebarCameraList(allStreams);
         
+        applySubscriptionRestrictions();
         renderStreamsTable();
     } catch (e) {
         console.error("Failed to load streams", e);
@@ -624,7 +678,24 @@ function openUserModal(user = null) {
     selectRole(isEdit ? user.role : 'user');
     
     modal.classList.remove('hidden');
+    checkModalPlanRestrictions();
 }
+
+function checkModalPlanRestrictions() {
+    const plan = document.getElementById('userSubscription').value;
+    const supportToggle = document.getElementById('userEnableSupport')?.closest('div.mt-4') || document.getElementById('userEnableSupport')?.closest('label')?.parentElement;
+    const vpnToggle = document.getElementById('userEnableVPN')?.closest('div.mt-4') || document.getElementById('userEnableVPN')?.closest('label')?.parentElement;
+
+    if (supportToggle) {
+        supportToggle.classList.toggle('hidden', plan === 'Free' || plan === 'Premium');
+    }
+    if (vpnToggle) {
+        vpnToggle.classList.toggle('hidden', plan !== 'Enterprise');
+    }
+}
+
+// Add listener for plan changes in modal
+document.getElementById('userSubscription')?.addEventListener('change', checkModalPlanRestrictions);
 
 function closeUserModal() {
     document.getElementById('userModal').classList.add('hidden');
