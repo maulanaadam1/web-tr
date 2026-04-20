@@ -1727,8 +1727,9 @@ function openCameraPreviewModal(name) {
     player.appendChild(iframe);
 
     // Show modal with animation
-    modal.classList.remove('opacity-0', 'pointer-events-none');
+    modal.classList.remove('hidden');
     requestAnimationFrame(() => {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
         content.classList.remove('scale-95');
         content.classList.add('scale-100');
     });
@@ -1751,7 +1752,10 @@ function closeCameraPreviewModal() {
     modal.classList.add('opacity-0', 'pointer-events-none');
 
     // Clear iframe to stop the stream
-    setTimeout(() => { if (player) player.innerHTML = ''; }, 300);
+    setTimeout(() => { 
+        if (player) player.innerHTML = ''; 
+        modal.classList.add('hidden');
+    }, 300);
     document.removeEventListener('keydown', _previewEscHandler);
 }
 

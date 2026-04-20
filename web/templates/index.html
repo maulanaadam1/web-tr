@@ -239,6 +239,7 @@
             </div>
             
             <div class="flex items-center gap-4">
+
                 <div class="w-px h-5 bg-slate-200 dark:bg-slate-700"></div>
                 <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors" title="Toggle theme">
                     <!-- Sun Icon (shown in dark mode) -->
@@ -1371,7 +1372,7 @@
 
     <!-- ===== Share Stream Modal ===== -->
     <!-- ===== Camera Live Preview Modal ===== -->
-    <div id="cameraPreviewModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
+    <div id="cameraPreviewModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center bg-black/85 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none">
         <!-- Close Button -->
         <button onclick="closeCameraPreviewModal()" class="absolute top-4 right-4 z-[210] bg-black/60 hover:bg-red-600 text-white p-3 rounded-full backdrop-blur-md transition-all duration-200 group shadow-2xl">
             <svg class="w-6 h-6 transform group-hover:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
