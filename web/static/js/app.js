@@ -331,6 +331,7 @@ function startLiveStream(name, iframeSrc, overlayElement) {
             style.textContent = `
                 video { object-fit: fill !important; width: 100% !important; height: 100% !important; }
                 body { background-color: black !important; margin: 0 !important; overflow: hidden !important; }
+                .info { display: none !important; }
             `;
             iframe.contentDocument.head.appendChild(style);
         } catch (e) {}
@@ -1916,6 +1917,14 @@ function openCameraPreviewModal(name) {
     iframe.src = iframeSrc;
     iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;z-index:20;';
     iframe.allow = 'autoplay; fullscreen; picture-in-picture';
+    iframe.onload = () => {
+        try {
+            // Inject CSS to hide go2rtc status/info bar
+            const style = document.createElement('style');
+            style.textContent = '.info { display: none !important; }'; 
+            iframe.contentDocument.head.appendChild(style);
+        } catch (e) {}
+    };
     player.appendChild(iframe);
 
     // Show modal with animation

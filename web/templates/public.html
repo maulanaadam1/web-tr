@@ -487,6 +487,13 @@
                 const ls = videoContainer.querySelector('.bg-gray-950');
                 if(ls) ls.style.opacity = '0';
                 setTimeout(() => { if(ls) ls.remove(); }, 300);
+
+                try {
+                    // Inject CSS to hide go2rtc status/info bar
+                    const style = document.createElement('style');
+                    style.textContent = '.info { display: none !important; }'; 
+                    iframe.contentDocument.head.appendChild(style);
+                } catch (e) {}
             };
 
             videoContainer.appendChild(iframe);
