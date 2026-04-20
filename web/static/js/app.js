@@ -2275,7 +2275,24 @@ function renderMapSidebarCameraList(streams) {
 
 function focusCameraOnMap(name) {
     const stream = allStreams.find(s => s.name === name);
-    if (!stream || (stream.lat === 0 && stream.lng === 0)) return;
+    if (!stream) return;
+
+    if (currentView === 'commandcenter') {
+        const gridContainer = document.getElementById('commandcenter-grid-container');
+        const isGrid = gridContainer && !gridContainer.classList.contains('hidden');
+        
+        if (isGrid) {
+            // Requirement 3: Grid View behavior - open player and close sidebar
+            openCameraPreviewModal(name);
+            if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
+                const panel = document.getElementById('mapSidePanel');
+                if (panel && panel.classList.contains('open')) toggleSidePanel();
+            }
+            return;
+        }
+    }
+
+    if (stream.lat === 0 && stream.lng === 0) return;
 
     // Determine which map is active
     let mapToUse = null;
@@ -2283,12 +2300,11 @@ function focusCameraOnMap(name) {
 
     if (currentView === 'dashboard') {
         mapToUse = maintenanceMap;
-        markersToSearch = maintenanceMarkers;
+        markersToSearch = Object.values(maintenanceMarkers || {});
     } else if (currentView === 'commandcenter') {
         mapToUse = globalCameraMap;
-        markersToSearch = globalMapMarkers;
+        markersToSearch = Object.values(commandCenterMarkers || {});
     } else if (typeof publicMap !== 'undefined') {
-        // We are on public view
         mapToUse = publicMap;
         markersToSearch = Object.values(publicMarkers || {});
     }
@@ -2296,21 +2312,23 @@ function focusCameraOnMap(name) {
     if (mapToUse) {
         mapToUse.setView([stream.lat, stream.lng], 18, { animate: false });
         
-        // Auto-close sidebar on mobile/tablet when focusing camera
+        // Requirement 3: Map View behavior - close sidebar and open popup
         if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
             const panel = document.getElementById('mapSidePanel');
-            if (panel && panel.classList.contains('open')) {
-                toggleSidePanel();
-            }
+            if (panel && panel.classList.contains('open')) toggleSidePanel();
         }
 
         // Find marker and open popup
-        const marker = markersToSearch.find(m => {
-            // Some markers are stored differently (Leaflet object vs manual array)
-            if (m.getPopup() && m.getPopup().getContent().includes(name)) return true;
-            return false;
-        });
-        
-        if (marker) marker.openPopup();
+        setTimeout(() => {
+            const marker = markersToSearch.find(m => {
+                try {
+                    const popup = m.getPopup();
+                    if (popup && popup.getContent() && popup.getContent().includes(name)) return true;
+                } catch(e) {}
+                return false;
+            });
+            
+            if (marker) marker.openPopup();
+        }, 100);
     }
 }
