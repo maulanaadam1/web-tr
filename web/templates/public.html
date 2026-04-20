@@ -226,7 +226,7 @@
                 </div>
             </div>
             
-            <div id="sidePanelOverlay" onclick="toggleSidePanel()" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[1999] opacity-0 pointer-events-none transition-opacity duration-500"></div>
+            <div id="sidePanelOverlay" onclick="toggleSidePanel()" class="fixed inset-0 bg-black/20 z-[1999] opacity-0 pointer-events-none transition-opacity duration-500"></div>
         </div>
 
         <!-- Tab 2: All Cameras (Grid View with Pagination) -->
@@ -666,7 +666,7 @@
                             ${s.online ? '<span class="flex h-2.5 w-2.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] border-2 border-white dark:border-slate-900"></span>' : '<span class="flex h-2.5 w-2.5 rounded-full bg-slate-400 border-2 border-white dark:border-slate-900"></span>'}
                         </div>
                         
-                        ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
+                        ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
                     </div>
                     <div class="p-3">
                         <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-1">${s.name}</div>
@@ -688,6 +688,14 @@
             if (item && window.globalMap) {
                 window.globalMap.setView(item.marker.getLatLng(), 18, { animate: false });
                 item.marker.openPopup();
+
+                // Auto close side panel on mobile/tablet when camera is selected
+                if (window.innerWidth < 1024) {
+                    const panel = document.getElementById('sidePanel');
+                    if (panel && panel.classList.contains('open')) {
+                        toggleSidePanel();
+                    }
+                }
             }
         }
     </script>
