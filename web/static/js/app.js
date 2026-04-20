@@ -431,6 +431,26 @@ function renderUsersTable() {
                     <span class="text-slate-300 dark:text-slate-600">/</span>
                     <span class="text-[10px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded" title="Offline/Error">${u.offline_cameras || 0}</span>
                 </div>
+            <            <td class="hidden md:table-cell px-6 py-4">
+                <div class="flex items-center gap-2">
+                    ${u.public_token ? `
+                        <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-[10px] font-bold hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                             COPY LINK
+                        </button>
+                        <a href="/view/${u.public_token}" target="_blank" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                        <button onclick="generatePublicLink(${u.id})" class="p-1.5 text-slate-300 hover:text-amber-500 transition-colors" title="Regenerate Link">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        </button>
+                    ` : `
+                        <button onclick="generatePublicLink(${u.id})" class="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-lg text-[10px] font-bold hover:bg-brand-500 hover:text-white transition-all" title="Create Public Link">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.823a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" /></svg>
+                             GENERATE
+                        </button>
+                    `}
+                </div>
             </td>
 
             <td class="hidden md:table-cell px-6 py-4">
@@ -463,6 +483,22 @@ function renderUsersTable() {
             <button class="px-2 py-1 border border-brand-500 rounded text-xs bg-brand-500 text-white">${userCurrentPage}</button>
             <button onclick="userCurrentPage=Math.min(${totalPages}, userCurrentPage+1);renderUsersTable()" class="px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-700">&gt;</button>
         `;
+    }
+}
+
+async function generatePublicLink(userId) {
+    if (!confirm("Generate a new public hub link? Any old link will stop working.")) return;
+    try {
+        const response = await fetch(`/api/users/token?id=${userId}`, { method: 'POST' });
+        if (response.ok) {
+            showToast("Public link generated successfully!", "success");
+            loadUsers(); // Refresh table
+        } else {
+            const err = await response.text();
+            showToast(`Failed: ${err}`, "error");
+        }
+    } catch (e) {
+        showToast("Network error generating token", "error");
     }
 }
 

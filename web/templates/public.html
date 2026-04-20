@@ -101,6 +101,17 @@
             <button id="btnTabGrid" onclick="switchTab('grid')" class="w-[110px] py-1.5 text-center text-sm font-semibold rounded-md transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">All Cameras</button>
         </div>
 
+        <!-- User Identity Branding -->
+        <div class="hidden md:flex items-center gap-3 ml-auto mr-4 pr-4 border-r border-slate-200 dark:border-slate-700">
+            <div class="text-right">
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Public Hub</p>
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-200">{{ .User.FullName }}</p>
+            </div>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-brand-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                {{ if .User.FullName }}{{ slice .User.FullName 0 1 }}{{ else }}U{{ end }}
+            </div>
+        </div>
+
         <div class="flex items-center gap-3">
             <button id="themeToggleBtn" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor">
@@ -110,9 +121,6 @@
                     <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                 </svg>
             </button>
-            <a href="/admin" class="h-9 hidden md:flex bg-brand-600 hover:bg-brand-700 text-white px-4 rounded-lg text-sm font-semibold transition-all duration-200 items-center justify-center gap-2 shadow-lg shadow-brand-500/20">
-                <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
-            </a>
         </div>
     </header>
 
@@ -458,7 +466,7 @@
         function openPublicPlayerModal(name) {
             titleEl.textContent = name;
             // Use standard rtc mode for primary public viewing
-            const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+            const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
 
             // Loading UI inside frameless container
             videoContainer.innerHTML = `

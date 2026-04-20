@@ -18,5 +18,6 @@ type User struct {
 	EnableSupport          bool      `json:"enable_support"`
 	EnableVPN              bool      `json:"enable_vpn"`
 	VPNPassword            string    `json:"vpn_password"`
+	PublicToken            string    `json:"public_token"`
 	CreatedAt              time.Time `json:"created_at"`
 }

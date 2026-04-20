@@ -775,6 +775,36 @@ func main() {
 		}
 	}))
 
+	http.HandleFunc("/api/users/token", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		idStr := r.URL.Query().Get("id")
+		var targetID int
+		fmt.Sscanf(idStr, "%d", &targetID)
+
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" && sess.UserID != targetID {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		// Generate random token
+		b := make([]byte, 16)
+		rand.Read(b)
+		token := hex.EncodeToString(b)
+
+		if err := store.UpdateUserPublicToken(targetID, token); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"public_token": token})
+	}))
+
 	http.HandleFunc("/api/sysinfo", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
 			stats := sysinfo.GetStats()
@@ -842,6 +872,41 @@ func main() {
 
 	http.HandleFunc("/commandcenter", adminHandler)
 	http.HandleFunc("/admin", adminHandler)
+
+	http.HandleFunc("/view/", func(w http.ResponseWriter, r *http.Request) {
+		token := strings.TrimPrefix(r.URL.Path, "/view/")
+		if token == "" {
+			http.Error(w, "Token required", http.StatusBadRequest)
+			return
+		}
+
+		user, err := store.GetUserByPublicToken(token)
+		if err != nil || user == nil {
+			http.Error(w, "Invalid or expired public link", http.StatusNotFound)
+			return
+		}
+
+		tmpl, err := template.ParseFiles("web/templates/public.html")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		allStreams, _ := streamMgr.GetStreams()
+		
+		// Admin sees all if using their public link, otherwise user sees their own
+		var filtered []models.Stream
+		for _, s := range allStreams {
+			if user.Role == "admin" || s.UserID == user.ID {
+				filtered = append(filtered, s)
+			}
+		}
+
+		tmpl.Execute(w, map[string]interface{}{
+			"Streams": filtered,
+			"User":    user,
+		})
+	})
 
 	http.HandleFunc("/api/streams", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		sess := r.Context().Value(sessionContextKey).(Session)
