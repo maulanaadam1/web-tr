@@ -498,8 +498,11 @@ func main() {
 	defer streamMgr.Stop()
 
 	// Public Share Page
-	http.HandleFunc("/share", func(w http.ResponseWriter, r *http.Request) {
-		streamName := r.URL.Query().Get("stream")
+	http.HandleFunc("/share/", func(w http.ResponseWriter, r *http.Request) {
+		streamName := strings.TrimPrefix(r.URL.Path, "/share/")
+		if streamName == "" {
+			streamName = r.URL.Query().Get("stream")
+		}
 		if streamName == "" {
 			http.Error(w, "Stream name is required", http.StatusBadRequest)
 			return
