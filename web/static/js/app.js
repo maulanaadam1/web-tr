@@ -179,10 +179,10 @@ function renderStreamsTable() {
                         <span class="text-xs font-bold text-brand-500">#${index + 1}</span>
                         ${s.enabled === false ? '<span class="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 uppercase">Disabled</span>' : ''}
                     </div>
-                    ${s.online 
-                        ? '<div class="p-1 px-[10px] bg-green-50 dark:bg-green-900/30 text-green-500 rounded text-xl"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>' 
-                        : '<div class="p-1 px-[10px] bg-slate-50 dark:bg-slate-800 text-slate-400 rounded text-xl"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728M16.95 7.05a7 7 0 010 9.9m-2.829-2.829a3 3 0 11-4.242-4.242 3 3 0 014.242 4.242zM12 4v2m0 12v2m8-8h2M2 12h2"/></svg></div>'
-                    }
+                    <!-- REPLACED LIGHTNING WITH COPY LINK -->
+                    <button onclick="copyToClipboard('${escapeJS(s.url)}')" class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 rounded-lg hover:bg-emerald-100 transition-colors shadow-sm" title="Copy Source URL">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                    </button>
                 </div>
             </td>
 
@@ -215,6 +215,12 @@ function renderStreamsTable() {
             </td>
             <td class="hidden md:table-cell px-6 py-4 max-w-[200px]">
                 <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded inline-block w-full" title="${s.url}">${s.url}</div>
+            </td>
+            
+            <td class="hidden md:table-cell px-6 py-4 text-center">
+                <button onclick="copyToClipboard('${escapeJS(s.url)}')" class="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors" title="Copy Source URL">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                </button>
             </td>
 
             <td class="block md:table-cell md:px-6 py-3 mt-4 pt-4 md:mt-0 md:pt-3 border-t md:border-none border-slate-100 dark:border-slate-800">
