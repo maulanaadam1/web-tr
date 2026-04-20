@@ -575,10 +575,10 @@
                 if (validStreams.length > 0) mapCenter = [validStreams[0].lat, validStreams[0].lng];
 
                 window.mapLayers = {
-                    'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png', { attribution: '&copy; CARTO' }),
-                    'Light': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png', { attribution: '&copy; CARTO' }),
-                    'OpenMaps': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }),
-                    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' })
+                    'Dark': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png', { maxZoom: 25, maxNativeZoom: 19, attribution: '&copy; CARTO' }),
+                    'Light': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png', { maxZoom: 25, maxNativeZoom: 19, attribution: '&copy; CARTO' }),
+                    'OpenMaps': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 25, maxNativeZoom: 19, attribution: '&copy; OSM' }),
+                    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 25, maxNativeZoom: 19, attribution: 'Esri' })
                 };
 
                 const currentTheme = document.documentElement.classList.contains('dark') ? 'Dark' : 'Light';
