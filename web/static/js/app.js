@@ -1742,7 +1742,17 @@ async function updateCameraLocation(name, lat, lng) {
 }
 
 // ===== Camera Live Preview Modal (Manage Camera) =====
+let currentPreviewedCamera = null;
+
+function takeSnapshotFromPreview() {
+    if (currentPreviewedCamera) {
+        takeSnapshot(currentPreviewedCamera);
+    }
+}
+
 function openCameraPreviewModal(name) {
+    currentPreviewedCamera = name;
+    window.currentPreviewedCamera = name; // For share modal compatibility
     const modal = document.getElementById('cameraPreviewModal');
     const content = document.getElementById('cameraPreviewContent');
     const player = document.getElementById('cameraPreviewPlayer');
