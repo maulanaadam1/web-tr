@@ -2,6 +2,7 @@
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
+let maintenanceFirstLoad = true;
 let selectedCameraOnMap = null;
 
 // --- View Management ---
@@ -717,6 +718,8 @@ function escapeJS(str) {
 let locationMap = null;
 let locationMarker = null;
 
+let locationMapZoom = 13;
+
 function initLocationMap(lat, lng) {
     setTimeout(() => {
         const DEFAULT_LAT = -7.2504; // Surabaya
@@ -725,12 +728,16 @@ function initLocationMap(lat, lng) {
         const initialLng = lng || DEFAULT_LNG;
 
         if (!locationMap) {
-            locationMap = L.map('streamLocationMap').setView([initialLat, initialLng], 13);
+            locationMap = L.map('streamLocationMap').setView([initialLat, initialLng], locationMapZoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 25,
                 maxNativeZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(locationMap);
+
+            locationMap.on('zoomend', () => {
+                locationMapZoom = locationMap.getZoom();
+            });
             
             locationMarker = L.marker([initialLat, initialLng], {draggable: true}).addTo(locationMap);
             
@@ -1602,9 +1609,10 @@ async function initMaintenanceMap() {
         }, 50);
     });
 
-    if (bounds.length > 0) {
+    if (bounds.length > 0 && maintenanceFirstLoad) {
         maintenanceMap.fitBounds(bounds, { padding: [20, 20] });
-    } else {
+        maintenanceFirstLoad = false;
+    } else if (bounds.length === 0 && maintenanceFirstLoad) {
         // Fallback to Current Location if no markers
         maintenanceMap.locate({ setView: true, maxZoom: 14 });
         maintenanceMap.on('locationerror', () => {
