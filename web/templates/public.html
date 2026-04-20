@@ -317,10 +317,10 @@
                 tabMap.classList.replace('tab-hidden', 'tab-active');
                 
                 btnMap.classList.remove(...inactiveClassBtn);
-                btnMap.classList.add(...activeHeaderClass || activeClassBtn);
+                btnMap.classList.add(...activeClassBtn);
                 
-                btnGrid.classList.remove(...activeHeaderClass || activeClassBtn);
-                btnGrid.classList.add(...inactiveHeaderClass || inactiveClassBtn);
+                btnGrid.classList.remove(...activeClassBtn);
+                btnGrid.classList.add(...inactiveClassBtn);
 
                 if (toggleBtn) {
                     toggleBtn.disabled = false;
@@ -345,11 +345,11 @@
                 tabMap.classList.replace('tab-active', 'tab-hidden');
                 tabGrid.classList.replace('tab-hidden', 'tab-active');
 
-                btnGrid.classList.remove(...inactiveHeaderClass || inactiveClassBtn);
-                btnGrid.classList.add(...activeHeaderClass || activeClassBtn);
+                btnGrid.classList.remove(...inactiveClassBtn);
+                btnGrid.classList.add(...activeClassBtn);
                 
-                btnMap.classList.remove(...activeHeaderClass || activeClassBtn);
-                btnMap.classList.add(...inactiveHeaderClass || inactiveClassBtn);
+                btnMap.classList.remove(...activeClassBtn);
+                btnMap.classList.add(...inactiveClassBtn);
 
                 if (toggleBtn) {
                     toggleBtn.disabled = true;
