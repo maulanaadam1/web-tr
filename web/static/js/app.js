@@ -105,6 +105,10 @@ async function loadStreams() {
         const response = await fetch('/api/streams');
         allStreams = await response.json() || [];
         streamCurrentPage = 1;
+        
+        // Populate sidebar camera list for maps
+        renderMapSidebarCameraList(allStreams);
+        
         renderStreamsTable();
     } catch (e) {
         console.error("Failed to load streams", e);
@@ -809,6 +813,7 @@ async function openEditModal(name, url) {
     document.getElementById("streamUrl").value = url;
     
     const streamInfo = allStreams.find(s => s.name === name);
+    document.getElementById("streamEnabled").checked = streamInfo ? streamInfo.enabled !== false : true;
     initLocationMap(streamInfo?.lat || 0, streamInfo?.lng || 0);
 
     const testRes = document.getElementById("testConnectionResult");
@@ -829,11 +834,14 @@ async function submitStreamForm(isEdit) {
     const originalName = document.getElementById("editOriginalName").value.trim();
     const lat = parseFloat(document.getElementById("streamLat").value) || 0;
     const lng = parseFloat(document.getElementById("streamLng").value) || 0;
+    const enabled = document.getElementById("streamEnabled").checked;
 
     if (!name || !url) { alert("Fields required"); return; }
 
     const method = isEdit ? 'PUT' : 'POST';
-    const body = isEdit ? JSON.stringify({ name, url, originalName, lat, lng }) : JSON.stringify({ name, url, lat, lng });
+    const body = isEdit 
+        ? JSON.stringify({ name, url, originalName, lat, lng, enabled }) 
+        : JSON.stringify({ name, url, lat, lng, enabled });
 
     try {
         const response = await fetch('/api/streams', {
@@ -1582,10 +1590,21 @@ async function initMaintenanceMap() {
     const bounds = [];
     allStreams.forEach(s => {
         if (s.lat && s.lng) {
+            const isEnabled = s.enabled !== false;
+            const markerColor = isEnabled ? '#6366f1' : '#94a3b8';
+            
             const roundIcon = L.divIcon({
-                className: 'round-marker',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
+                className: 'round-marker-container',
+                html: `
+                    <div class="relative group">
+                        <div class="w-4 h-4 rounded-full bg-white dark:bg-slate-900 border-2 shadow flex items-center justify-center transition-transform hover:scale-125" style="border-color: ${markerColor}">
+                            <div class="w-1.5 h-1.5 rounded-full" style="background-color: ${markerColor}"></div>
+                            ${!isEnabled ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-slate-400 border-2 border-white dark:border-slate-800 rounded-full"></div>' : ''}
+                        </div>
+                    </div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                popupAnchor: [0, -8]
             });
 
             const marker = L.marker([s.lat, s.lng], {
@@ -1595,9 +1614,11 @@ async function initMaintenanceMap() {
             }).addTo(maintenanceMap);
 
             const updatePopup = (lat, lng) => {
+                const statusHtml = !isEnabled ? '<div class="text-[9px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase tracking-tighter mb-1 inline-block">Disabled</div>' : '';
                 marker.bindPopup(`
                     <div class="p-1">
                         <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.name}</div>
+                        ${statusHtml}
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium italic">Coordinate updated via drag</div>
                         <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
                             <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
@@ -1921,26 +1942,50 @@ function renderCommandCenterMarkers() {
     const bounds = [];
 
     allStreams.forEach(s => {
-        if (s.enabled !== false && s.lat && s.lng) {
+        if (s.lat && s.lng) {
+            const isEnabled = s.enabled !== false;
+            const markerColor = isEnabled ? '#6366f1' : '#94a3b8';
+
             const roundIcon = L.divIcon({
-                className: 'round-marker',
-                iconSize: [14, 14],
-                iconAnchor: [7, 7]
+                className: 'round-marker-container',
+                html: `
+                    <div class="relative group">
+                        <div class="w-4 h-4 rounded-full bg-white dark:bg-slate-900 border-2 shadow flex items-center justify-center transition-transform hover:scale-125" style="border-color: ${markerColor}">
+                            <div class="w-1.5 h-1.5 rounded-full" style="background-color: ${markerColor}"></div>
+                            ${!isEnabled ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-slate-400 border-2 border-white dark:border-slate-800 rounded-full"></div>' : ''}
+                        </div>
+                    </div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8],
+                popupAnchor: [0, -8]
             });
 
             const marker = L.marker([s.lat, s.lng], { icon: roundIcon }).addTo(globalCameraMap);
             
             const host = window.location.host;
-            const iframeSrc = `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
+            const iframeSrc = isEnabled 
+                ? `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg`
+                : '';
             
+            const statusHtml = !isEnabled 
+                ? '<span class="text-[10px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-2 py-0.5 rounded-md uppercase tracking-tighter">Disabled</span>'
+                : (s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500"></span>');
+
+            const previewContent = isEnabled 
+                ? `<iframe src="${iframeSrc}" class="w-full h-full border-none pointer-events-auto" allow="autoplay; fullscreen; picture-in-picture"></iframe>`
+                : `<div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800/50 text-slate-400 italic">
+                     <svg class="w-12 h-12 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                     <span class="text-xs font-bold uppercase tracking-widest">Camera Disabled</span>
+                   </div>`;
+
             const popupContent = `
                 <div class="w-72 sm:w-80 -m-4 overflow-hidden rounded-xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
                     <div class="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
-                        <h3 class="font-bold text-slate-800 dark:text-white truncate pr-2 text-sm max-w-[80%]">${s.name}</h3>
-                        ${s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500"></span>'}
+                        <h3 class="font-bold text-slate-800 dark:text-white truncate pr-2 text-sm max-w-[70%]">${s.name}</h3>
+                        ${statusHtml}
                     </div>
                     <div class="bg-black w-full aspect-video relative group">
-                        <iframe src="${iframeSrc}" class="w-full h-full border-none pointer-events-auto" allow="autoplay; fullscreen; picture-in-picture"></iframe>
+                        ${previewContent}
                         <div class="absolute inset-0 border border-white/10 rounded-b-xl pointer-events-none"></div>
                     </div>
                 </div>`;
@@ -2177,4 +2222,65 @@ function openShareModal(manualName) {
 function closeShareModal() {
     const modal = document.getElementById('shareModal');
     if (modal) modal.classList.add('hidden');
+}
+function renderMapSidebarCameraList(streams) {
+    const listContainer = document.getElementById('mapSidebarCameraList');
+    if (!listContainer) return;
+
+    if (!streams || streams.length === 0) {
+        listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs">No cameras available</div>';
+        return;
+    }
+
+    listContainer.innerHTML = streams.map(s => `
+        <div onclick="focusCameraOnMap('${escapeJS(s.name)}')" class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 transition-all cursor-pointer group/item">
+            <div class="w-10 h-10 rounded-lg ${s.enabled === false ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-brand-50 dark:bg-brand-900/40 text-brand-500'} flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-slate-700/50 transition-colors group-hover/item:border-brand-500/50 relative">
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                ${s.online ? '<span class="absolute -top-1 -right-1 flex h-3 w-3 rounded-full border-2 border-white dark:border-slate-900"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-full w-full bg-green-500"></span></span>' : ''}
+            </div>
+            <div class="min-w-0 pr-2">
+                <div class="text-xs font-black text-slate-800 dark:text-white uppercase truncate mb-0.5 group-hover/item:text-brand-500 transition-colors">${s.name}</div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
+                    ${s.enabled === false ? '<span class="text-[8px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1 rounded uppercase tracking-tighter">Disabled</span>' : ''}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function focusCameraOnMap(name) {
+    const stream = allStreams.find(s => s.name === name);
+    if (!stream || (stream.lat === 0 && stream.lng === 0)) return;
+
+    // Determine which map is active
+    let mapToUse = null;
+    let markersToSearch = [];
+
+    if (currentView === 'dashboard') {
+        mapToUse = maintenanceMap;
+        markersToSearch = maintenanceMarkers;
+    } else if (currentView === 'commandcenter') {
+        mapToUse = globalCameraMap;
+        markersToSearch = globalMapMarkers;
+    } else if (typeof publicMap !== 'undefined') {
+        // We are on public view
+        mapToUse = publicMap;
+        markersToSearch = Object.values(publicMarkers || {});
+    }
+
+    if (mapToUse) {
+        mapToUse.setView([stream.lat, stream.lng], 18, { animate: false });
+        
+        // Find marker and open popup
+        const marker = markersToSearch.find(m => {
+            // Some markers are stored differently (Leaflet object vs manual array)
+            if (m.getPopup() && m.getPopup().getContent().includes(name)) return true;
+            return false;
+        });
+        
+        if (marker) marker.openPopup();
+    }
 }

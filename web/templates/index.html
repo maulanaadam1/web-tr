@@ -798,6 +798,15 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Camera List Section -->
+                        <div class="border-t border-slate-100 dark:border-slate-800 pt-6">
+                            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 px-1">Registered Cameras</h3>
+                            <div id="mapSidebarCameraList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                <!-- Populated by JS -->
+                                <div class="text-center py-8 text-slate-400 italic text-xs">Loading cameras...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -822,6 +831,18 @@
 
                         <form id="streamForm">
                             <input type="hidden" id="editOriginalName" name="originalName">
+
+                            <!-- Status Toggle -->
+                            <div class="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 mb-6 transition-all">
+                                <div>
+                                    <h4 class="text-sm font-bold text-blue-900 dark:text-blue-300">Camera Status</h4>
+                                    <p class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Turn this camera on or off without deleting it</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="streamEnabled" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
+                                </label>
+                            </div>
 
                             <!-- Common Fields -->
                             <div class="grid grid-cols-1 gap-4 mb-6">

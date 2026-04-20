@@ -945,6 +945,7 @@ func main() {
 				Backend string  `json:"backend,omitempty"`
 				Lat     float64 `json:"lat"`
 				Lng     float64 `json:"lng"`
+				Enabled bool    `json:"enabled"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1016,6 +1017,7 @@ func main() {
 				OriginalName string  `json:"originalName"`
 				Lat          float64 `json:"lat"`
 				Lng          float64 `json:"lng"`
+				Enabled      bool    `json:"enabled"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1035,16 +1037,7 @@ func main() {
 
 			log.Printf("[API] Updating stream: OriginalName='%s', NewName='%s', Lat=%f, Lng=%f", req.OriginalName, req.Name, req.Lat, req.Lng)
 
-			// Use Manager Update
-			streams, _ := streamMgr.GetStreams()
-			isEnabled := true
-			for _, s := range streams {
-				if s.Name == req.OriginalName {
-					isEnabled = s.Enabled
-					break
-				}
-			}
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, isEnabled, sess.UserID); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID); err != nil {
 				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

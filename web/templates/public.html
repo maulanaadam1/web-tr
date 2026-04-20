@@ -220,16 +220,15 @@
                         </div>
                     </div>
 
-                    <div>
-                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Traffic Layer</h3>
-                        <label class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 bg-brand-100 dark:bg-brand-900/30 text-brand-600 rounded-lg"><i data-lucide="activity" class="w-4 h-4"></i></div>
-                                <span class="text-sm font-medium dark:text-slate-300">Live Traffic</span>
-                            </div>
-                            <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
-                        </label>
+                    <!-- Camera List Section -->
+                    <div class="border-t border-slate-100 dark:border-slate-800 pt-6">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4 px-1">Registered Cameras</h3>
+                        <div id="mapSidebarCameraList" class="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                            <!-- Populated by JS -->
+                            <div class="text-center py-8 text-slate-400 italic text-xs">Loading cameras...</div>
+                        </div>
                     </div>
+                </div>
                 </div>
             </div>
             
@@ -286,7 +285,7 @@
     <script>
         const publicStreams = [
             {{ range .Streams }}
-            { name: "{{ .Name }}", lat: {{ .Lat }}, lng: {{ .Lng }} },
+            { name: "{{ .Name }}", lat: {{ .Lat }}, lng: {{ .Lng }}, enabled: {{ .Enabled }} },
             {{ end }}
         ];
 
@@ -578,11 +577,15 @@
 
                 const bounds = [];
                 validStreams.forEach(stream => {
+                    const isEnabled = stream.enabled !== false;
+                    const markerColor = isEnabled ? '#6366f1' : '#94a3b8';
+                    
                     const customIcon = L.divIcon({
                         className: 'custom-pin',
                         html: `<div class="relative group cursor-pointer transition-none">
-                                <div class="w-5 h-5 bg-brand-600 hover:bg-brand-500 rounded-full border-2 border-white shadow-lg z-10 relative flex items-center justify-center transition-none">
-                                    <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                                <div class="w-5 h-5 bg-white dark:bg-slate-900 rounded-full border-2 shadow-lg z-10 relative flex items-center justify-center transition-none" style="border-color: ${markerColor}">
+                                    <div class="w-1.5 h-1.5 rounded-full" style="background-color: ${markerColor}"></div>
+                                    ${!isEnabled ? '<div class="absolute -top-1 -right-1 w-2 h-2 bg-slate-400 border-2 border-white dark:border-slate-800 rounded-full"></div>' : ''}
                                 </div>
                                </div>`,
                         iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10]
@@ -599,12 +602,12 @@
                             <div class="absolute bottom-0 left-0 right-0 p-2 pt-6 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
                                 <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${stream.name}">${stream.name}</h4>
                             </div>
-                            
+                            ${isEnabled ? `
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                                 <div class="bg-black/40 backdrop-blur-sm w-11 h-11 rounded-full flex items-center justify-center shadow-2xl transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300">
                                     <svg class="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
                                 </div>
-                            </div>
+                            </div>` : ''}
                         </div>`;
                     const popup = L.popup({ 
                         className: 'custom-popup',
@@ -628,6 +631,9 @@
                     window.hasFittedBounds = true;
                 }
                 
+                // Render sidebar list
+                renderMapSidebarCameraList(publicStreams);
+
                 // Set initial theme layer in UI
                 changeMapLayer(currentTheme);
             } else if (mapContainer) {
@@ -635,6 +641,40 @@
                 lucide.createIcons();
             }
         });
+        function renderMapSidebarCameraList(streams) {
+            const listContainer = document.getElementById('mapSidebarCameraList');
+            if (!listContainer) return;
+
+            if (!streams || streams.length === 0) {
+                listContainer.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs">No cameras available</div>';
+                return;
+            }
+
+            listContainer.innerHTML = streams.map(s => `
+                <div onclick="focusCameraOnMap('${s.name}')" class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 transition-all cursor-pointer group/item">
+                    <div class="w-10 h-10 rounded-lg ${s.enabled === false ? 'bg-slate-200 dark:bg-slate-800 text-slate-400' : 'bg-brand-50 dark:bg-brand-900/40 text-brand-500'} flex items-center justify-center shrink-0 border border-slate-200/50 dark:border-slate-700/50 transition-colors group-hover/item:border-brand-500/50 relative">
+                        <i data-lucide="video" class="h-5 w-5"></i>
+                        ${s.online ? '<span class="absolute -top-1 -right-1 flex h-3 w-3 rounded-full border-2 border-white dark:border-slate-900"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-full w-full bg-green-500"></span></span>' : ''}
+                    </div>
+                    <div class="min-w-0 pr-2">
+                        <div class="text-xs font-black text-slate-800 dark:text-white uppercase truncate mb-0.5 group-hover/item:text-brand-500 transition-colors">${s.name}</div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
+                            ${s.enabled === false ? '<span class="text-[8px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1 rounded uppercase tracking-tighter">Disabled</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function focusCameraOnMap(name) {
+            const item = window.allMarkers.find(m => m.name === name);
+            if (item && window.globalMap) {
+                window.globalMap.setView(item.marker.getLatLng(), 18, { animate: false });
+                item.marker.openPopup();
+            }
+        }
     </script>
 </body>
 </html>
