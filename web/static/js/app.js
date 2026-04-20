@@ -2086,6 +2086,12 @@ function switchCCTab(tab) {
     const inactiveHeaderClass = ['text-slate-500', 'dark:text-slate-400', 'hover:text-slate-700', 'dark:hover:text-slate-200', 'bg-transparent', 'shadow-none'];
 
     if (tab === 'grid') {
+        // Auto-collapse sidebar if open
+        const panel = document.getElementById('mapSidePanel');
+        if (panel && panel.classList.contains('translate-x-0')) {
+            toggleSidePanel();
+        }
+
         document.getElementById('commandcenter-map-container').classList.add('hidden');
         document.getElementById('commandcenter-grid-container').classList.remove('hidden');
         
