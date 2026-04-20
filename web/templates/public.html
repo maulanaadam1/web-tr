@@ -316,6 +316,7 @@
                 tabGrid.classList.replace('tab-active', 'tab-hidden');
                 tabMap.classList.replace('tab-hidden', 'tab-active');
                 
+                // Toggle Button States
                 btnMap.classList.remove(...inactiveClassBtn);
                 btnMap.classList.add(...activeClassBtn);
                 
@@ -327,16 +328,13 @@
                     toggleBtn.classList.remove('opacity-30', 'cursor-not-allowed');
                 }
 
-                // Show map UI
                 const mapUI = document.getElementById('mapGlobalUI');
                 if(mapUI) mapUI.classList.remove('hidden');
 
-                // Re-trigger map size computation in case it resized while hidden
                 if(window.globalMap) {
                     setTimeout(() => window.globalMap.invalidateSize(), 300);
                 }
             } else {
-                // Auto-collapse sidebar if open
                 const panel = document.getElementById('sidePanel');
                 if (panel && panel.classList.contains('open')) {
                     toggleSidePanel();
@@ -345,6 +343,7 @@
                 tabMap.classList.replace('tab-active', 'tab-hidden');
                 tabGrid.classList.replace('tab-hidden', 'tab-active');
 
+                // Toggle Button States
                 btnGrid.classList.remove(...inactiveClassBtn);
                 btnGrid.classList.add(...activeClassBtn);
                 
@@ -356,7 +355,6 @@
                     toggleBtn.classList.add('opacity-30', 'cursor-not-allowed');
                 }
 
-                // Hide map UI
                 const mapUI = document.getElementById('mapGlobalUI');
                 if(mapUI) mapUI.classList.add('hidden');
                 
@@ -440,17 +438,17 @@
             if(markerObj) {
                 switchTab('map');
                 
-                // Fly to marker
-                window.globalMap.flyTo(markerObj.marker.getLatLng(), 16, {
-                    duration: 1.5,
-                    easeLinearity: 0.25
-                });
+                const lat = parseFloat(markerObj.marker.getLatLng().lat);
+                const lng = parseFloat(markerObj.marker.getLatLng().lng);
+
+                // Smooth move to marker
+                window.globalMap.setView([lat, lng], 18, { animate: true, duration: 1.5 });
                 
-                // Open popup after flying finishes
+                // Open popup after moving finishes
                 setTimeout(() => {
                     markerObj.marker.openPopup();
                     
-                    // Highlight marker
+                    // Highlight marker pulse effect
                     const iconElement = markerObj.marker.getElement();
                     if(iconElement) {
                         iconElement.classList.add('marker-selected');
@@ -458,7 +456,7 @@
                     }
                 }, 1600);
             } else {
-                alert("Location data not available for this camera.");
+                alert("Location info not found.");
             }
         }
 
