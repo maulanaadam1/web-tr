@@ -379,10 +379,10 @@
                     btn.innerHTML = '<span class="flex h-2 w-2 rounded-full bg-white animate-ping mr-2"></span> Loading...';
                     
                     try {
-                        const res = await fetch('/api/streams/add', {
+                        const res = await fetch('/api/public/test-rtsp', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: 'test-' + Date.now().toString().slice(-4), url: url, is_public: 1, lat: 0, lng: 0 })
+                            body: JSON.stringify({ name: 'test-' + Date.now().toString().slice(-4), url: url })
                         });
                         const data = await res.json();
                         if (data.name) {

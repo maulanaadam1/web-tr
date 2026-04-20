@@ -893,6 +893,44 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	http.HandleFunc("/api/public/test-rtsp", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if req.Name == "" || req.URL == "" {
+			http.Error(w, "Name and URL required", http.StatusBadRequest)
+			return
+		}
+
+		// Add stream with Guest behavior (assigned to admin UserID 1)
+		if err := store.AddStream(models.Stream{
+			Name:     req.Name,
+			URL:      req.URL,
+			Backend:  "go2rtc",
+			Lat:      0,
+			Lng:      0,
+			Enabled:  true,
+			UserID:   1, // Assign to default admin
+			IsPublic: true,
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		streamMgr.SyncFromDB()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"name": req.Name})
+	})
+
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
 		if prelaunch || hideDocs {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -1045,8 +1083,6 @@ func main() {
 				return
 			}
 			
-			streamMgr.SyncFromDB()
-
 			streamMgr.SyncFromDB()
 
 			// Route stream creation to the correct streaming engine
