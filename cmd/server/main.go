@@ -896,13 +896,12 @@ func main() {
 
 		allStreams, _ := streamMgr.GetStreams()
 		
-		// Admin sees all if using their public link, otherwise user sees their own
-		var filtered []models.Stream
-		for _, s := range allStreams {
-			if user.Role == "admin" || s.UserID == user.ID {
-				filtered = append(filtered, s)
-			}
+		// Use existing helper to handle Role-based and Support-based visibility
+		tempSess := Session{
+			UserID: user.ID,
+			Role:   user.Role,
 		}
+		filtered := getUserVisibleStreams(tempSess, allStreams, store)
 
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams": filtered,
