@@ -1664,7 +1664,8 @@ function selectDashboardCamera(name) {
     // Check if the marker exists
     if (maintenanceMarkers[name]) {
         const marker = maintenanceMarkers[name];
-        maintenanceMap.flyTo(marker.getLatLng(), 14, { duration: 1.5 });
+        const currentZoom = maintenanceMap.getZoom();
+        maintenanceMap.flyTo(marker.getLatLng(), Math.max(currentZoom, 14), { duration: 1.5 });
         marker.openPopup();
     }
     
@@ -1938,7 +1939,8 @@ function debounceMapSearch(query) {
 
             if (q !== '' && name.toLowerCase().includes(q)) {
                 if (!found) {
-                    globalCameraMap.flyTo(marker.getLatLng(), 15, { duration: 1.5 });
+                    const currentZoom = globalCameraMap.getZoom();
+                    globalCameraMap.flyTo(marker.getLatLng(), Math.max(currentZoom, 15), { duration: 1.5 });
                     setTimeout(() => marker.openPopup(), 1500);
                     found = true;
                 }
@@ -2071,7 +2073,8 @@ function goToMapMarker(name) {
     switchCCTab('map');
     const marker = commandCenterMarkers[name];
     if (marker) {
-        globalCameraMap.flyTo(marker.getLatLng(), 16, { duration: 1.5 });
+        const currentZoom = globalCameraMap.getZoom();
+        globalCameraMap.flyTo(marker.getLatLng(), Math.max(currentZoom, 16), { duration: 1.5 });
         setTimeout(() => marker.openPopup(), 1600);
     } else {
         alert("Location data not available for this camera.");
