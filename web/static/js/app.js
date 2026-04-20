@@ -1538,23 +1538,22 @@ async function initMaintenanceMap() {
                     });
                     const marker = L.marker([lat, lng], { icon: roundIcon }).addTo(maintenanceMap);
                     
-                    // Cleanup name for ID
-                    const safeId = name.replace(/[^a-z0-9]/gi, '_');
-                    const popupContent = `
-                        <div class="custom-card-popup p-3 rounded-xl bg-white dark:bg-slate-900 shadow-2xl">
-                            <div class="flex items-center gap-2 mb-2">
-                                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                <h4 class="font-bold text-xs text-slate-800 dark:text-white uppercase">${name}</h4>
+                    const updatePopup = (lat, lng) => {
+                        marker.bindPopup(`
+                            <div class="p-1">
+                                <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${name}</div>
+                                <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
+                                    <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
+                                    <span class="text-indigo-600 dark:text-indigo-400 font-bold">LNG:</span> ${lng.toFixed(6)}
+                                </div>
                             </div>
-                            <button onclick="selectDashboardCamera('${escapeJS(name)}')" class="w-full py-1.5 bg-brand-500 text-white rounded-lg text-[10px] font-bold uppercase hover:bg-brand-600 transition-all shadow-lg shadow-brand-500/30">
-                                View Stream
-                            </button>
-                        </div>
-                    `;
-                    marker.bindPopup(popupContent, {
-                        closeButton: false,
-                        className: 'custom-popup-container-dash',
-                        minWidth: 160
+                        `);
+                    };
+
+                    updatePopup(lat, lng);
+                    
+                    marker.on('click', () => {
+                        selectCameraOnMap(name);
                     });
 
                     maintenanceMarkers[name] = marker;
