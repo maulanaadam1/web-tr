@@ -88,7 +88,7 @@
 
     <!-- Navbar Minimalis -->
     <header class="flex-shrink-0 h-16 w-full fixed top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 flex justify-between items-center shadow-sm">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 relative z-10">
             <div class="bg-brand-600 p-1.5 rounded-lg text-white shadow-lg shadow-brand-500/20 flex items-center justify-center">
                 <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             </div>
@@ -96,9 +96,9 @@
         </div>
         
         <!-- Tab Controls -->
-        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
-            <button id="btnTabMap" onclick="switchTab('map')" class="w-[110px] py-1.5 text-center text-sm font-semibold rounded-md transition-all shadow-sm bg-white dark:bg-slate-600 text-brand-600 dark:text-white">Map View</button>
-            <button id="btnTabGrid" onclick="switchTab('grid')" class="w-[110px] py-1.5 text-center text-sm font-semibold rounded-md transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">All Cameras</button>
+        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 pointer-events-none">
+            <button id="btnTabMap" onclick="switchTab('map')" class="w-[110px] py-1.5 text-center text-sm font-semibold rounded-md transition-all shadow-sm bg-white dark:bg-slate-600 text-brand-600 dark:text-white pointer-events-auto">Map View</button>
+            <button id="btnTabGrid" onclick="switchTab('grid')" class="w-[110px] py-1.5 text-center text-sm font-semibold rounded-md transition-all text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 pointer-events-auto">All Cameras</button>
         </div>
 
         <!-- User Identity Branding -->
@@ -112,7 +112,7 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 relative z-10">
             <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-yellow-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h1a1 1 0 100 2h-1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 100 2h1z" clip-rule="evenodd" />
