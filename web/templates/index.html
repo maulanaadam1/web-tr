@@ -78,24 +78,34 @@
             background: #94a3b8;
         }
 
+        /* Custom Popup Style (Sync with public view) */
+        .custom-popup .leaflet-popup-content-wrapper {
+            background-color: transparent !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+            border-radius: 12px;
+            padding: 0 !important;
+            overflow: hidden;
+            border: none !important;
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 220px !important;
+            line-height: 0;
+        }
+        .custom-popup .leaflet-popup-tip-container { display: none; }
+        .custom-popup .leaflet-popup-close-button {
+            color: #fff !important;
+            z-index: 10;
+            text-shadow: 0 1px 4px rgba(0,0,0,1);
+            padding: 6px !important;
+            font-size: 16px !important;
+        }
+
         /* Selected Marker Style */
         .selected-marker {
             filter: drop-shadow(0 0 8px #6366f1) hue-rotate(180deg);
             z-index: 1000 !important;
-        }
-
-        /* Leaflet Dark Mode Popups */
-        .dark .leaflet-popup-content-wrapper, 
-        .dark .leaflet-popup-tip {
-            background-color: #1e293b !important; /* slate-800 */
-            color: #f8fafc !important; /* slate-50 */
-            border: 1px solid #334155;
-        }
-        .dark .leaflet-popup-content {
-            color: #f8fafc !important;
-        }
-        .dark .leaflet-container a.leaflet-popup-close-button {
-            color: #94a3b8 !important;
         }
 
         /* Collapsible Sidebar Styles */

@@ -1967,42 +1967,32 @@ function renderCommandCenterMarkers() {
             });
 
             const marker = L.marker([s.lat, s.lng], { icon: roundIcon }).addTo(globalCameraMap);
-            
-            const host = window.location.host;
-            const iframeSrc = isEnabled 
-                ? `${window.location.protocol}//${host}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg`
-                : '';
-            
-            const statusHtml = !isEnabled 
-                ? '<span class="text-[10px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-2 py-0.5 rounded-md uppercase tracking-tighter">Disabled</span>'
-                : (s.online ? '<span class="flex h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>' : '<span class="flex h-2 w-2 rounded-full bg-slate-400 dark:bg-slate-500"></span>');
-
-            const previewContent = isEnabled 
-                ? `<iframe src="${iframeSrc}" class="w-full h-full border-none pointer-events-auto" allow="autoplay; fullscreen; picture-in-picture"></iframe>`
-                : `<div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800/50 text-slate-400 italic">
-                     <svg class="w-12 h-12 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                     <span class="text-xs font-bold uppercase tracking-widest">Camera Disabled</span>
-                   </div>`;
-
             const popupContent = `
-                <div class="w-72 sm:w-80 -m-4 overflow-hidden rounded-xl bg-white dark:bg-slate-900 shadow-2xl flex flex-col">
-                    <div class="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800">
-                        <h3 class="font-bold text-slate-800 dark:text-white truncate pr-2 text-sm max-w-[70%]">${s.name}</h3>
-                        ${statusHtml}
+                <div class="relative w-[220px] h-[124px] bg-gray-950 group cursor-pointer overflow-hidden rounded-xl" onclick="openCameraPreviewModal('${escapeJS(s.name)}')">
+                    <img src="/api/snapshot?name=${encodeURIComponent(s.name)}" class="w-full h-full object-cover opacity-90 group-hover:opacity-60" 
+                         onload="window.globalCameraMap && this.parentElement.parentElement.parentElement.__popup && this.parentElement.parentElement.parentElement.__popup.update()"
+                         onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJncmF5Ij48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTZsNC41ODYtNC41ODZhMiAyIDAgMDEyLjgyODAwTDE2IDE2bS0yLTJsMS41ODYtMS41ODZhMiAyIDAgMDEyLjgyODAwTDIwIDE0bS02LTZoLjAxTTYgMjBoMTJhMiAyIDAgMDAyLTJWNmEyIDIgMCAwMC0yLTJINmEyIDIgMDAwLTIgMTJoMiAwIDAwMiAyekkiLz48L3N2Zz4='">
+                    
+                    <div class="absolute bottom-0 left-0 right-0 p-2 pt-6 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
+                        <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${s.name}">${s.name}</h4>
                     </div>
-                    <div class="bg-black w-full aspect-video relative group">
-                        ${previewContent}
-                        <div class="absolute inset-0 border border-white/10 rounded-b-xl pointer-events-none"></div>
-                    </div>
+                    ${isEnabled ? `
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="bg-black/40 backdrop-blur-sm w-11 h-11 rounded-full flex items-center justify-center shadow-2xl transform scale-90 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-300">
+                            <svg class="w-6 h-6 text-white ml-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" /></svg>
+                        </div>
+                    </div>` : ''}
                 </div>`;
 
-            marker.bindPopup(popupContent, {
-                maxWidth: 400,
-                minWidth: 280,
-                className: 'custom-popup-container',
-                closeButton: true,
-                autoPanPadding: [50, 50]
-            });
+            const popup = L.popup({ 
+                className: 'custom-popup',
+                maxWidth: 220,
+                minWidth: 220,
+                autoPan: true
+            }).setContent(popupContent);
+            
+            marker.bindPopup(popup);
+            marker.__popup = popup; 
 
             commandCenterMarkers[s.name] = marker;
             bounds.push([s.lat, s.lng]);
