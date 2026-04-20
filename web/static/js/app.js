@@ -759,7 +759,8 @@ function initLocationMap(lat, lng) {
             document.getElementById('streamLat').addEventListener('input', updateMarker);
             document.getElementById('streamLng').addEventListener('input', updateMarker);
         } else {
-            locationMap.setView([initialLat, initialLng], 13);
+            const currentZoom = locationMap.getZoom();
+            locationMap.setView([initialLat, initialLng], currentZoom || 13);
             locationMarker.setLatLng([initialLat, initialLng]);
             locationMap.invalidateSize();
         }
@@ -1813,6 +1814,7 @@ function closeCameraPreviewModal() {
 // ===== Command Center Map Logic =====
 let globalCameraMap = null;
 let commandCenterMarkers = {};
+let commandCenterFirstLoad = true;
 
 function initCommandCenterMap() {
     if (globalCameraMap) {
@@ -1908,8 +1910,9 @@ function renderCommandCenterMarkers() {
         }
     });
 
-    if (bounds.length > 0) {
+    if (bounds.length > 0 && commandCenterFirstLoad) {
         globalCameraMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+        commandCenterFirstLoad = false;
     }
 }
 

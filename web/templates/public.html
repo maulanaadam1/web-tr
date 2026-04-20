@@ -623,7 +623,10 @@
                     bounds.push([stream.lat, stream.lng]);
                 });
 
-                if (bounds.length > 0) window.globalMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                if (bounds.length > 0 && !window.hasFittedBounds) {
+                    window.globalMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
+                    window.hasFittedBounds = true;
+                }
                 
                 // Set initial theme layer in UI
                 changeMapLayer(currentTheme);
