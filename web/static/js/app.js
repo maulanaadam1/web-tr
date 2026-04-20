@@ -392,6 +392,8 @@ function startLiveStream(name, iframeSrc, overlayElement) {
                 video { object-fit: fill !important; width: 100% !important; height: 100% !important; }
                 body { background-color: black !important; margin: 0 !important; overflow: hidden !important; }
                 .info { display: none !important; }
+                .mode { display: none !important; }
+                .retry { display: none !important; }
             `;
             iframe.contentDocument.head.appendChild(style);
         } catch (e) {}
@@ -424,7 +426,12 @@ function reloadPlayer(name, mode) {
     iframe.onload = function () {
         try {
             const style = document.createElement('style');
-            style.textContent = `video { object-fit: fill !important; width:100%; height:100%; } body { background: black; margin: 0; overflow: hidden; }`;
+            style.textContent = `
+                video { object-fit: fill !important; width:100%; height:100%; } 
+                body { background: black; margin: 0; overflow: hidden; }
+                .mode { display: none !important; }
+                .retry { display: none !important; }
+            `;
             iframe.contentDocument.head.appendChild(style);
         } catch (e) {}
     };
@@ -1914,6 +1921,19 @@ function reloadDashboardPreview(mode) {
     iframe.className = "w-full h-full border-none";
     iframe.allow = "autoplay; fullscreen; picture-in-picture";
 
+    iframe.onload = () => {
+        try {
+            const style = document.createElement('style');
+            style.textContent = `
+                video { object-fit: fill !important; width: 100% !important; height: 100% !important; }
+                body { background-color: black !important; margin: 0 !important; overflow: hidden !important; }
+                .mode { display: none !important; }
+                .retry { display: none !important; }
+            `;
+            iframe.contentDocument.head.appendChild(style);
+        } catch (e) {}
+    };
+
     container.appendChild(iframe);
 }
 
@@ -1998,7 +2018,11 @@ function openCameraPreviewModal(name) {
         try {
             // Inject CSS to hide go2rtc status/info bar
             const style = document.createElement('style');
-            style.textContent = '.info { display: none !important; }'; 
+            style.textContent = `
+                .info { display: none !important; }
+                .mode { display: none !important; }
+                .retry { display: none !important; }
+            `; 
             iframe.contentDocument.head.appendChild(style);
         } catch (e) {}
     };
