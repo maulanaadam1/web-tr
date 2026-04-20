@@ -123,10 +123,12 @@
                 </div>
                 {{end}}
 
+                {{if not .HideSignup}}
                 <div class="flex p-1 mb-8 space-x-1 bg-slate-900/50 rounded-xl">
                     <button id="tab-login" onclick="switchTab('login')" class="w-full py-2.5 text-sm font-medium rounded-lg text-white bg-brand-500 shadow transition-all">Sign In</button>
                     <button id="tab-register" onclick="switchTab('register')" class="w-full py-2.5 text-sm font-medium rounded-lg text-slate-400 hover:text-white transition-all">Sign Up</button>
                 </div>
+                {{end}}
 
                 <!-- Login Form -->
                 <form id="form-login" action="/login" method="POST" class="space-y-6">

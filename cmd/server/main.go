@@ -385,6 +385,8 @@ func main() {
 	os.MkdirAll("data", 0755)
 	
 	prelaunch := os.Getenv("APP_PRELAUNCH") == "true"
+	hideSignup := os.Getenv("HIDE_SIGNUP") == "true"
+	hideDocs := os.Getenv("HIDE_DOCS") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
 
@@ -527,7 +529,7 @@ func main() {
 	})
 
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		if prelaunch && r.URL.Query().Get("tab") == "signup" {
+		if (prelaunch || hideSignup) && r.URL.Query().Get("tab") == "signup" {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
@@ -553,9 +555,10 @@ func main() {
 			successMsg := r.URL.Query().Get("success")
 			mode := r.URL.Query().Get("mode") // "register" or empty
 			tmpl.Execute(w, map[string]interface{}{
-				"Error":   errorMsg,
-				"Success": successMsg,
-				"Mode":    mode,
+				"Error":      errorMsg,
+				"Success":    successMsg,
+				"Mode":       mode,
+				"HideSignup": prelaunch || hideSignup,
 			})
 			return
 		}
@@ -626,6 +629,10 @@ func main() {
 	})
 
 	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		if prelaunch || hideSignup {
+			http.Error(w, "Signup is disabled", http.StatusForbidden)
+			return
+		}
 		if r.Method == http.MethodPost {
 			username := r.FormValue("username")
 			password := r.FormValue("password")
@@ -850,7 +857,10 @@ func main() {
 			return
 		}
 
-		tmpl.Execute(w, nil)
+		tmpl.Execute(w, map[string]interface{}{
+			"HideDocs":   prelaunch || hideDocs,
+			"HideSignup": prelaunch || hideSignup,
+		})
 	})
 
 	http.HandleFunc("/api/interest", func(w http.ResponseWriter, r *http.Request) {
@@ -877,7 +887,7 @@ func main() {
 	})
 
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
-		if prelaunch {
+		if prelaunch || hideDocs {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 			return
 		}
