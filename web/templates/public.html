@@ -227,7 +227,7 @@
                 </div>
             </div>
             
-            <div id="sidePanelOverlay" onclick="toggleSidePanel()" class="fixed inset-0 bg-black/20 z-[1999] opacity-0 pointer-events-none transition-opacity duration-500"></div>
+
         </div>
 
         <!-- Tab 2: All Cameras (Grid View with Pagination) -->
@@ -511,9 +511,7 @@
         // New Toolbar & Side Panel Logic
         function toggleSidePanel() {
             const panel = document.getElementById('sidePanel');
-            const overlay = document.getElementById('sidePanelOverlay');
-            panel.classList.toggle('open');
-            overlay.classList.toggle('open');
+            if (panel) panel.classList.toggle('open');
             // Refresh icons inside panel
             lucide.createIcons();
         }
