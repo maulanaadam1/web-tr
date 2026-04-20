@@ -131,6 +131,13 @@
         <div id="tab-map" class="tab-content tab-active">
             <div id="globalCameraMap" class="w-full h-full z-0"></div>
 
+
+
+
+        </div>
+
+        <!-- Global Map UI Components (Floating above map but shared context) -->
+        <div id="mapGlobalUI" class="block">
             <!-- Top Left Toolbar - Google Maps Style -->
             <div id="mapToolbar" class="absolute top-4 left-4 z-[2000] flex flex-col items-start gap-2 w-[calc(100vw-32px)] md:max-w-md pointer-events-none transition-all duration-300">
                 <div class="pointer-events-auto relative w-full translate-y-0 opacity-100 transition-all duration-500">
@@ -160,12 +167,11 @@
                                 <i data-lucide="x" class="w-5 h-5"></i>
                             </button>
                         </div>
-                        
                     </div>
                 </div>
             </div>
 
-            <!-- Side Panel for Layer Selection -->
+            <!-- Copy of sidePanel and overlay removed from above will be here -->
             <div id="sidePanel" class="fixed inset-y-0 left-0 w-80 bg-white dark:bg-slate-900 shadow-2xl z-[2010] -translate-x-full transition-transform duration-500 ease-in-out border-r border-slate-200 dark:border-slate-800 flex flex-col pt-16 mt-0">
                 <div class="flex-shrink-0 p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
                     <h2 class="text-xl font-bold dark:text-white bg-clip-text text-transparent bg-gradient-to-r from-brand-600 to-blue-500">Map Options</h2>
@@ -218,13 +224,9 @@
                         </div>
                     </div>
                 </div>
-                </div>
             </div>
             
-            <!-- Side Panel Overlay -->
             <div id="sidePanelOverlay" onclick="toggleSidePanel()" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[1999] opacity-0 pointer-events-none transition-opacity duration-500"></div>
-
-            <!-- Old collapsible map layer menu removed as requested -->
         </div>
 
         <!-- Tab 2: All Cameras (Grid View with Pagination) -->
@@ -312,6 +314,10 @@
                 btnGrid.classList.remove(...activeClassBtn);
                 btnGrid.classList.add(...inactiveClassBtn);
 
+                // Show map UI
+                const mapUI = document.getElementById('mapGlobalUI');
+                if(mapUI) mapUI.classList.remove('hidden');
+
                 // Re-trigger map size computation in case it resized while hidden
                 if(window.globalMap) {
                     setTimeout(() => window.globalMap.invalidateSize(), 300);
@@ -325,6 +331,10 @@
                 
                 btnMap.classList.remove(...activeClassBtn);
                 btnMap.classList.add(...inactiveClassBtn);
+
+                // Hide map UI
+                const mapUI = document.getElementById('mapGlobalUI');
+                if(mapUI) mapUI.classList.add('hidden');
                 
                 if(currentPage === 1 && !gridRendered) {
                     renderGridPage(1);
