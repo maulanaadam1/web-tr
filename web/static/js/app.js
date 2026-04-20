@@ -2095,6 +2095,10 @@ function switchCCTab(tab) {
         document.getElementById('commandcenter-map-container').classList.add('hidden');
         document.getElementById('commandcenter-grid-container').classList.remove('hidden');
         
+        // Hide map specific UI components
+        const mapActionBar = document.getElementById('ccMapActionBar');
+        if (mapActionBar) mapActionBar.classList.add('hidden');
+
         if (toggleBtn) {
             toggleBtn.disabled = true;
             toggleBtn.classList.add('opacity-30', 'cursor-not-allowed');
@@ -2115,6 +2119,10 @@ function switchCCTab(tab) {
         document.getElementById('commandcenter-grid-container').classList.add('hidden');
         document.getElementById('commandcenter-map-container').classList.remove('hidden');
         
+        // Reshow map specific UI components
+        const mapActionBar = document.getElementById('ccMapActionBar');
+        if (mapActionBar) mapActionBar.classList.remove('hidden');
+
         if (toggleBtn) {
             toggleBtn.disabled = false;
             toggleBtn.classList.remove('opacity-30', 'cursor-not-allowed');
