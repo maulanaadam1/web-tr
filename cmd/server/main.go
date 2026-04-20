@@ -387,6 +387,7 @@ func main() {
 	prelaunch := os.Getenv("APP_PRELAUNCH") == "true"
 	hideSignup := os.Getenv("HIDE_SIGNUP") == "true"
 	hideDocs := os.Getenv("HIDE_DOCS") == "true"
+	skipLanding := os.Getenv("SKIP_LANDING_PAGE") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
 
@@ -848,6 +849,11 @@ func main() {
 				return
 			}
 			tmpl.Execute(w, nil)
+			return
+		}
+
+		if skipLanding {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 
