@@ -2286,7 +2286,7 @@ function focusCameraOnMap(name) {
             openCameraPreviewModal(name);
             if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
                 const panel = document.getElementById('mapSidePanel');
-                if (panel && panel.classList.contains('open')) toggleSidePanel();
+            if (panel && panel.classList.contains('translate-x-0')) toggleSidePanel();
             }
             return;
         }
@@ -2315,7 +2315,7 @@ function focusCameraOnMap(name) {
         // Requirement 3: Map View behavior - close sidebar and open popup
         if (window.innerWidth < 1024 && typeof toggleSidePanel === 'function') {
             const panel = document.getElementById('mapSidePanel');
-            if (panel && panel.classList.contains('open')) toggleSidePanel();
+            if (panel && panel.classList.contains('translate-x-0')) toggleSidePanel();
         }
 
         // Find marker and open popup
