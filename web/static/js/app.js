@@ -528,12 +528,12 @@ function renderUsersTable() {
 
                 <div class="grid grid-cols-4 gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <a href="/view/${u.public_token || ''}" target="_blank" class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-slate-500 ${!u.public_token ? 'opacity-20 pointer-events-none' : ''}">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                        <span class="text-[9px] font-bold uppercase">Manage</span>
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Open</span>
                     </a>
-                    <button onclick='openUserModal(${JSON.stringify(u)})' class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-amber-500">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
-                        <span class="text-[9px] font-bold uppercase">Pass</span>
+                    <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-emerald-500 ${!u.public_token ? 'opacity-20 pointer-events-none' : ''}">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
+                        <span class="text-[9px] font-bold uppercase">Copy</span>
                     </button>
                     <button onclick='openUserModal(${JSON.stringify(u)})' class="flex flex-col items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg text-blue-500">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
