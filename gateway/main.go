@@ -626,9 +626,8 @@ func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
 		myWindow.Clipboard().SetContent(inst.PublicURL)
 		addLog(fmt.Sprintf("[%s] RTSP URL copied to clipboard.", inst.Camera.Name))
 	})
-	btnCopy.Hide()
 
-	btnWeb := widget.NewButtonWithIcon("", theme.HelpIcon(), func() {
+	btnWeb := widget.NewButtonWithIcon("", theme.VisibilityIcon(), func() {
 		if inst.PublicURL == "" {
 			return
 		}
@@ -638,8 +637,6 @@ func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
 		exec.Command("rundll32", "url.dll,FileProtocolHandler", webURL).Start()
 		addLog(fmt.Sprintf("[%s] Opening Web Player in browser...", inst.Camera.Name))
 	})
-	btnWeb.SetIcon(theme.VisibilityIcon())
-	btnWeb.Hide()
 
 	publicBox := container.NewBorder(nil, nil, nil, container.NewHBox(btnCopy, btnWeb), inst.PublicLabel)
 

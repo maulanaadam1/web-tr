@@ -1,0 +1,19 @@
+{
+  "server_url": "https://stream.campod.my.id",
+  "api_username": "",
+  "api_password": "",
+  "vpn_mode": "zerotier",
+  "stream_engine": "",
+  "l2tp_server": "",
+  "l2tp_user": "",
+  "l2tp_pass": "",
+  "l2tp_psk": "",
+  "wireguard_config": "",
+  "cameras": [
+    {
+      "name": "sdsd",
+      "local_rtsp": "ddsd",
+      "vps_port": 0
+    }
+  ]
+}
