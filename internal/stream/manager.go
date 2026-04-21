@@ -132,11 +132,11 @@ func (m *Manager) ClearAllStreams() error {
 	return m.ConfigManager.Save(cfg)
 }
 
-func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64, enabled bool, userID int) error {
+func (m *Manager) UpdateStream(oldName, name, displayName, url string, lat, lng float64, enabled bool, userID int) error {
 
 	backend := "go2rtc" // Forced backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, url, backend, lat, lng, enabled, userID); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, displayName, url, backend, lat, lng, enabled, userID); err != nil {
 			return err
 		}
 		return m.SyncFromDB()

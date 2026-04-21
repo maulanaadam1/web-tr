@@ -1550,11 +1550,12 @@ func registerToBackend(inst *TunnelInstance) {
 
 	// Use POST to ADD a new stream
 	payload := map[string]interface{}{
-		"name":    camName,
-		"url":     rtspSource,
-		"backend": config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
-		"lat":     0,
-		"lng":     0,
+		"name":         camName,
+		"display_name": inst.Camera.Name, // Visual title
+		"url":          rtspSource,
+		"backend":      config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
+		"lat":          0,
+		"lng":          0,
 	}
 
 	jsonData, err := json.Marshal(payload)

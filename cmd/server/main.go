@@ -1129,12 +1129,13 @@ func main() {
 
 		if r.Method == http.MethodPost {
 			var req struct {
-				Name    string  `json:"name"`
-				URL     string  `json:"url"`
-				Backend string  `json:"backend,omitempty"`
-				Lat     float64 `json:"lat"`
-				Lng     float64 `json:"lng"`
-				Enabled bool    `json:"enabled"`
+				Name        string  `json:"name"`
+				DisplayName string  `json:"display_name"`
+				URL         string  `json:"url"`
+				Backend     string  `json:"backend,omitempty"`
+				Lat         float64 `json:"lat"`
+				Lng         float64 `json:"lng"`
+				Enabled     bool    `json:"enabled"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1170,6 +1171,7 @@ func main() {
 
 			if err := store.AddStream(models.Stream{
 				Name: req.Name,
+				DisplayName: req.DisplayName,
 				URL: req.URL,
 				Backend: req.Backend,
 				Lat: req.Lat,
@@ -1206,6 +1208,7 @@ func main() {
 		if r.Method == http.MethodPut {
 			var req struct {
 				Name         string  `json:"name"`
+				DisplayName  string  `json:"display_name"`
 				URL          string  `json:"url"`
 				Backend      string  `json:"backend,omitempty"`
 				OriginalName string  `json:"originalName"`
@@ -1231,7 +1234,7 @@ func main() {
 
 			log.Printf("[API] Updating stream: OriginalName='%s', NewName='%s', Lat=%f, Lng=%f", req.OriginalName, req.Name, req.Lat, req.Lng)
 
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.DisplayName, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID); err != nil {
 				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

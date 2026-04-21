@@ -206,7 +206,7 @@ function renderStreamsTable() {
         gridContainer.innerHTML = '';
         allStreams.forEach(s => {
             if (s.enabled !== false) {
-                gridContainer.appendChild(createStreamCard(s.name, s.url));
+                gridContainer.appendChild(createStreamCard(s.name, s.url, s.display_name || s.name));
             }
         });
     }
@@ -255,9 +255,9 @@ function renderStreamsTable() {
             </td>
 
             <td class="block md:table-cell md:px-6 py-2 md:py-4">
-                <div class="text-base md:text-sm font-bold text-slate-900 dark:text-white uppercase mb-1 md:mb-0">${s.name}</div>
+                <div class="text-base md:text-sm font-bold text-slate-900 dark:text-white uppercase mb-1 md:mb-0">${s.display_name || s.name}</div>
                 <div class="text-[11px] md:text-[10px] text-slate-500 font-mono flex items-center gap-1 mb-4 md:mb-0 truncate max-w-full">
-                    <span class="text-slate-400">ID:</span> ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name} <span class="text-slate-400">(${s.backend || 'HLS'})</span>
+                    <span class="text-slate-400">ID:</span> ${s.name.replace(/[^a-zA-Z0-9-]/g,'').substring(0,8) || s.name} <span class="text-slate-400">(${s.backend || 'HLS'})</span>
                     ${s.resolution ? `<span class="ml-2 font-bold text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">${s.resolution}</span>` : ''}
                 </div>
                 
@@ -293,11 +293,11 @@ function renderStreamsTable() {
 
             <td class="block md:table-cell md:px-6 py-3 mt-4 pt-4 md:mt-0 md:pt-3 border-t md:border-none border-slate-100 dark:border-slate-800">
                 <div class="flex justify-end gap-2 md:gap-1 w-full flex-wrap">
-                    <button onclick="openCameraPreviewModal('${escapeJS(s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-blue-50 dark:bg-slate-800 md:bg-transparent text-blue-600 md:text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="Live Preview">
+                    <button onclick="openCameraPreviewModal('${escapeJS(s.name)}', '${escapeJS(s.display_name || s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-blue-50 dark:bg-slate-800 md:bg-transparent text-blue-600 md:text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="Live Preview">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span class="md:hidden text-[10px] font-bold uppercase">Preview</span>
                     </button>
-                    <button onclick="openEditModal('${escapeJS(s.name)}', '${escapeJS(s.url)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-indigo-50 dark:bg-slate-800 md:bg-transparent text-indigo-600 md:text-slate-400 hover:text-indigo-600 rounded-lg transition-colors" title="Edit">
+                    <button onclick="openEditModal('${escapeJS(s.name)}', '${escapeJS(s.url)}', '${escapeJS(s.display_name || s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-indigo-50 dark:bg-slate-800 md:bg-transparent text-indigo-600 md:text-slate-400 hover:text-indigo-600 rounded-lg transition-colors" title="Edit">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         <span class="md:hidden text-[10px] font-bold uppercase">Edit</span>
                     </button>
@@ -332,7 +332,7 @@ function renderStreamsTable() {
     updateBulkActions();
 }
 
-function createStreamCard(name, url) {
+function createStreamCard(name, url, displayName = name) {
     const card = document.createElement('div');
     card.className = 'card bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800 group';
     card.dataset.name = name;
@@ -340,7 +340,7 @@ function createStreamCard(name, url) {
 
     card.innerHTML = `
         <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
-            <h3 class="font-bold text-sm truncate text-slate-800 dark:text-white">${name}</h3>
+            <h3 class="font-bold text-sm truncate text-slate-800 dark:text-white" title="${displayName}">${displayName}</h3>
             <button onclick="takeSnapshot('${name}')" class="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
             </button>
@@ -972,11 +972,11 @@ function openAddModal() {
     submitBtn.onclick = async function () { await submitStreamForm(false); };
 }
 
-async function openEditModal(name, url) {
+async function openEditModal(name, url, displayName = "") {
     resetAdvancedOptions();
     document.getElementById("modalTitle").textContent = "Edit Stream";
     document.getElementById("editOriginalName").value = name;
-    document.getElementById("streamName").value = name;
+    document.getElementById("streamName").value = displayName || name;
     document.getElementById("streamUrl").value = url;
     
     const streamInfo = allStreams.find(s => s.name === name);
@@ -996,19 +996,22 @@ function closeModal() { document.getElementById("streamModal").classList.add("hi
 function resetAdvancedOptions() { document.getElementById("advancedOptions")?.classList.add("hidden"); }
 
 async function submitStreamForm(isEdit) {
-    const name = document.getElementById("streamName").value.trim();
+    const displayName = document.getElementById("streamName").value.trim();
     let url = document.getElementById("streamUrl").value.trim();
-    const originalName = document.getElementById("editOriginalName").value.trim();
+    const originalName = document.getElementById("editOriginalName").value.trim(); // This is the UUID
     const lat = parseFloat(document.getElementById("streamLat").value) || 0;
     const lng = parseFloat(document.getElementById("streamLng").value) || 0;
     const enabled = document.getElementById("streamEnabled").checked;
 
-    if (!name || !url) { alert("Fields required"); return; }
+    if (!displayName || !url) { alert("Fields required"); return; }
+
+    // Generate UUID if it's a new stream
+    const name = isEdit ? originalName : (crypto.randomUUID ? crypto.randomUUID() : 'stream-' + Date.now() + Math.floor(Math.random()*1000));
 
     const method = isEdit ? 'PUT' : 'POST';
     const body = isEdit 
-        ? JSON.stringify({ name, url, originalName, lat, lng, enabled }) 
-        : JSON.stringify({ name, url, lat, lng, enabled });
+        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled }) 
+        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled });
 
     try {
         const response = await fetch('/api/streams', {
@@ -1771,7 +1774,7 @@ async function initMaintenanceMap() {
                     const updatePopup = (lat, lng) => {
                         marker.bindPopup(`
                             <div class="p-1">
-                                <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${name}</div>
+                                <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${stream ? (stream.display_name || stream.name) : name}</div>
                                 <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
                                     <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
                                     <span class="text-indigo-600 dark:text-indigo-400 font-bold">LNG:</span> ${lng.toFixed(6)}
@@ -1790,7 +1793,7 @@ async function initMaintenanceMap() {
                     
                     // Refresh the select dropdown text (remove "No Marker" status)
                     const opt = dashSelect.querySelector(`option[value="${name}"]`);
-                    if (opt) opt.textContent = name;
+                    if (opt) opt.textContent = stream ? (stream.display_name || stream.name) : name;
 
                     setTimeout(() => selectDashboardCamera(name), 100);
                 }
@@ -1831,7 +1834,7 @@ async function initMaintenanceMap() {
 
             const marker = L.marker([s.lat, s.lng], {
                 draggable: !markersLocked,
-                title: s.name,
+                title: s.display_name || s.name,
                 icon: roundIcon
             }).addTo(maintenanceMap);
 
@@ -1839,7 +1842,7 @@ async function initMaintenanceMap() {
                 const statusHtml = !isEnabled ? '<div class="text-[9px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase tracking-tighter mb-1 inline-block">Disabled</div>' : '';
                 marker.bindPopup(`
                     <div class="p-1">
-                        <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.name}</div>
+                        <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.display_name || s.name}</div>
                         ${statusHtml}
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium italic">Coordinate updated via drag</div>
                         <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
@@ -2222,7 +2225,7 @@ function renderCommandCenterMarkers() {
                          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJncmF5Ij48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTZsNC41ODYtNC41ODZhMiAyIDAgMDEyLjgyODAwTDE2IDE2bS0yLTJsMS41ODYtMS41ODZhMiAyIDAgMDEyLjgyODAwTDIwIDE0bS02LTZoLjAxTTYgMjBoMTJhMiAyIDAgMDAyLTJWNmEyIDIgMCAwMC0yLTJINmEyIDIgMDAwLTIgMTJoMiAwIDAwMiAyekkiLz48L3N2Zz4='">
                     
                     <div class="absolute bottom-0 left-0 right-0 p-2 pt-6 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-                        <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${s.name}">${s.name}</h4>
+                        <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${s.display_name || s.name}">${s.display_name || s.name}</h4>
                     </div>
                     ${isEnabled ? `
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -2275,11 +2278,15 @@ function debounceMapSearch(query) {
 
     window.mapSearchTimer = setTimeout(() => {
         const q = String(query).toLowerCase().trim();
-        const matches = Object.keys(commandCenterMarkers).filter(name => name.toLowerCase().includes(q));
+        const matches = Object.keys(commandCenterMarkers).filter(name => {
+            const title = commandCenterMarkers[name]?.options?.title || name;
+            return name.toLowerCase().includes(q) || title.toLowerCase().includes(q);
+        });
 
         // Filter markers on map
         Object.entries(commandCenterMarkers).forEach(([name, marker]) => {
-            if (name.toLowerCase().includes(q)) {
+            const title = marker.options?.title || name;
+            if (name.toLowerCase().includes(q) || title.toLowerCase().includes(q)) {
                 if (!globalCameraMap.hasLayer(marker)) marker.addTo(globalCameraMap);
             } else {
                 if (globalCameraMap.hasLayer(marker)) marker.remove();
@@ -2288,12 +2295,14 @@ function debounceMapSearch(query) {
 
         // Populate dropdown
         if (resultsList) {
-            resultsList.innerHTML = matches.slice(0, 10).map(name => `
+            resultsList.innerHTML = matches.slice(0, 10).map(name => {
+                const title = commandCenterMarkers[name]?.options?.title || name;
+                return `
                 <button onclick="selectCCSearchResult('${name.replace(/'/g, "\\'")}')" class="w-full flex items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-none text-left">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-brand-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${name}</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${title}</span>
                 </button>
-            `).join('');
+            `}).join('');
 
             if (matches.length > 0) {
                 resultsDropdown.classList.remove('hidden');

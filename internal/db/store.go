@@ -192,6 +192,7 @@ func (s *Store) Init() error {
 			"user_id INTEGER DEFAULT 1",
 			"is_public BOOLEAN DEFAULT 1",
 			"resolution TEXT DEFAULT ''",
+			"display_name TEXT DEFAULT ''",
 		}
 		for _, colDef := range streamCols {
 			name := strings.Split(colDef, " ")[0]
@@ -220,7 +221,8 @@ func (s *Store) Init() error {
 		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
 		ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION DEFAULT 0,
 		ADD COLUMN IF NOT EXISTS is_enabled BOOLEAN DEFAULT TRUE,
-		ADD COLUMN IF NOT EXISTS resolution TEXT DEFAULT '';`
+		ADD COLUMN IF NOT EXISTS resolution TEXT DEFAULT '',
+		ADD COLUMN IF NOT EXISTS display_name TEXT DEFAULT '';`
 		_, _ = s.db.Exec(alterQuery)
 	}
 
@@ -256,7 +258,7 @@ func (s *Store) SeedDefaultAdmin() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution FROM streams ORDER BY name ASC")
+	rows, err := s.db.Query("SELECT name, COALESCE(display_name, name) as display_name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution FROM streams ORDER BY display_name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -265,13 +267,16 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic, &st.Resolution); err != nil {
+		if err := rows.Scan(&st.Name, &st.DisplayName, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic, &st.Resolution); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
 		// Default to go2rtc if empty
 		if st.Backend == "" {
 			st.Backend = "go2rtc"
+		}
+		if st.DisplayName == "" {
+			st.DisplayName = st.Name
 		}
 		streams = append(streams, st)
 	}
@@ -283,6 +288,9 @@ func (s *Store) AddStream(st models.Stream) error {
 	if st.Backend == "" {
 		st.Backend = "go2rtc"
 	}
+	if st.DisplayName == "" {
+		st.DisplayName = st.Name
+	}
 
 	var query string
 	// Default to user_id 1 if not set
@@ -291,12 +299,12 @@ func (s *Store) AddStream(st models.Stream) error {
 	}
 
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ?, is_public = ?"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
+		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET display_name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ?, is_public = ?"
+		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
 		return err
 	} else {
-		query = "INSERT INTO streams (name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (name) DO UPDATE SET url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6, user_id = $7, is_public = $8"
-		_, err := s.db.Exec(query, st.Name, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
+		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, is_public) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (name) DO UPDATE SET display_name = $2, url = $3, backend = $4, lat = $5, lng = $6, is_enabled = $7, user_id = $8, is_public = $9"
+		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic)
 		return err
 	}
 }
@@ -328,9 +336,12 @@ func (s *Store) ClearAllStreams() error {
 	return err
 }
 
-func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng float64, enabled bool, userID int) error {
+func (s *Store) UpdateStream(oldName, newName, displayName, url, backend string, lat, lng float64, enabled bool, userID int) error {
 	newName = strings.TrimSpace(newName)
 	oldName = strings.TrimSpace(oldName)
+	if displayName == "" {
+		displayName = newName
+	}
 
 	// Default to go2rtc if backend not specified
 	if backend == "" {
@@ -346,33 +357,33 @@ func (s *Store) UpdateStream(oldName, newName, url, backend string, lat, lng flo
 	var checkQuery, updateNameQuery, updateUrlQuery string
 	if s.dbType == "sqlite" {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = ?)"
-		updateNameQuery = "UPDATE streams SET name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
-		updateUrlQuery = "UPDATE streams SET url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
+		updateNameQuery = "UPDATE streams SET name = ?, display_name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
+		updateUrlQuery = "UPDATE streams SET display_name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ? WHERE name = ?"
 	} else {
 		checkQuery = "SELECT EXISTS(SELECT 1 FROM streams WHERE name = $1)"
-		updateNameQuery = "UPDATE streams SET name = $1, url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6, user_id = $7 WHERE name = $8"
-		updateUrlQuery = "UPDATE streams SET url = $1, backend = $2, lat = $3, lng = $4, is_enabled = $5, user_id = $6 WHERE name = $7"
+		updateNameQuery = "UPDATE streams SET name = $1, display_name = $2, url = $3, backend = $4, lat = $5, lng = $6, is_enabled = $7, user_id = $8 WHERE name = $9"
+		updateUrlQuery = "UPDATE streams SET display_name = $1, url = $2, backend = $3, lat = $4, lng = $5, is_enabled = $6, user_id = $7 WHERE name = $8"
 	}
 
 	if oldName != newName {
-		// Check if new name exists
+		// Check if new name (UUID/ID) exists. Usually newName == oldName for updates now, unless migrating.
 		var exists bool
 		err := tx.QueryRow(checkQuery, newName).Scan(&exists)
 		if err != nil {
 			return err
 		}
 		if exists {
-			return fmt.Errorf("stream name '%s' already exists", newName)
+			return fmt.Errorf("stream id '%s' already exists", newName)
 		}
 
-		// Update name, url, backend, and user_id
-		_, err = tx.Exec(updateNameQuery, newName, url, backend, lat, lng, enabled, userID, oldName)
+		// Update name, display_name, url, backend, and user_id
+		_, err = tx.Exec(updateNameQuery, newName, displayName, url, backend, lat, lng, enabled, userID, oldName)
 		if err != nil {
 			return err
 		}
 	} else {
-		// Just update url, backend, and user_id
-		_, err = tx.Exec(updateUrlQuery, url, backend, lat, lng, enabled, userID, newName)
+		// Just update display_name, url, backend, and user_id
+		_, err = tx.Exec(updateUrlQuery, displayName, url, backend, lat, lng, enabled, userID, newName)
 		if err != nil {
 			return err
 		}
