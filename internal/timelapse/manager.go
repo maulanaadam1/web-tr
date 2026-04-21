@@ -322,11 +322,15 @@ func (m *Manager) ExportVideo(name string, startStr, endStr string) (string, err
 	}
 
 	f.Close()
-	defer os.Remove(listFileName) // Cleanup list
-
+	// Cleanup list file later is handled by defer, but we need the path relative to cmd.Dir 
+	// Or just use absolute path for listFileName
+	absListPath, _ := filepath.Abs(listFileName)
+	
 	// Output file - Use sanitized time strings for filename (No colons for Windows)
 	outName := fmt.Sprintf("%s_export_%s_%s.mp4", name, startCmp, endCmp)
-	outPath := filepath.Join("data", "timelapse", name, outName)
+	outDir := filepath.Join("data", "timelapse", name)
+	outPath := filepath.Join(outDir, outName)
+	absOutPath, _ := filepath.Abs(outPath)
 
 	// FFmpeg command
 	// ffmpeg -f concat -safe 0 -i list.txt -vsync vfr -pix_fmt yuv420p out.mp4
@@ -334,23 +338,31 @@ func (m *Manager) ExportVideo(name string, startStr, endStr string) (string, err
 	// Sniff ffmpeg path
 	ffmpegPath := "ffmpeg"
 	if _, err := os.Stat("ffmpeg.exe"); err == nil {
-		ffmpegPath = ".\\ffmpeg.exe"
+		ffmpegPath, _ = filepath.Abs("ffmpeg.exe")
 	}
 
 	cmd := exec.Command(ffmpegPath,
 		"-y",
 		"-f", "concat",
 		"-safe", "0",
-		"-i", listFileName,
+		"-i", absListPath,
 		"-vsync", "vfr",
 		"-pix_fmt", "yuv420p",
-		outPath,
+		absOutPath,
 	)
+
+	// Set working directory to where images are
+	cmd.Dir = outDir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// Clean up the list file on error too
+		os.Remove(listFileName)
 		return "", fmt.Errorf("ffmpeg error: %v, output: %s", err, string(output))
 	}
+
+	// Remove list file on success
+	os.Remove(listFileName)
 
 	return outPath, nil
 }

@@ -1572,13 +1572,19 @@ async function deleteTimelapse(mode, filename = '') {
         const url = `/api/timelapse/files/delete?name=${encodeURIComponent(tlCurrentStream)}&filename=${encodeURIComponent(mode === 'all' ? 'all' : filename)}`;
         const res = await fetch(url, { method: 'DELETE' });
         if (res.ok) {
-            loadTimelapseFiles(tlCurrentStream);
+            // Fix: Call the correct refresh function
+            await loadTlFiles(tlCurrentStream);
+            
+            if (mode === 'all') {
+                alert("All snapshots deleted successfully");
+            }
         } else {
             const err = await res.text();
             alert("Delete failed: " + err);
         }
     } catch (e) {
         console.error("Delete failed", e);
+        alert("Operation failed. Please try again.");
     }
 }
 
@@ -1615,7 +1621,7 @@ function startTlPlay() {
     if (!tlFiles || tlFiles.length === 0) return;
     tlIsPlaying = true;
     const playBtn = document.getElementById('tlPlayBtn');
-    if(playBtn) playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Pause';
+    if(playBtn) playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Pause';
 
     if (tlPlayIndex >= tlFiles.length - 1) tlPlayIndex = 0;
 
@@ -1630,7 +1636,7 @@ function stopTlPlay() {
     tlIsPlaying = false;
     clearInterval(tlPlayInterval);
     const playBtn = document.getElementById('tlPlayBtn');
-    if(playBtn) playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg> Play';
+    if(playBtn) playBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /></svg> Play';
 }
 
 async function handleTlExport() {
@@ -1644,8 +1650,11 @@ async function handleTlExport() {
         const start = document.getElementById('tlStartDate').value;
         const end = document.getElementById('tlEndDate').value;
         const res = await fetch(`/api/timelapse/export?name=${encodeURIComponent(tlCurrentStream)}&start=${start}&end=${end}`);
-
-        if (!res.ok) throw new Error("Export failed");
+        
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(errorText || "Export failed from server");
+        }
 
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
