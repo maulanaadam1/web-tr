@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	_ "embed"
 	"encoding/csv"
 	"encoding/json"
@@ -1497,10 +1498,8 @@ func registerToBackend(inst *TunnelInstance) {
 		} else {
 			apiURL += "?test=true"
 		}
-		
-		// Prevent clashes in Test Mode by appending a small unique hex string
-		uniqueSuffix := fmt.Sprintf("%04x", time.Now().UnixNano()&0xffff)
-		camName = fmt.Sprintf("%s_%s", inst.Camera.Name, uniqueSuffix)
+		// Prevent clashes in Test Mode by using a UUID
+		camName = generateUUID()
 		
 		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
 		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
@@ -1810,4 +1809,12 @@ func formatBytes(b uint64) string {
 		return fmt.Sprintf("%.1f MB/s", float64(b)/(unit*unit))
 	}
 	return fmt.Sprintf("%.1f GB/s", float64(b)/(unit*unit*unit))
+}
+
+func generateUUID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
