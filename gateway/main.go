@@ -879,6 +879,19 @@ func fetchGatewaySettings() {
 	if apiURL == "" {
 		return
 	}
+
+	// If no credentials, we are in Test Mode
+	if config.ApiUsername == "" || config.ApiPassword == "" {
+		serverSettings = GatewaySettings{
+			Plan:         "Trial",
+			MaxCameras:   2,
+			IsTrial:      true,
+			LimitMinutes: 60,
+		}
+		addLog("Auth: ℹ️ Gateway is running in Test Broadcast Mode (Trial)")
+		return
+	}
+
 	checkURL := strings.Replace(apiURL, "/api/streams", "/api/gateway/check", 1)
 
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -887,7 +900,7 @@ func fetchGatewaySettings() {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		addLog(fmt.Sprintf("Auth: ⚠️ Failed to sync subscription: %v", err))
+		addLog(fmt.Sprintf("Auth: ⚠️ Connection failed: %v. Using local cache.", err))
 		return
 	}
 	defer resp.Body.Close()
