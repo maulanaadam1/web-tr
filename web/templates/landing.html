@@ -607,7 +607,7 @@
             }
         }
 
-        function tryBroadcast() {
+        async function tryBroadcast() {
             const rtspUrl = document.getElementById('tryRtspUrl').value.trim();
             const camName = 'Preview Stream';
 
@@ -629,16 +629,24 @@
 
             setTryStatus('connecting', 'Menghubungkan ke stream RTSP...');
 
-            broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(rtspUrl)}&mode=webrtc,mse,hls,mp4,mjpeg`;
+            try {
+                // Get stateless 1-hour token from server
+                const tokenRes = await fetch(`/api/public/test-token?src=${encodeURIComponent(rtspUrl)}`);
+                const tokenData = await tokenRes.json();
+                
+                broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(rtspUrl)}&expires=${tokenData.expires}&token=${tokenData.token}&mode=webrtc,mse,hls,mp4,mjpeg`;
 
-            const linkBox = document.getElementById('broadcastLinkBox');
-            if (linkBox) { linkBox.classList.remove('hidden'); }
-            const linkText = document.getElementById('broadcastLinkText');
-            if (linkText) linkText.textContent = broadcastUrl;
+                const linkBox = document.getElementById('broadcastLinkBox');
+                if (linkBox) { linkBox.classList.remove('hidden'); }
+                const linkText = document.getElementById('broadcastLinkText');
+                if (linkText) linkText.textContent = broadcastUrl;
 
-            setTimeout(() => {
-                setTryStatus('online', `Stream "${currentStreamName}" siap — klik Lihat Stream untuk preview.`);
-            }, 2000);
+                setTimeout(() => {
+                    setTryStatus('online', `Stream "${currentStreamName}" siap — klik Lihat Stream untuk preview.`);
+                }, 1000);
+            } catch (e) {
+                setTryStatus('offline', 'Gagal membuat token pengujian.');
+            }
         }
 
         function setTryStatus(state, text) {

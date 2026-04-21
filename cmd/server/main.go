@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"html/template"
 	"io"
 	"log"
@@ -340,6 +342,13 @@ func initGo2RTCProxy() {
 	}
 }
 
+func generateTestToken(src, expires string) string {
+	h := sha256.New()
+	// Using a dedicated secret for test tokens
+	h.Write([]byte(src + expires + "RTSP2GO_TEST_SECRET_KEY_2024"))
+	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
 func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Security: Block access to the root of the RTC proxy to hide the dashboard
 	// but allow stream-related files and necessary API endpoints.
@@ -369,6 +378,33 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 			allowed = true
 			break
 		}
+	}
+
+	// Check for direct RTSP source and enforce expiration
+	src := r.URL.Query().Get("src")
+	if strings.HasPrefix(src, "rtsp://") {
+		expiresStr := r.URL.Query().Get("expires")
+		token := r.URL.Query().Get("token")
+		
+		if expiresStr == "" || token == "" {
+			http.Error(w, "Access Denied: Public test stream requires a valid token.", http.StatusForbidden)
+			return
+		}
+		
+		expires, err := strconv.ParseInt(expiresStr, 10, 64)
+		if err != nil || time.Now().Unix() > expires {
+			http.Error(w, "Access Denied: This test stream link has expired (1 hour limit).", http.StatusForbidden)
+			return
+		}
+		
+		expected := generateTestToken(src, expiresStr)
+		if token != expected {
+			http.Error(w, "Access Denied: Invalid test token.", http.StatusForbidden)
+			return
+		}
+		
+		// If we are here, the direct RTSP preview is valid
+		allowed = true
 	}
 
 	if !allowed {
@@ -907,6 +943,25 @@ func main() {
 			return
 		}
 		w.WriteHeader(http.StatusOK)
+	})
+
+	// Stateless Test Token Generation
+	http.HandleFunc("/api/public/test-token", func(w http.ResponseWriter, r *http.Request) {
+		src := r.URL.Query().Get("src")
+		if src == "" {
+			http.Error(w, "Source is required", http.StatusBadRequest)
+			return
+		}
+		
+		expires := time.Now().Add(1 * time.Hour).Unix()
+		expiresStr := strconv.FormatInt(expires, 10)
+		token := generateTestToken(src, expiresStr)
+		
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"expires": expires,
+			"token":   token,
+		})
 	})
 
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {

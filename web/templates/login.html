@@ -378,17 +378,25 @@
                     btn.disabled = true;
                     btn.innerHTML = '<span class="flex h-2 w-2 rounded-full bg-white animate-ping mr-2"></span> Connecting...';
                     
-                    // Directly use go2rtc player URL with the RTSP src - same as landing page
-                    currentStreamName = "Direct Preview";
-                    broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(url)}&mode=webrtc,mse,hls,mp4,mjpeg`;
-                    
-                    setTimeout(() => {
-                        statusBar.classList.remove('hidden');
-                        bar.classList.add('active'); // Keep bar open
-                        updateTryStatus();
+                    try {
+                        // Get stateless 1-hour token from server
+                        const tokenRes = await fetch(`/api/public/test-token?src=${encodeURIComponent(url)}`);
+                        const tokenData = await tokenRes.json();
+                        
+                        currentStreamName = "Direct Preview";
+                        broadcastUrl = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(url)}&expires=${tokenData.expires}&token=${tokenData.token}&mode=webrtc,mse,hls,mp4,mjpeg`;
+                        
+                        setTimeout(() => {
+                            statusBar.classList.remove('hidden');
+                            bar.classList.add('active');
+                            updateTryStatus();
+                            btn.disabled = false;
+                            btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg> Start Broadcast';
+                        }, 1000);
+                    } catch (e) {
                         btn.disabled = false;
-                        btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.636 18.364a9 9 0 010-12.728m12.728 0a9 9 0 010 12.728m-9.9-2.829a5 5 0 010-7.07m7.072 0a5 5 0 010 7.07M13 12a1 1 0 11-2 0 1 1 0 012 0z"/></svg> Start Broadcast';
-                    }, 1500);
+                        btn.innerHTML = 'Error generating token';
+                    }
                 }
 
                 function updateTryStatus() {
