@@ -694,7 +694,6 @@ function openUserModal(user = null) {
     // Multi-tenant fields
     document.getElementById('userSubscription').value = isEdit ? (user.subscription_plan || 'Free') : 'Free';
     document.getElementById('userEnableSupport').checked = isEdit ? !!user.enable_support : false;
-    document.getElementById('userEnableVPN').checked = isEdit ? !!user.enable_vpn : false;
 
     title.textContent = isEdit ? `Edit User: ${user.full_name || user.username}` : 'Add New User';
     submitBtnText.textContent = isEdit ? 'Update User' : 'Create User';
@@ -708,13 +707,9 @@ function openUserModal(user = null) {
 function checkModalPlanRestrictions() {
     const plan = document.getElementById('userSubscription').value;
     const supportToggle = document.getElementById('userEnableSupport')?.closest('div.mt-4') || document.getElementById('userEnableSupport')?.closest('label')?.parentElement;
-    const vpnToggle = document.getElementById('userEnableVPN')?.closest('div.mt-4') || document.getElementById('userEnableVPN')?.closest('label')?.parentElement;
 
     if (supportToggle) {
         supportToggle.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
-    }
-    if (vpnToggle) {
-        vpnToggle.classList.toggle('hidden', plan !== 'Enterprise');
     }
 }
 
@@ -775,7 +770,6 @@ async function submitUserForm() {
         is_active: document.getElementById('userIsActive').checked,
         subscription_plan: document.getElementById('userSubscription').value,
         enable_support: document.getElementById('userEnableSupport').checked,
-        enable_vpn: document.getElementById('userEnableVPN').checked,
         broadcast_notifications: false,
         notification_paid: false,
     };
