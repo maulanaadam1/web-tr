@@ -102,10 +102,21 @@
             font-size: 16px !important;
         }
 
+        /* Remove default Leaflet/Browser focus outline on markers */
+        .leaflet-marker-icon {
+            outline: none !important;
+            border: none !important;
+            background: none !important;
+        }
+
         /* Selected Marker Style */
         .selected-marker {
-            filter: drop-shadow(0 0 8px #6366f1) hue-rotate(180deg);
             z-index: 1000 !important;
+        }
+        .selected-marker > div {
+            transform: scale(1.25);
+            filter: drop-shadow(0 0 10px rgba(99, 102, 241, 0.6));
+            border-color: #6366f1 !important;
         }
 
         /* Collapsible Sidebar Styles */
