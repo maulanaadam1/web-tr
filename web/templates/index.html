@@ -575,15 +575,21 @@
 
             <!-- TEST LOGS VIEW -->
             <div id="view-testlogs" class="hidden space-y-6 p-4 md:p-8">
-                <div class="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <div class="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 gap-6">
                     <div>
                         <h2 class="text-2xl font-bold text-slate-800 dark:text-white font-inter">RTSP Test Logs</h2>
                         <p class="text-sm text-slate-500">Audit history of RTSP test attempts on public pages.</p>
                     </div>
-                    <button type="button" onclick="loadTestLogs()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                        <span class="hidden md:inline">Refresh</span>
-                    </button>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="loadTestLogs()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            <span class="hidden md:inline">Refresh</span>
+                        </button>
+                        <button type="button" onclick="exportTestLogsToCSV()" class="flex items-center gap-2 md:px-4 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-emerald-500/30 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            <span class="hidden md:inline">Export CSV</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -600,6 +606,12 @@
                                 <!-- Populated by JS -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Paging Controls -->
+                    <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                        <span class="text-xs text-slate-500" id="testLogPageInfo">Showing 0 entries</span>
+                        <div class="flex gap-1" id="testLogPagination"></div>
                     </div>
                 </div>
             </div>

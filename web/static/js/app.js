@@ -2600,6 +2600,10 @@ function focusCameraOnMap(name) {
         }, 300); // 300ms to allow some movement
     }
 }
+let allTestLogs = [];
+let testLogsCurrentPage = 1;
+const testLogsPageSize = 10;
+
 function loadTestLogs() {
     const tbody = document.getElementById('testLogTableBody');
     if (!tbody) return;
@@ -2609,46 +2613,134 @@ function loadTestLogs() {
     fetch('/api/admin/test-logs')
         .then(res => res.json())
         .then(logs => {
-            if (!logs || logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400">No test logs found.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = logs.map(log => {
-                const date = new Date(log.created_at);
-                const dateStr = date.toLocaleString('id-ID', { 
-                    day: '2-digit', 
-                    month: 'short', 
-                    year: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                return `
-                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                        <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-500 dark:text-slate-400">
-                            ${dateStr}
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="text-sm font-bold text-slate-800 dark:text-white break-all max-w-md">${log.url}</div>
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex flex-col gap-1">
-                                <div class="flex items-center gap-1.5">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 select-all">${log.ip}</span>
-                                </div>
-                                <div class="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-xs" title="${log.user_agent}">
-                                    ${log.user_agent}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            allTestLogs = logs || [];
+            testLogsCurrentPage = 1;
+            renderTestLogsPage(1);
         })
         .catch(err => {
             console.error('Error loading logs:', err);
             tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-red-400">Error loading logs.</td></tr>';
         });
+}
+
+function renderTestLogsPage(page) {
+    const tbody = document.getElementById('testLogTableBody');
+    if (!tbody) return;
+
+    const startIndex = (page - 1) * testLogsPageSize;
+    const endIndex = startIndex + testLogsPageSize;
+    const logsToShow = allTestLogs.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(allTestLogs.length / testLogsPageSize) || 1;
+
+    if (logsToShow.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400">No logs found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = logsToShow.map(log => {
+        const date = new Date(log.created_at);
+        const dateStr = date.toLocaleString('id-ID', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        return `
+            <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    ${dateStr}
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm font-bold text-slate-800 dark:text-white break-all max-w-md">${log.url}</div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex flex-col gap-1">
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 select-all">${log.ip}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-xs" title="${log.user_agent}">
+                            ${log.user_agent}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Update paging info
+    const infoEl = document.getElementById('testLogPageInfo');
+    if (infoEl) {
+        infoEl.innerText = `Showing ${startIndex + 1} to ${Math.min(endIndex, allTestLogs.length)} of ${allTestLogs.length} entries`;
+    }
+
+    // Render pagination buttons
+    renderTestLogPagination(totalPages, page);
+}
+
+function renderTestLogPagination(totalPages, currentPage) {
+    const container = document.getElementById('testLogPagination');
+    if (!container) return;
+
+    container.innerHTML = '';
+    
+    const maxVisible = 5;
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+
+    // Prev Button
+    const prevBtn = document.createElement('button');
+    prevBtn.className = `px-3 py-1 text-xs font-semibold rounded border transition-all ${currentPage === 1 ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200 text-slate-400' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`;
+    prevBtn.disabled = (currentPage === 1);
+    prevBtn.innerHTML = '&laquo;';
+    prevBtn.onclick = () => { if(currentPage > 1) { testLogsCurrentPage--; renderTestLogsPage(testLogsCurrentPage); } };
+    container.appendChild(prevBtn);
+
+    for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement('button');
+        btn.className = `px-3 py-1 text-xs font-bold rounded border transition-all ${i === currentPage ? 'bg-brand-600 border-brand-600 text-white shadow-md' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`;
+        btn.innerText = i;
+        btn.onclick = () => { testLogsCurrentPage = i; renderTestLogsPage(i); };
+        container.appendChild(btn);
+    }
+
+    // Next Button
+    const nextBtn = document.createElement('button');
+    nextBtn.className = `px-3 py-1 text-xs font-semibold rounded border transition-all ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200 text-slate-400' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`;
+    nextBtn.disabled = (currentPage === totalPages);
+    nextBtn.innerHTML = '&raquo;';
+    nextBtn.onclick = () => { if(currentPage < totalPages) { testLogsCurrentPage++; renderTestLogsPage(testLogsCurrentPage); } };
+    container.appendChild(nextBtn);
+}
+
+function exportTestLogsToCSV() {
+    if (allTestLogs.length === 0) {
+        alert("No logs to export.");
+        return;
+    }
+
+    const headers = ["Timestamp", "RTSP URL", "IP Address", "User Agent"];
+    const rows = allTestLogs.map(log => [
+        new Date(log.created_at).toISOString(),
+        `"${log.url}"`,
+        log.ip,
+        `"${log.user_agent.replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `rtsp_test_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
