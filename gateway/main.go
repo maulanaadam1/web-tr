@@ -468,6 +468,14 @@ func showAddCameraDialog() {
 		addLog(fmt.Sprintf("Testing RTSP connection to: %s", rtspURL))
 		go func() {
 			err := checkRTSPConnection(rtspURL)
+			
+			// Send log to web
+			status := "SUCCESS"
+			if err != nil {
+				status = fmt.Sprintf("FAILED: %v", err)
+			}
+			go sendTestLogToWeb("Gateway Test Local - "+status, rtspURL)
+
 			if err != nil {
 				addLog(fmt.Sprintf("RTSP Check Failed: %v", err))
 				dialog.ShowError(fmt.Errorf("RTSP Connection Failed:\n%v", err), myWindow)
@@ -695,7 +703,15 @@ func showEditCameraDialog(inst *TunnelInstance) {
 	entryRTSP.SetText(inst.Camera.LocalRTSP)
 
 	btnTest := widget.NewButtonWithIcon("Test Local", theme.ViewRefreshIcon(), func() {
-		if err := checkRTSPConnection(entryRTSP.Text); err != nil {
+		err := checkRTSPConnection(entryRTSP.Text)
+		
+		status := "SUCCESS"
+		if err != nil {
+			status = fmt.Sprintf("FAILED: %v", err)
+		}
+		go sendTestLogToWeb("Gateway Test Local - "+status, entryRTSP.Text)
+
+		if err != nil {
 			dialog.ShowError(fmt.Errorf("⚠️ RTSP Test Failed: %v", err), myWindow)
 		} else {
 			dialog.ShowInformation("RTSP Test", "✅ Connection successful!", myWindow)
@@ -1445,6 +1461,7 @@ func registerToBackend(inst *TunnelInstance) {
 			apiURL += "?test=true"
 		}
 		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
+		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
 	}
 	var originalRTSP string
 	for _, cam := range config.Cameras {
@@ -1569,6 +1586,23 @@ func deregisterFromBackend(camName string) {
 		addLog(fmt.Sprintf("[%s] ✅ Successfully deregistered from VPS backend.", camName))
 	} else {
 		addLog(fmt.Sprintf("[%s] ❌ Deregister failed — Status: %d, Body: %s", camName, resp.StatusCode, string(bodyBytes)))
+	}
+}
+
+func sendTestLogToWeb(action, rtspURL string) {
+	if config == nil || config.ServerURL == "" {
+		return
+	}
+	baseURL := strings.TrimSuffix(config.ServerURL, "/")
+	
+	// Create a unique log string combining the action context and the actual RTSP URL
+	logSource := fmt.Sprintf("%s | RTSP: %s", action, rtspURL)
+	apiURL := fmt.Sprintf("%s/api/public/test-token?src=%s", baseURL, url.QueryEscape(logSource))
+	
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(apiURL)
+	if err == nil {
+		resp.Body.Close()
 	}
 }
 
