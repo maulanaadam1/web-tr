@@ -909,7 +909,12 @@ func main() {
 		}
 
 		if prelaunch {
-			tmpl, err := template.ParseFiles("web/templates/coming_soon.html")
+			theme := os.Getenv("PRELAUNCH_THEME")
+			templateName := "coming_soon_compact.html"
+			if theme == "extended" {
+				templateName = "coming_soon_extended.html"
+			}
+			tmpl, err := template.ParseFiles("web/templates/" + templateName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
