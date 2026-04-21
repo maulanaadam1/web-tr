@@ -127,7 +127,8 @@
             width: 4.5rem; /* w-18 */
         }
         aside#mainSidebar.sidebar-collapsed .nav-text, 
-        aside#mainSidebar.sidebar-collapsed .brand-title {
+        aside#mainSidebar.sidebar-collapsed .brand-title,
+        aside#mainSidebar.sidebar-collapsed .menu-label {
             display: none;
         }
         aside#mainSidebar.sidebar-collapsed .nav-link {
@@ -135,9 +136,13 @@
             padding-left: 0;
             padding-right: 0;
         }
-        aside#mainSidebar.sidebar-collapsed .menu-label {
-            text-align: center;
-            font-size: 0px;
+        aside#mainSidebar.sidebar-collapsed #collapseToggleIcon {
+            transform: rotate(180deg);
+        }
+        aside#mainSidebar.sidebar-collapsed .h-16 {
+            padding-left: 0;
+            padding-right: 0;
+            justify-content: center;
         }
     </style>
 </head>
@@ -243,12 +248,12 @@
                 </a>
             </div>
             
-            <div class="pt-2 mt-auto">
-                <button onclick="document.getElementById('mainSidebar').classList.toggle('sidebar-collapsed')" class="nav-link flex items-center gap-3 px-3 py-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 w-full transition-colors hidden lg:flex" title="Collapse Sidebar">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            <div class="pt-2 mt-auto border-t border-slate-200/50 dark:border-slate-800/50">
+                <button onclick="document.getElementById('mainSidebar').classList.toggle('sidebar-collapsed')" class="nav-link flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-brand-500 dark:hover:text-brand-400 w-full transition-all hidden lg:flex" title="Toggle Sidebar">
+                    <svg id="collapseToggleIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                     </svg>
-                    <span class="nav-text whitespace-nowrap text-sm font-semibold">Collapse</span>
+                    <span class="nav-text whitespace-nowrap text-sm font-bold tracking-tight">Collapse</span>
                 </button>
             </div>
         </nav>
