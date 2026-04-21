@@ -909,12 +909,12 @@ func main() {
 		}
 
 		if prelaunch {
-			theme := os.Getenv("PRELAUNCH_THEME")
-			templateName := "coming_soon_compact.html"
-			if theme == "extended" {
-				templateName = "coming_soon_extended.html"
+			csMode := os.Getenv("COMING_SOON_MODE")
+			templateName := "web/templates/coming_soon_full.html"
+			if csMode == "compact" {
+				templateName = "web/templates/coming_soon_compact.html"
 			}
-			tmpl, err := template.ParseFiles("web/templates/" + templateName)
+			tmpl, err := template.ParseFiles(templateName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

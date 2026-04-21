@@ -60,6 +60,7 @@ type CameraConfig struct {
 	Name      string `json:"name"`
 	LocalRTSP string `json:"local_rtsp"`
 	VPSPort   int    `json:"vps_port"`
+	ServerID  string `json:"server_id,omitempty"`
 }
 
 type Config struct {
@@ -1479,14 +1480,34 @@ func startTCPProxy(inst *TunnelInstance, targetHostPort string) error {
 }
 
 func registerToBackend(inst *TunnelInstance) {
-	camName := inst.Camera.Name
+	var originalRTSP string
+	var camIndex int = -1
+	for i, cam := range config.Cameras {
+		if cam.Name == inst.Camera.Name {
+			originalRTSP = cam.LocalRTSP
+			camIndex = i
+			break
+		}
+	}
+
+	// Always use persistent ServerID (UUID) to prevent clashes
+	camName := inst.Camera.ServerID
+	if camName == "" {
+		camName = generateUUID()
+		inst.Camera.ServerID = camName
+		if camIndex >= 0 {
+			config.Cameras[camIndex].ServerID = camName
+			saveConfig()
+		}
+	}
+
 	// Give the tunnel a brief moment to stabilize
 	time.Sleep(2 * time.Second)
 
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
 	if apiURL == "" {
-		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", camName))
+		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", inst.Camera.Name))
 		return
 	}
 
@@ -1498,24 +1519,14 @@ func registerToBackend(inst *TunnelInstance) {
 		} else {
 			apiURL += "?test=true"
 		}
-		// Prevent clashes in Test Mode by using a UUID
-		camName = generateUUID()
 		
-		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
-		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
+		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", inst.Camera.Name))
+		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", inst.Camera.Name), inst.Camera.LocalRTSP)
 	}
 	
-	// Save the name used for the API so we can deregister correctly later
+	// Save the strict UUID used for the API so we can deregister correctly later
 	inst.ApiCamName = camName
 	
-	var originalRTSP string
-	for _, cam := range config.Cameras {
-		if cam.Name == inst.Camera.Name {
-			originalRTSP = cam.LocalRTSP
-			break
-		}
-	}
-
 	var rtspSource string
 	hostPort := extractHostPort(originalRTSP)
 	if isPrivateIP(hostPort) {
