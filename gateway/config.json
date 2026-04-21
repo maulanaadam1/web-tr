@@ -10,5 +10,11 @@
   "l2tp_psk": "",
   "wireguard_config": "",
   "keep_camera_on_stop": true,
-  "cameras": []
+  "cameras": [
+    {
+      "name": "Test",
+      "local_rtsp": "rtsp://admin:vivo1234@123.255.201.50:8554/Media/Live/Normal?camera=C_1\u0026streamindex=2",
+      "vps_port": 0
+    }
+  ]
 }

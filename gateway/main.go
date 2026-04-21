@@ -1592,6 +1592,13 @@ func deregisterFromBackend(camName string) {
 	}
 	// Append query param to the base API URL
 	fullURL := fmt.Sprintf("%s?name=%s", apiURL, url.QueryEscape(camName))
+	
+	// If in Test Mode (empty username), we MUST append test=true so backend allows the deletion
+	isTestMode := config.ApiUsername == ""
+	if isTestMode {
+		fullURL += "&test=true"
+	}
+	
 	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", camName, fullURL))
 
 	req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
