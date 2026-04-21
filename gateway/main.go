@@ -94,9 +94,10 @@ type TunnelInstance struct {
 	StopChan   chan bool
 	mu         sync.Mutex
 	Card       fyne.CanvasObject
-	proxyLn     net.Listener
-	proxyPort   int
-	PublicURL   string
+	proxyLn    net.Listener
+	proxyPort  int
+	ApiCamName string
+	PublicURL  string
 	PublicLabel *widget.Entry // Use Entry for easy selection/copy
 }
 
@@ -622,8 +623,11 @@ func deleteCamera(inst *TunnelInstance) {
 			go func() {
 				inst.Stop()
 
-				// Auto Deregister from backend API
-				deregisterFromBackend(inst.Camera.Name)
+				// Auto Deregister from backend API using the exact name used for registration
+				if inst.ApiCamName == "" {
+					inst.ApiCamName = inst.Camera.Name
+				}
+				deregisterFromBackend(inst.ApiCamName)
 
 				// Remove from config slice
 				for i, c := range config.Cameras {
@@ -1137,7 +1141,10 @@ func (inst *TunnelInstance) Stop() {
 	// EXCEPTION: If in Test Mode (empty credentials), always deregister to keep server clean.
 	isTestMode := config.ApiUsername == "" && config.ApiPassword == ""
 	if !config.KeepCameraOnStop || isTestMode {
-		go deregisterFromBackend(inst.Camera.Name)
+		if inst.ApiCamName == "" {
+			inst.ApiCamName = inst.Camera.Name
+		}
+		go deregisterFromBackend(inst.ApiCamName)
 	} else {
 		addLog(fmt.Sprintf("[%s] Persistence: Camera kept on server per settings.", inst.Camera.Name))
 	}
@@ -1490,12 +1497,21 @@ func registerToBackend(inst *TunnelInstance) {
 		} else {
 			apiURL += "?test=true"
 		}
+		
+		// Prevent clashes in Test Mode by appending a small unique hex string
+		uniqueSuffix := fmt.Sprintf("%04x", time.Now().UnixNano()&0xffff)
+		camName = fmt.Sprintf("%s_%s", inst.Camera.Name, uniqueSuffix)
+		
 		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
 		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
 	}
+	
+	// Save the name used for the API so we can deregister correctly later
+	inst.ApiCamName = camName
+	
 	var originalRTSP string
 	for _, cam := range config.Cameras {
-		if cam.Name == camName {
+		if cam.Name == inst.Camera.Name {
 			originalRTSP = cam.LocalRTSP
 			break
 		}
