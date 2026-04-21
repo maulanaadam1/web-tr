@@ -31,6 +31,30 @@ import (
 	psnet "github.com/shirou/gopsutil/v3/net"
 )
 
+// ReadOnlyEntry is a custom widget that allows selection and copy but prevents typing/editing
+type ReadOnlyEntry struct {
+	widget.Entry
+}
+
+func NewReadOnlyEntry() *ReadOnlyEntry {
+	e := &ReadOnlyEntry{}
+	e.MultiLine = true
+	e.Wrapping = fyne.TextWrapWord
+	e.ExtendBaseWidget(e)
+	return e
+}
+
+func (e *ReadOnlyEntry) TypedRune(r rune)            {} // Ignore character input
+func (e *ReadOnlyEntry) TypedKey(k *fyne.KeyEvent)   {} // Ignore special keys (backspace, etc)
+func (e *ReadOnlyEntry) TypedShortcut(s fyne.Shortcut) {
+	if _, ok := s.(*fyne.ShortcutCopy); ok {
+		e.Entry.TypedShortcut(s) // Allow Copy shortcut
+	}
+	if _, ok := s.(*fyne.ShortcutSelectAll); ok {
+		e.Entry.TypedShortcut(s) // Allow Select All
+	}
+}
+
 type CameraConfig struct {
 	Name      string `json:"name"`
 	LocalRTSP string `json:"local_rtsp"`
@@ -92,7 +116,7 @@ var (
 	config         *Config
 	serverSettings GatewaySettings
 	configPath     = "config.json"
-	globalLogs     *widget.Entry
+	globalLogs     *ReadOnlyEntry
 	logData        []string
 	logMu          sync.Mutex
 	myApp          fyne.App
@@ -218,22 +242,8 @@ func buildDashboard() fyne.CanvasObject {
 
 	// Logs Section
 	logData = []string{"System ready. Awaiting interaction..."}
-	globalLogs = widget.NewMultiLineEntry()
-	globalLogs.Wrapping = fyne.TextWrapWord
-	// Use disabled state initially to mimic read-only, we manage the text
-	// programmatically via SetText
-	globalLogs.Disable()
+	globalLogs = NewReadOnlyEntry()
 	globalLogs.SetText(strings.Join(logData, "\n"))
-
-	// Because Disabled entries aren't strictly selectable in some Fyne versions,
-	// typically developers leave it enabled but intercept TypedRune,
-	// or they just allow the user to type but it gets overwritten.
-	// To make it selectable and copyable natively without custom extensions,
-	// we keep it enabled but override TypedRune to do nothing, preventing typing.
-	globalLogs.Enable()
-	globalLogs.OnChanged = func(s string) {
-		// Do nothing on user input to keep it pseudo-readonly
-	}
 
 	logScroll := container.NewStack(globalLogs)
 
