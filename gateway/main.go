@@ -438,13 +438,43 @@ func buildSettings() fyne.CanvasObject {
 
 func refreshCameraList() {
 	listContainer.Objects = nil
-	instances = nil
+	
+	// Create a map of existing instances by Name to preserve their state
+	existingMap := make(map[string]*TunnelInstance)
+	for _, inst := range instances {
+		existingMap[inst.Camera.Name] = inst
+	}
+
+	var newInstances []*TunnelInstance
+
 	for _, cam := range config.Cameras {
-		inst := createTunnelInstance(cam)
-		instances = append(instances, inst)
-		inst.Card = createCameraCard(inst)
+		var inst *TunnelInstance
+		if existing, found := existingMap[cam.Name]; found {
+			// Reuse existing instance, just update the config in case LocalRTSP changed
+			existing.Camera = cam
+			inst = existing
+			
+			// Recreate the UI card to reflect potential changes, but keep state (like button icons) intact.
+			// Actually, createCameraCard already binds to the existing inst values.
+			// We need to re-render the card.
+			inst.Card = createCameraCard(inst)
+			
+			// Since createCameraCard recreates the buttons, we must restore the UI state if it was running.
+			if inst.Running {
+				inst.ToggleBtn.SetIcon(theme.MediaStopIcon())
+				// We can't easily grab the btnCopy/Web from here without refactoring createCameraCard, 
+				// but at least the play/stop state will be correct. Let's rely on createCameraCard.
+			}
+		} else {
+			// Create brand new instance
+			inst = createTunnelInstance(cam)
+			inst.Card = createCameraCard(inst)
+		}
+		newInstances = append(newInstances, inst)
 		listContainer.Add(inst.Card)
 	}
+	
+	instances = newInstances
 	listContainer.Refresh()
 }
 

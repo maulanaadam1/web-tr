@@ -1,7 +1,7 @@
 {
   "server_url": "https://rtsp2go.campod.my.id",
-  "api_username": "budi",
-  "api_password": "user",
+  "api_username": "",
+  "api_password": "",
   "vpn_mode": "zerotier",
   "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",
@@ -10,11 +10,5 @@
   "l2tp_psk": "",
   "wireguard_config": "",
   "keep_camera_on_stop": true,
-  "cameras": [
-    {
-      "name": "Laptop",
-      "local_rtsp": "rtsp://root:vivo1234@10.85.50.56:554/live1s1.sdp",
-      "vps_port": 0
-    }
-  ]
+  "cameras": []
 }
