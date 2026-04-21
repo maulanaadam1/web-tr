@@ -1,5 +1,5 @@
 {
-  "server_url": "https://stream.campod.my.id",
+  "server_url": "https://rtsp2go.campod.my.id",
   "api_username": "",
   "api_password": "",
   "vpn_mode": "l2tp",

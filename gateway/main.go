@@ -48,6 +48,7 @@ type Config struct {
 	L2TPPass        string         `json:"l2tp_pass"`
 	L2TPPSK         string         `json:"l2tp_psk"`
 	WireGuardConfig string         `json:"wireguard_config"`
+	KeepCameraOnStop bool          `json:"keep_camera_on_stop"`
 	Cameras         []CameraConfig `json:"cameras"`
 }
 
@@ -332,6 +333,9 @@ func buildSettings() fyne.CanvasObject {
 		container.NewGridWrap(fyne.NewSize(450, 150), entryWG),
 	)
 
+	checkKeepCamera := widget.NewCheck("Keep camera on server when stopped (manual stop)", nil)
+	checkKeepCamera.SetChecked(config.KeepCameraOnStop)
+
 	// VPN Mode selector
 	currentMode := config.VPNMode
 	if currentMode == "" {
@@ -364,6 +368,7 @@ func buildSettings() fyne.CanvasObject {
 		config.ServerURL = entryURL.Text
 		config.ApiUsername = entryApiUser.Text
 		config.ApiPassword = entryApiPass.Text
+		config.KeepCameraOnStop = checkKeepCamera.Checked
 
 		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
 			config.VPNMode = "none"
@@ -413,6 +418,7 @@ func buildSettings() fyne.CanvasObject {
 				widget.NewFormItem("API Password", entryApiPass),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
 				widget.NewFormItem("Stream Engine", engineSelect),
+				widget.NewFormItem("", checkKeepCamera),
 			),
 			dynamicSection,
 		),
@@ -1073,7 +1079,14 @@ func (inst *TunnelInstance) Stop() {
 
 	close(inst.StopChan)
 	inst.StopChan = make(chan bool)
-	go deregisterFromBackend(inst.Camera.Name)
+
+	// Conditional deregister: only if KeepCameraOnStop is FALSE
+	if !config.KeepCameraOnStop {
+		go deregisterFromBackend(inst.Camera.Name)
+	} else {
+		addLog(fmt.Sprintf("[%s] Persistence: Camera kept on server per settings.", inst.Camera.Name))
+	}
+
 	inst.updateStatus("Stopped", theme.ColorNameDisabled)
 	if inst.ToggleBtn != nil {
 		inst.ToggleBtn.SetIcon(theme.MediaPlayIcon())
