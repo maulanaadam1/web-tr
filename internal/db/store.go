@@ -230,7 +230,49 @@ func (s *Store) Init() error {
 		log.Printf("Warning: Failed to seed default admin: %v", err)
 	}
 
+	s.MigrateOldStreamsToUUID()
+
 	return nil
+}
+
+func (s *Store) MigrateOldStreamsToUUID() {
+	rows, err := s.db.Query("SELECT id, name FROM streams WHERE name NOT LIKE '%-%-%-%-%'")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	type OldStream struct {
+		ID   int
+		Name string
+	}
+	var targets []OldStream
+	for rows.Next() {
+		var o OldStream
+		if err := rows.Scan(&o.ID, &o.Name); err == nil {
+			targets = append(targets, o)
+		}
+	}
+
+	for _, t := range targets {
+		newUUID := make([]byte, 16)
+		rand.Read(newUUID)
+		uuidStr := fmt.Sprintf("%x-%x-%x-%x-%x", newUUID[0:4], newUUID[4:6], newUUID[6:8], newUUID[8:10], newUUID[10:])
+
+		var updateQuery string
+		if s.dbType == "sqlite" {
+			updateQuery = "UPDATE streams SET display_name = COALESCE(NULLIF(display_name, ''), name), name = ? WHERE id = ?"
+		} else {
+			updateQuery = "UPDATE streams SET display_name = COALESCE(NULLIF(display_name, ''), name), name = $1 WHERE id = $2"
+		}
+		
+		_, err := s.db.Exec(updateQuery, uuidStr, t.ID)
+		if err == nil {
+			log.Printf("Database Migration: Migrated legacy stream '%s' to UUID: %s", t.Name, uuidStr)
+		} else {
+			log.Printf("Database Migration Failed for '%s': %v", t.Name, err)
+		}
+	}
 }
 
 func (s *Store) SeedDefaultAdmin() error {
