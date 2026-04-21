@@ -59,7 +59,7 @@ function switchView(viewName) {
     if (viewName === 'commandcenter') {
         const ccTabs = document.getElementById('ccTabControlsHeader');
         if (ccTabs) ccTabs.classList.remove('hidden');
-        initCommandCenter();
+        initCommandCenterMap();
     } else {
         const ccTabs = document.getElementById('ccTabControlsHeader');
         if (ccTabs) ccTabs.classList.add('hidden');
