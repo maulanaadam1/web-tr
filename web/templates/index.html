@@ -840,6 +840,11 @@
                             <input type="text" id="mapSearchInput" oninput="debounceMapSearch(event.target.value)" placeholder="Search cameras..." class="w-full bg-transparent border-none text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 text-sm md:text-base py-2 pl-9">
                         </div>
                     </div>
+
+                    <!-- Search Results Dropdown (Admin CC) -->
+                    <div id="ccMapSearchResults" class="hidden absolute top-full left-0 right-0 mt-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[300px] overflow-y-auto pointer-events-auto">
+                        <div id="ccSearchResultsList" class="flex flex-col"></div>
+                    </div>
                 </div>
 
                 <!-- Tab 1: Map -->

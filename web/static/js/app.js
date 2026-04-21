@@ -149,6 +149,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 toggleSidePanel();
             }
         }
+
+        // Auto-close search results dropdown
+        const searchResults = document.getElementById('ccMapSearchResults');
+        const searchInput = document.getElementById('mapSearchInput');
+        if (searchResults && !searchResults.classList.contains('hidden')) {
+            if (!searchResults.contains(e.target) && e.target !== searchInput) {
+                searchResults.classList.add('hidden');
+            }
+        }
     });
 });
 
@@ -2212,26 +2221,50 @@ function renderCommandCenterMarkers() {
 
 function debounceMapSearch(query) {
     clearTimeout(window.mapSearchTimer);
+    const resultsDropdown = document.getElementById('ccMapSearchResults');
+    const resultsList = document.getElementById('ccSearchResultsList');
+
+    if (!query || query.trim() === '') {
+        if (resultsDropdown) resultsDropdown.classList.add('hidden');
+        return;
+    }
+
     window.mapSearchTimer = setTimeout(() => {
         const q = String(query).toLowerCase().trim();
-        let found = false;
-        
-        Object.keys(commandCenterMarkers).forEach(name => {
-            const marker = commandCenterMarkers[name];
-            
-            // Close all popups first
-            marker.closePopup();
+        const matches = Object.keys(commandCenterMarkers).filter(name => name.toLowerCase().includes(q));
 
-            if (q !== '' && name.toLowerCase().includes(q)) {
-                if (!found) {
-                    const currentZoom = globalCameraMap.getZoom();
-                    globalCameraMap.setView(marker.getLatLng(), Math.max(currentZoom, 15), { animate: false });
-                    setTimeout(() => marker.openPopup(), 100);
-                    found = true;
-                }
+        // Populate dropdown
+        if (resultsList) {
+            resultsList.innerHTML = matches.slice(0, 10).map(name => `
+                <button onclick="selectCCSearchResult('${name.replace(/'/g, "\\'")}')" class="w-full flex items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-none text-left">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-brand-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${name}</span>
+                </button>
+            `).join('');
+
+            if (matches.length > 0) {
+                resultsDropdown.classList.remove('hidden');
+            } else {
+                resultsList.innerHTML = '<div class="px-4 py-3 text-sm text-slate-400 italic">No cameras found</div>';
+                resultsDropdown.classList.remove('hidden');
             }
-        });
-    }, 500);
+        }
+    }, 300);
+}
+
+function selectCCSearchResult(name) {
+    const input = document.getElementById('mapSearchInput');
+    if (input) input.value = name;
+    
+    const resultsDropdown = document.getElementById('ccMapSearchResults');
+    if (resultsDropdown) resultsDropdown.classList.add('hidden');
+    
+    const marker = commandCenterMarkers[name];
+    if (marker && globalCameraMap) {
+        const currentZoom = globalCameraMap.getZoom();
+        globalCameraMap.setView(marker.getLatLng(), Math.max(currentZoom, 15), { animate: true, duration: 1.0 });
+        setTimeout(() => marker.openPopup(), 1100);
+    }
 }
 
 function changeGlobalMapLayer(layerName) {
