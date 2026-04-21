@@ -39,10 +39,9 @@ type CameraConfig struct {
 
 type Config struct {
 	ServerURL       string         `json:"server_url"`
-	CloudflareToken string         `json:"cloudflare_token"`
 	ApiUsername     string         `json:"api_username"`
 	ApiPassword     string         `json:"api_password"`
-	VPNMode         string         `json:"vpn_mode"`
+	VPNMode          string         `json:"vpn_mode"`
 	StreamEngine    string         `json:"stream_engine"` // "go2rtc", "mediamtx", "ffmpeg"
 	L2TPServer      string         `json:"l2tp_server"`
 	L2TPUser        string         `json:"l2tp_user"`
@@ -50,6 +49,14 @@ type Config struct {
 	L2TPPSK         string         `json:"l2tp_psk"`
 	WireGuardConfig string         `json:"wireguard_config"`
 	Cameras         []CameraConfig `json:"cameras"`
+}
+
+type GatewaySettings struct {
+	Username     string `json:"username"`
+	Plan         string `json:"plan"`
+	MaxCameras   int    `json:"max_cameras"`
+	LimitMinutes int    `json:"limit_minutes"`
+	IsTrial      bool   `json:"is_trial"`
 }
 
 type TunnelInstance struct {
@@ -62,8 +69,10 @@ type TunnelInstance struct {
 	StopChan   chan bool
 	mu         sync.Mutex
 	Card       fyne.CanvasObject
-	proxyLn    net.Listener
-	proxyPort  int
+	proxyLn     net.Listener
+	proxyPort   int
+	PublicURL   string
+	PublicLabel *widget.Entry // Use Entry for easy selection/copy
 }
 
 var singleInstanceListener net.Listener
@@ -78,20 +87,21 @@ func checkSingleInstance() {
 }
 
 var (
-	instances     []*TunnelInstance
-	config        *Config
-	configPath    = "config.json"
-	globalLogs    *widget.Entry
-	logData       []string
-	logMu         sync.Mutex
-	myApp         fyne.App
-	myWindow      fyne.Window
-	listContainer *fyne.Container
-	lblMonitor    *widget.Label
-	trayMenu      *fyne.Menu
-	trayCPUItem   *fyne.MenuItem
-	trayUpItem    *fyne.MenuItem
-	trayDownItem  *fyne.MenuItem
+	instances      []*TunnelInstance
+	config         *Config
+	serverSettings GatewaySettings
+	configPath     = "config.json"
+	globalLogs     *widget.Entry
+	logData        []string
+	logMu          sync.Mutex
+	myApp          fyne.App
+	myWindow       fyne.Window
+	listContainer  *fyne.Container
+	lblMonitor     *widget.Label
+	trayMenu       *fyne.Menu
+	trayCPUItem    *fyne.MenuItem
+	trayUpItem     *fyne.MenuItem
+	trayDownItem   *fyne.MenuItem
 )
 
 func main() {
@@ -131,11 +141,13 @@ func main() {
 	// Set a minimum size so the window never shrinks to a tiny unusable bar
 	myWindow.Canvas().Content().Resize(fyne.NewSize(550, 750))
 
-	// Intercept close to minimize to tray
 	myWindow.SetCloseIntercept(func() {
 		myWindow.Hide()
 		addLog("App minimized to system tray. Tunnels are still actively managed.")
 	})
+
+	// Initial sync of subscription limits
+	go fetchGatewaySettings()
 
 	myWindow.ShowAndRun()
 }
@@ -244,10 +256,6 @@ func buildSettings() fyne.CanvasObject {
 	entryURL.SetPlaceHolder("e.g., https://stream.campod.my.id")
 	entryURL.SetText(config.ServerURL)
 
-	entryCF := widget.NewEntry()
-	entryCF.SetPlaceHolder("Cloudflare Tunnel Token (Optional)")
-	entryCF.SetText(config.CloudflareToken)
-
 	entryApiUser := widget.NewEntry()
 	entryApiUser.SetPlaceHolder("Admin / Gateway User")
 	entryApiUser.SetText(config.ApiUsername)
@@ -354,7 +362,6 @@ func buildSettings() fyne.CanvasObject {
 
 	btnSave := widget.NewButtonWithIcon("Save Settings", theme.DocumentSaveIcon(), func() {
 		config.ServerURL = entryURL.Text
-		config.CloudflareToken = entryCF.Text
 		config.ApiUsername = entryApiUser.Text
 		config.ApiPassword = entryApiPass.Text
 
@@ -384,8 +391,6 @@ func buildSettings() fyne.CanvasObject {
 			config.L2TPUser = entryL2TPUser.Text
 			config.L2TPPass = entryL2TPPass.Text
 			config.L2TPPSK = entryL2TPPSK.Text
-		} else {
-			config.VPNMode = "none"
 		}
 
 		err := saveConfig()
@@ -406,7 +411,6 @@ func buildSettings() fyne.CanvasObject {
 				widget.NewFormItem("Server URL", entryURL),
 				widget.NewFormItem("API Username", entryApiUser),
 				widget.NewFormItem("API Password", entryApiPass),
-				widget.NewFormItem("Cloudflare Token", entryCF),
 				widget.NewFormItem("VPN Mode", vpnModeSelect),
 				widget.NewFormItem("Stream Engine", engineSelect),
 			),
@@ -429,6 +433,11 @@ func refreshCameraList() {
 }
 
 func showAddCameraDialog() {
+	if serverSettings.MaxCameras > 0 && len(config.Cameras) >= serverSettings.MaxCameras {
+		dialog.ShowError(fmt.Errorf("Subscription Limit Reached!\n\nYour '%s' plan allows max %d cameras.\nPlease upgrade your subscription to add more.", serverSettings.Plan, serverSettings.MaxCameras), myWindow)
+		return
+	}
+
 	entryName := widget.NewEntry()
 	entryName.SetPlaceHolder("e.g., Kamera Balkon")
 	entryRTSP := widget.NewEntry()
@@ -440,14 +449,12 @@ func showAddCameraDialog() {
 			dialog.ShowError(fmt.Errorf("Please enter an RTSP URL first."), myWindow)
 			return
 		}
-
 		addLog(fmt.Sprintf("Testing RTSP connection to: %s", rtspURL))
-
 		go func() {
 			err := checkRTSPConnection(rtspURL)
 			if err != nil {
 				addLog(fmt.Sprintf("RTSP Check Failed: %v", err))
-				dialog.ShowError(fmt.Errorf("RTSP Connection Failed:\n%v", err), myWindow) // Using dialog.ShowError for simplicity but keep in mind it runs async so could occasionally block if heavy interaction happens.
+				dialog.ShowError(fmt.Errorf("RTSP Connection Failed:\n%v", err), myWindow)
 			} else {
 				addLog("RTSP Check Success: Camera is online and responding.")
 				dialog.ShowInformation("Connection Success", "Camera is online and responding to RTSP requests!", myWindow)
@@ -455,9 +462,21 @@ func showAddCameraDialog() {
 		}()
 	})
 
+	btnPreview := widget.NewButtonWithIcon("Video Preview", theme.VisibilityIcon(), func() {
+		rtspURL := entryRTSP.Text
+		if rtspURL == "" {
+			dialog.ShowError(fmt.Errorf("Please enter an RTSP URL first."), myWindow)
+			return
+		}
+		addLog(fmt.Sprintf("Launching local video preview for: %s", rtspURL))
+		go playLocalRTSP(rtspURL)
+	})
+	btnPreview.Importance = widget.LowImportance
+
 	items := []*widget.FormItem{
 		widget.NewFormItem("Name", entryName),
-		widget.NewFormItem("Local RTSP", container.NewBorder(nil, nil, nil, btnTest, entryRTSP)),
+		widget.NewFormItem("Local RTSP", entryRTSP),
+		widget.NewFormItem("", container.NewHBox(layout.NewSpacer(), btnTest, btnPreview)),
 	}
 	form := widget.NewForm(items...)
 
@@ -571,13 +590,17 @@ func createTunnelInstance(cam CameraConfig) *TunnelInstance {
 	dot := canvas.NewCircle(theme.Color(theme.ColorNameDisabled))
 	dot.Resize(fyne.NewSize(12, 12))
 
-	return &TunnelInstance{
-		Camera:     cam,
-		Status:     "Stopped",
-		StatusDot:  dot,
-		StatusText: widget.NewLabel("Stopped"),
-		StopChan:   make(chan bool),
+	inst := &TunnelInstance{
+		Camera:      cam,
+		Status:      "Stopped",
+		StatusDot:   dot,
+		StatusText:  widget.NewLabel("Stopped"),
+		StopChan:    make(chan bool),
+		PublicLabel: widget.NewEntry(),
 	}
+	inst.PublicLabel.Disable() // read-only
+	inst.PublicLabel.Hide()
+	return inst
 }
 
 func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
@@ -590,6 +613,30 @@ func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
 		inst.StatusText,
 	)
 
+	inst.PublicLabel.SetText("Public Link: N/A")
+	inst.PublicLabel.TextStyle = fyne.TextStyle{Italic: true}
+
+	btnCopy := widget.NewButtonWithIcon("", theme.ContentCopyIcon(), func() {
+		myWindow.Clipboard().SetContent(inst.PublicURL)
+		addLog(fmt.Sprintf("[%s] RTSP URL copied to clipboard.", inst.Camera.Name))
+	})
+	btnCopy.Hide()
+
+	btnWeb := widget.NewButtonWithIcon("", theme.HelpIcon(), func() {
+		if inst.PublicURL == "" {
+			return
+		}
+		// Generate Web Link
+		baseURL := strings.TrimSuffix(config.ServerURL, "/")
+		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s&mode=mse,webrtc,hls,mp4,mjpeg", baseURL, url.QueryEscape(inst.Camera.Name))
+		exec.Command("rundll32", "url.dll,FileProtocolHandler", webURL).Start()
+		addLog(fmt.Sprintf("[%s] Opening Web Player in browser...", inst.Camera.Name))
+	})
+	btnWeb.SetIcon(theme.VisibilityIcon())
+	btnWeb.Hide()
+
+	publicBox := container.NewBorder(nil, nil, nil, container.NewHBox(btnCopy, btnWeb), inst.PublicLabel)
+
 	btnToggle := widget.NewButtonWithIcon("", theme.MediaPlayIcon(), nil)
 	inst.ToggleBtn = btnToggle
 	btnToggle.OnTapped = func() {
@@ -600,9 +647,13 @@ func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
 		if !running {
 			go inst.Start()
 			btnToggle.SetIcon(theme.MediaStopIcon())
+			btnCopy.Show()
+			btnWeb.Show()
 		} else {
 			go inst.Stop()
 			btnToggle.SetIcon(theme.MediaPlayIcon())
+			btnCopy.Hide()
+			btnWeb.Hide()
 		}
 	}
 
@@ -619,7 +670,7 @@ func createCameraCard(inst *TunnelInstance) fyne.CanvasObject {
 
 	return widget.NewCard("", "", container.NewBorder(
 		nil, nil, nil, controls,
-		container.NewVBox(title, details, statusBox),
+		container.NewVBox(title, details, statusBox, publicBox),
 	))
 }
 
@@ -638,9 +689,15 @@ func showEditCameraDialog(inst *TunnelInstance) {
 		}
 	})
 
+	btnPreview := widget.NewButtonWithIcon("Video Preview", theme.VisibilityIcon(), func() {
+		addLog(fmt.Sprintf("Launching local video preview for: %s", entryRTSP.Text))
+		go playLocalRTSP(entryRTSP.Text)
+	})
+
 	items := []*widget.FormItem{
 		widget.NewFormItem("Name", entryName),
-		widget.NewFormItem("Local RTSP", container.NewBorder(nil, nil, nil, btnTest, entryRTSP)),
+		widget.NewFormItem("Local RTSP", entryRTSP),
+		widget.NewFormItem("", container.NewHBox(layout.NewSpacer(), btnTest, btnPreview)),
 	}
 	form := widget.NewForm(items...)
 
@@ -698,7 +755,7 @@ func showEditCameraDialog(inst *TunnelInstance) {
 			if config.ApiUsername != "" && config.ApiPassword != "" {
 				req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
 			}
-			client := &http.Client{Timeout: 5 * time.Second}
+			client := &http.Client{Timeout: 15 * time.Second}
 			resp, err := client.Do(req)
 			if err != nil {
 				addLog(fmt.Sprintf("[%s] Edit sync to VPS failed: %v", entryName.Text, err))
@@ -726,14 +783,18 @@ func connectL2TP() error {
 		return fmt.Errorf("L2TP credentials not configured. Go to Settings.")
 	}
 
-	addLog("L2TP: Creating VPN phonebook entry...")
-
 	// Create/update the L2TP VPN entry using PowerShell
+	pskParam := ""
+	if config.L2TPPSK != "" {
+		pskParam = fmt.Sprintf("-L2tpPsk '%s'", config.L2TPPSK)
+	}
+
 	psScript := fmt.Sprintf(`
 $vpnName = 'RTSP2go-VPN'
 Remove-VpnConnection -Name $vpnName -Force -ErrorAction SilentlyContinue
-Add-VpnConnection -Name $vpnName -ServerAddress '%s' -TunnelType L2tp -L2tpPsk '%s' -AuthenticationMethod MSChapv2 -EncryptionLevel Optional -Force
-`, config.L2TPServer, config.L2TPPSK)
+Add-VpnConnection -Name $vpnName -ServerAddress '%s' -TunnelType L2tp %s -AuthenticationMethod MSChapv2 -EncryptionLevel Optional -Force
+Set-VpnConnection -Name $vpnName -SplitTunneling $true
+`, config.L2TPServer, pskParam)
 
 	cmd := exec.Command("powershell", "-Command", psScript)
 	out, err := cmd.CombinedOutput()
@@ -813,29 +874,32 @@ func disconnectWireGuard() {
 	}
 }
 
-func startCloudflareTunnel() error {
-	if config.CloudflareToken == "" {
-		return nil
+func fetchGatewaySettings() {
+	apiURL := getServerAPIURL()
+	if apiURL == "" {
+		return
 	}
-	addLog("Cloudflare: Starting tunnel...")
-	// Try to execute cloudflared
-	cmd := exec.Command("cloudflared", "tunnel", "--no-autoupdate", "run", "--token", config.CloudflareToken)
-	err := cmd.Start()
-	if err != nil {
-		addLog(fmt.Sprintf("Cloudflare: ❌ Failed to start cloudflared: %v. Please ensure it is installed.", err))
-		return err
-	}
-	addLog("Cloudflare: ✅ Tunnel process started in background.")
-	return nil
-}
+	checkURL := strings.Replace(apiURL, "/api/streams", "/api/gateway/check", 1)
 
-func stopCloudflareTunnel() {
-	addLog("Cloudflare: Stopping tunnel...")
-	// On Windows we usually taskkill or let OS handle it, but for a simple implementation:
-	if os.Getenv("OS") == "Windows_NT" {
-		exec.Command("taskkill", "/F", "/IM", "cloudflared.exe").Run()
-	} else {
-		exec.Command("pkill", "cloudflared").Run()
+	client := &http.Client{Timeout: 10 * time.Second}
+	req, _ := http.NewRequest("GET", checkURL, nil)
+	req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		addLog(fmt.Sprintf("Auth: ⚠️ Failed to sync subscription: %v", err))
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var settings GatewaySettings
+		if err := json.NewDecoder(resp.Body).Decode(&settings); err == nil {
+			serverSettings = settings
+			addLog(fmt.Sprintf("Auth: ✅ Active Plan: %s (Limit: %d cameras)", settings.Plan, settings.MaxCameras))
+		}
+	} else if resp.StatusCode == http.StatusUnauthorized {
+		addLog("Auth: ❌ Invalid API Credentials. Please check Settings.")
 	}
 }
 
@@ -858,6 +922,9 @@ func startAll() {
 		dialog.ShowError(fmt.Errorf("Please set Server URL in Settings first."), myWindow)
 		return
 	}
+
+	// Fetch latest subscription limits before starting
+	go fetchGatewaySettings()
 
 	vpnMode := config.VPNMode
 	if vpnMode == "" {
@@ -889,10 +956,6 @@ func startAll() {
 		}
 
 		// Cloudflare Tunnel
-		if config.CloudflareToken != "" {
-			startCloudflareTunnel()
-		}
-
 		ip := getVpnIP()
 		if ip == "" && vpnMode != "none" {
 			if vpnMode == "l2tp" {
@@ -938,7 +1001,6 @@ func stopAll() {
 		} else if vpnMode == "wireguard" {
 			disconnectWireGuard()
 		}
-		stopCloudflareTunnel()
 
 		addLog("Global ✅ All Processes Stopped.")
 	}()
@@ -961,6 +1023,21 @@ func (inst *TunnelInstance) Start() {
 	go registerToBackend(inst)
 
 	inst.updateStatus("Online", theme.ColorNameSuccess)
+
+	// Trial Timer Logic
+	if serverSettings.IsTrial && serverSettings.LimitMinutes > 0 {
+		addLog(fmt.Sprintf("[%s] Trial Mode: Broadcast limited to %d minutes.", inst.Camera.Name, serverSettings.LimitMinutes))
+		go func() {
+			select {
+			case <-time.After(time.Duration(serverSettings.LimitMinutes) * time.Minute):
+				addLog(fmt.Sprintf("[%s] ⚠️ Trial period expired (%d min). Stopping...", inst.Camera.Name, serverSettings.LimitMinutes))
+				inst.Stop()
+				dialog.ShowInformation("Trial Expired", fmt.Sprintf("The broadcast for '%s' has stopped because the %d-minute trial period expired.", inst.Camera.Name, serverSettings.LimitMinutes), myWindow)
+			case <-inst.StopChan:
+				// Stopped manually
+			}
+		}()
+	}
 
 	// Wait for stop signal
 	<-inst.StopChan
@@ -1108,6 +1185,31 @@ func checkRTSPConnection(uri string) error {
 	return nil
 }
 
+func playLocalRTSP(uri string) {
+	// Try VLC first (Common locations)
+	vlcPaths := []string{
+		"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe",
+		"C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe",
+		"vlc", // If in PATH
+	}
+
+	for _, p := range vlcPaths {
+		cmd := exec.Command(p, uri, "--network-caching=300", "--play-and-exit")
+		if err := cmd.Start(); err == nil {
+			return
+		}
+	}
+
+	// Try ffplay as fallback
+	cmd := exec.Command("ffplay", "-i", uri, "-an", "-sn", "-fflags", "nobuffer", "-flags", "low_delay", "-window_title", "Local RTSP Preview")
+	if err := cmd.Start(); err == nil {
+		return
+	}
+
+	addLog("Preview Error: Could not find VLC or ffplay.")
+	dialog.ShowError(fmt.Errorf("Video Player Not Found!\n\nPlease install VLC Media Player to use the local preview feature."), myWindow)
+}
+
 func containsStr(s, substr string) bool {
 	if len(substr) == 0 {
 		return true
@@ -1133,14 +1235,27 @@ func getVpnIP() string {
 
 	var psCommand string
 	if vpnMode == "l2tp" {
-		// L2TP creates a PPP adapter; detect its IP
-		psCommand = "(Get-NetIPAddress -InterfaceAlias '*PPP*','*VPN*','*L2TP*','*WebTR*','*RAS*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
+		// L2TP creates a PPP adapter; detect its IP using multiple fallbacks
+		// We search by common aliases AND by infrastructure types (NdisPhysicalMedium 14=WAN, 8=WirelessWAN)
+		psCommand = `
+            $addr = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { 
+                $_.InterfaceAlias -like '*PPP*' -or 
+                $_.InterfaceAlias -like '*VPN*' -or 
+                $_.InterfaceAlias -like '*L2TP*' -or 
+                $_.InterfaceAlias -like '*RTSP2go*' -or
+                $_.InterfaceAlias -like '*RAS*'
+            } | Select-Object -First 1
+            if (!$addr) {
+                $iface = Get-NetIPInterface -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.NdisPhysicalMedium -eq 14 -or $_.NdisPhysicalMedium -eq 8 } | Select-Object -First 1
+                if ($iface) { $addr = Get-NetIPAddress -InterfaceIndex $iface.InterfaceIndex -AddressFamily IPv4 | Select-Object -First 1 }
+            }
+            if ($addr) { $addr.IPAddress }
+        `
 	} else if vpnMode == "wireguard" {
-		// WireGuard creates an interface named after the config file (e.g. wg0)
-		psCommand = "(Get-NetIPAddress -InterfaceAlias 'wg0','*WireGuard*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
+		psCommand = "(Get-NetIPAddress -InterfaceAlias 'wg0','*WireGuard*' -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress"
 	} else {
-		// ZeroTier interface
-		psCommand = "(Get-NetIPAddress -InterfaceAlias 'ZeroTier*' -AddressFamily IPv4 -ErrorAction SilentlyContinue).IPAddress"
+		// Default to ZeroTier
+		psCommand = "(Get-NetIPAddress -InterfaceAlias 'ZeroTier*' -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1).IPAddress"
 	}
 
 	cmd := exec.Command("powershell", "-Command", psCommand)
@@ -1148,8 +1263,7 @@ func getVpnIP() string {
 	if err == nil {
 		ip := strings.TrimSpace(string(out))
 		if ip != "" {
-			ips := strings.Split(ip, "\n")
-			return strings.TrimSpace(ips[0])
+			return ip
 		}
 	}
 	return ""
@@ -1258,7 +1372,7 @@ func startTCPProxy(inst *TunnelInstance, targetHostPort string) error {
 			}
 			go func(c net.Conn) {
 				defer c.Close()
-				remote, err := net.DialTimeout("tcp", targetHostPort, 5*time.Second)
+				remote, err := net.DialTimeout("tcp", targetHostPort, 10*time.Second)
 				if err != nil {
 					addLog(fmt.Sprintf("[%s] Proxy Dial Error: %v", inst.Camera.Name, err))
 					return
@@ -1286,6 +1400,17 @@ func registerToBackend(inst *TunnelInstance) {
 		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", camName))
 		return
 	}
+
+	// Mode Test: Jika username kosong, bypass auth di API
+	isTestMode := config.ApiUsername == ""
+	if isTestMode {
+		if strings.Contains(apiURL, "?") {
+			apiURL += "&test=true"
+		} else {
+			apiURL += "?test=true"
+		}
+		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
+	}
 	var originalRTSP string
 	for _, cam := range config.Cameras {
 		if cam.Name == camName {
@@ -1312,8 +1437,9 @@ func registerToBackend(inst *TunnelInstance) {
 
 		addLog(fmt.Sprintf("[%s] Local proxy started on port %d -> %s", camName, inst.proxyPort, hostPort))
 
-		// Replace the RTSP URL so it connects to our local proxy via ZeroTier interface
-		proxyHostPort := fmt.Sprintf("%s:%d", vpnIP, inst.proxyPort)
+		// Replace the RTSP URL so it connects to our local proxy via VPN interface
+		host := vpnIP
+		proxyHostPort := fmt.Sprintf("%s:%d", host, inst.proxyPort)
 		rtspSource = replaceHostPortInRTSP(originalRTSP, proxyHostPort)
 
 		addLog(fmt.Sprintf("[%s] Camera is LOCAL — proxying via VPN IP: %s", camName, rtspSource))
@@ -1350,7 +1476,7 @@ func registerToBackend(inst *TunnelInstance) {
 		req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
 	}
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		addLog(fmt.Sprintf("[%s] Auto-Register Failed: Cannot reach VPS backend via HTTP. (%v)", camName, err))
@@ -1359,7 +1485,17 @@ func registerToBackend(inst *TunnelInstance) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated {
-		addLog(fmt.Sprintf("[%s] Successfully registered to web-tr backend!", camName))
+		baseURL := strings.TrimSuffix(config.ServerURL, "/")
+		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
+
+		addLog(fmt.Sprintf("[%s] Successfully registered!", camName))
+		addLog(fmt.Sprintf("[%s] RTSP: %s", camName, rtspSource))
+		addLog(fmt.Sprintf("[%s] WEB: %s", camName, webURL))
+
+		inst.PublicURL = rtspSource
+		inst.PublicLabel.SetText(webURL) // Show Web Link by default as it is more useful for user
+		inst.PublicLabel.Show()
+		inst.PublicLabel.Refresh()
 	} else {
 		// Read body for error context
 		bodyBytes, _ := ioutil.ReadAll(resp.Body)
@@ -1385,7 +1521,7 @@ func deregisterFromBackend(camName string) {
 		req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		addLog(fmt.Sprintf("[%s] Auto-Deregister Failed: %v", camName, err))
@@ -1419,7 +1555,7 @@ func diagnoseVPS() {
 		if apiURL == "" {
 			results += "❌ RTSP2go API: ERROR (Server URL not configured)\n\n"
 		} else {
-			client := &http.Client{Timeout: 5 * time.Second}
+			client := &http.Client{Timeout: 15 * time.Second}
 			resp, err := client.Get(apiURL)
 			if err != nil {
 				results += "❌ RTSP2go API: UNREACHABLE\n    " + err.Error() + "\n\n"

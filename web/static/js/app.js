@@ -96,10 +96,10 @@ function applySubscriptionRestrictions() {
     const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
     
     if (publicViewLink) {
-        publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Premium');
+        publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
     }
 
-    if (plan === 'Free' || plan === 'Premium') {
+    if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
         if (dashboardLink) dashboardLink.classList.add('hidden');
         if (ccLink) ccLink.classList.add('hidden');
         // If they are on a hidden view, move them to cameras
@@ -123,6 +123,7 @@ function applySubscriptionRestrictions() {
     const addCamBtn = document.querySelector('button[onclick="openAddModal()"]');
     if (addCamBtn) {
         let limit = 2;
+        if (plan === 'Basic') limit = 4;
         if (plan === 'Premium') limit = 8;
         if (plan === 'Advance') limit = 16;
         if (plan === 'Enterprise') limit = 9999;
@@ -710,7 +711,7 @@ function checkModalPlanRestrictions() {
     const vpnToggle = document.getElementById('userEnableVPN')?.closest('div.mt-4') || document.getElementById('userEnableVPN')?.closest('label')?.parentElement;
 
     if (supportToggle) {
-        supportToggle.classList.toggle('hidden', plan === 'Free' || plan === 'Premium');
+        supportToggle.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
     }
     if (vpnToggle) {
         vpnToggle.classList.toggle('hidden', plan !== 'Enterprise');
@@ -1479,11 +1480,17 @@ async function loadTlFiles(name) {
         return;
     }
 
+    // Reset local state before fetch
+    tlFiles = [];
+    tlPlayIndex = 0;
+    if(gallery) gallery.innerHTML = '';
     document.getElementById('tlLoadingOverlay').classList.remove('hidden');
+
     try {
         const start = document.getElementById('tlStartDate').value;
         const end = document.getElementById('tlEndDate').value;
-        const res = await fetch(`/api/timelapse/files?name=${encodeURIComponent(name)}&start=${start}&end=${end}`);
+        // Add cache-buster to ensure we get latest file list after deletion
+        const res = await fetch(`/api/timelapse/files?name=${encodeURIComponent(name)}&start=${start}&end=${end}&_=${Date.now()}`);
         if (!res.ok) throw new Error('Failed');
 
         tlFiles = await res.json() || [];
@@ -1509,6 +1516,7 @@ async function loadTlFiles(name) {
             else delAllBtn.classList.add('hidden');
         }
     } catch (e) {
+        console.error("Failed to load tl files", e);
         if(gallery) gallery.innerHTML = '<div class="col-span-3 text-center text-red-500 py-10 text-sm">Failed to load files</div>';
     } finally {
         document.getElementById('tlLoadingOverlay').classList.add('hidden');

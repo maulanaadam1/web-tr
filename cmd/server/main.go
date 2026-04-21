@@ -258,6 +258,19 @@ func generateSessionToken() string {
 
 func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// 0) Special Test Mode Exception (No user/pass required, limited by duration elsewhere)
+		if r.URL.Query().Get("test") == "true" {
+			ctx := context.WithValue(r.Context(), sessionContextKey, Session{
+				UserID:           0, // System/Test user
+				Username:         "test_user",
+				Role:             "user",
+				SubscriptionPlan: "Trial",
+				Expiry:           time.Now().Add(1 * time.Hour),
+			})
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
 		// 1) Gateway / API Basic Auth Fallback
 		username, password, hasBasic := r.BasicAuth()
 		if hasBasic {
@@ -1133,9 +1146,10 @@ func main() {
 				req.Backend = "go2rtc"
 			}
 
-			// Enforce subscription quota limits for non-admins
-			if sess.Role != "admin" {
-				limit := 2 // default Free
+			// Enforce subscription quota limits for non-admins (Skip for Test User)
+			if sess.Role != "admin" && sess.UserID != 0 {
+				limit := 2 // default Free (Trial)
+				if sess.SubscriptionPlan == "Basic" { limit = 4 }
 				if sess.SubscriptionPlan == "Premium" { limit = 8 }
 				if sess.SubscriptionPlan == "Advance" { limit = 16 }
 				if sess.SubscriptionPlan == "Enterprise" { limit = 9999 }
@@ -1148,6 +1162,12 @@ func main() {
 				}
 			}
 
+			// Special Handling: If Test User (UserID 0), allow overwriting to prevent "duplicate name" errors
+			if sess.UserID == 0 {
+				// Try to delete existing first if it's the test user
+				_ = store.RemoveStream(req.Name) 
+			}
+
 			if err := store.AddStream(models.Stream{
 				Name: req.Name,
 				URL: req.URL,
@@ -1156,7 +1176,7 @@ func main() {
 				Lng: req.Lng,
 				Enabled: true,
 				UserID: sess.UserID,
-				IsPublic: false,
+				IsPublic: sess.UserID == 0, // Make test streams public so they can be viewed for testing
 			}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1389,6 +1409,32 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
+	}))
+
+	http.HandleFunc("/api/gateway/check", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		
+		limit := 2 // default Free
+		duration := 0 // 0 means unlimited
+		
+		if sess.SubscriptionPlan == "Basic" { limit = 4 }
+		if sess.SubscriptionPlan == "Premium" { limit = 8 }
+		if sess.SubscriptionPlan == "Advance" { limit = 16 }
+		if sess.SubscriptionPlan == "Enterprise" { limit = 9999 }
+		
+		isTrial := sess.SubscriptionPlan == "Free" || sess.SubscriptionPlan == "Trial"
+		if isTrial {
+			duration = 60 // 60 minutes for trial
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"username":      sess.Username,
+			"plan":          sess.SubscriptionPlan,
+			"max_cameras":   limit,
+			"limit_minutes": duration,
+			"is_trial":      isTrial,
+		})
 	}))
 
 	http.HandleFunc("/api/streams/export", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
@@ -1866,7 +1912,8 @@ func getUserVisibleStreams(sess Session, streams []models.Stream, store *db.Stor
 
 		var filtered []models.Stream
 		for _, s := range streams {
-			if s.UserID == sess.UserID || supportEnabledMap[s.UserID] {
+			// Admin can see: their own, support-enabled users, and test user (UserID 0)
+			if s.UserID == sess.UserID || supportEnabledMap[s.UserID] || s.UserID == 0 {
 				filtered = append(filtered, s)
 			}
 		}

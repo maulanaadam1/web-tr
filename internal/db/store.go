@@ -286,7 +286,7 @@ func (s *Store) AddStream(st models.Stream) error {
 
 	var query string
 	// Default to user_id 1 if not set
-	if st.UserID == 0 {
+	if (st.UserID == -1) {
 		st.UserID = 1
 	}
 
