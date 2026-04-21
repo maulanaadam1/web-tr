@@ -1078,7 +1078,9 @@ func (inst *TunnelInstance) Stop() {
 	inst.StopChan = make(chan bool)
 
 	// Conditional deregister: only if KeepCameraOnStop is FALSE
-	if !config.KeepCameraOnStop {
+	// EXCEPTION: If in Test Mode (empty credentials), always deregister to keep server clean.
+	isTestMode := config.ApiUsername == "" && config.ApiPassword == ""
+	if !config.KeepCameraOnStop || isTestMode {
 		go deregisterFromBackend(inst.Camera.Name)
 	} else {
 		addLog(fmt.Sprintf("[%s] Persistence: Camera kept on server per settings.", inst.Camera.Name))

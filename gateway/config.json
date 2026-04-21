@@ -1,7 +1,7 @@
 {
   "server_url": "https://rtsp2go.campod.my.id",
-  "api_username": "",
-  "api_password": "",
+  "api_username": "budi",
+  "api_password": "user",
   "vpn_mode": "zerotier",
   "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",
@@ -9,7 +9,7 @@
   "l2tp_pass": "GPCEWCEKKD",
   "l2tp_psk": "",
   "wireguard_config": "",
-  "keep_camera_on_stop": false,
+  "keep_camera_on_stop": true,
   "cameras": [
     {
       "name": "Laptop",
