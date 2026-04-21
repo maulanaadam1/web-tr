@@ -135,6 +135,31 @@ func (s *Store) Init() error {
 		return err
 	}
 
+	// Create test_logs table
+	var logsQuery string
+	if s.dbType == "sqlite" {
+		logsQuery = `
+		CREATE TABLE IF NOT EXISTS test_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			url TEXT NOT NULL,
+			ip_address TEXT,
+			user_agent TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);`
+	} else {
+		logsQuery = `
+		CREATE TABLE IF NOT EXISTS test_logs (
+			id SERIAL PRIMARY KEY,
+			url TEXT NOT NULL,
+			ip_address TEXT,
+			user_agent TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`
+	}
+	if _, err := s.db.Exec(logsQuery); err != nil {
+		return err
+	}
+
 	// Add backend column if it doesn't exist (migration)
 	if s.dbType == "sqlite" {
 		cols := []string{
@@ -578,4 +603,36 @@ func (s *Store) AddInterest(email string) error {
 	}
 	_, err := s.db.Exec(query, email)
 	return err
+}
+func (s *Store) AddTestLog(url, ip, ua string) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO test_logs (url, ip_address, user_agent) VALUES (?, ?, ?)"
+	} else {
+		query = "INSERT INTO test_logs (url, ip_address, user_agent) VALUES ($1, $2, $3)"
+	}
+	_, err := s.db.Exec(query, url, ip, ua)
+	return err
+}
+
+func (s *Store) GetTestLogs() ([]models.TestLog, error) {
+	query := "SELECT id, url, ip_address, user_agent, created_at FROM test_logs ORDER BY created_at DESC LIMIT 500"
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var logs []models.TestLog
+	for rows.Next() {
+		var l models.TestLog
+		var ip, ua sql.NullString
+		if err := rows.Scan(&l.ID, &l.URL, &ip, &ua, &l.CreatedAt); err != nil {
+			return nil, err
+		}
+		l.IP = ip.String
+		l.UserAgent = ua.String
+		logs = append(logs, l)
+	}
+	return logs, nil
 }

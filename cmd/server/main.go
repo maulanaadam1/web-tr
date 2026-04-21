@@ -945,7 +945,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	// Stateless Test Token Generation
+	// Stateless Test Token Generation with Logging
 	http.HandleFunc("/api/public/test-token", func(w http.ResponseWriter, r *http.Request) {
 		src := r.URL.Query().Get("src")
 		if src == "" {
@@ -953,6 +953,12 @@ func main() {
 			return
 		}
 		
+		// Log the test attempt
+		ip := r.Header.Get("X-Forwarded-For")
+		if ip == "" { ip = r.RemoteAddr }
+		ua := r.UserAgent()
+		_ = store.AddTestLog(src, ip, ua)
+
 		expires := time.Now().Add(1 * time.Hour).Unix()
 		expiresStr := strconv.FormatInt(expires, 10)
 		token := generateTestToken(src, expiresStr)
@@ -963,6 +969,26 @@ func main() {
 			"token":   token,
 		})
 	})
+
+	// Admin-only Log Viewer
+	http.HandleFunc("/api/admin/test-logs", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			logs, err := store.GetTestLogs()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(logs)
+			return
+		}
+	}))
 
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
 		if prelaunch || hideDocs {

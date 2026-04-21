@@ -24,3 +24,11 @@ type Config struct {
 	Api     ApiConfig              `yaml:"api,omitempty"`
 	Rest    map[string]interface{} `yaml:",inline"`
 }
+
+type TestLog struct {
+	ID        int     `json:"id"`
+	URL       string  `json:"url"`
+	IP        string  `json:"ip"`
+	UserAgent string  `json:"user_agent"`
+	CreatedAt string  `json:"created_at"`
+}

@@ -58,17 +58,15 @@ function switchView(viewName) {
     // Handle view-specific initialization
     if (viewName === 'commandcenter') {
         const ccTabs = document.getElementById('ccTabControlsHeader');
-        if(ccTabs) ccTabs.classList.remove('hidden');
-
-        if (allStreams.length === 0) {
-            loadStreams().then(initCommandCenterMap);
-        } else {
-            initCommandCenterMap();
-        }
-        return; // Don't run other dashboard stuff
+        if (ccTabs) ccTabs.classList.remove('hidden');
+        initCommandCenter();
     } else {
         const ccTabs = document.getElementById('ccTabControlsHeader');
-        if(ccTabs) ccTabs.classList.add('hidden');
+        if (ccTabs) ccTabs.classList.add('hidden');
+    }
+
+    if (viewName === 'testlogs') {
+        loadTestLogs();
     }
 
     // Refresh Data for specific views
@@ -2568,4 +2566,56 @@ function focusCameraOnMap(name) {
             if (marker) marker.openPopup();
         }, 300); // 300ms to allow some movement
     }
+}
+function loadTestLogs() {
+    const tbody = document.getElementById('testLogTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400">Loading logs...</td></tr>';
+
+    fetch('/api/admin/test-logs')
+        .then(res => res.json())
+        .then(logs => {
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-slate-400">No test logs found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => {
+                const date = new Date(log.created_at);
+                const dateStr = date.toLocaleString('id-ID', { 
+                    day: '2-digit', 
+                    month: 'short', 
+                    year: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                return `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                        <td class="px-6 py-4 whitespace-nowrap text-xs font-semibold text-slate-500 dark:text-slate-400">
+                            ${dateStr}
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-bold text-slate-800 dark:text-white break-all max-w-md">${log.url}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 select-all">${log.ip}</span>
+                                </div>
+                                <div class="text-[10px] text-slate-400 dark:text-slate-500 truncate max-w-xs" title="${log.user_agent}">
+                                    ${log.user_agent}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        })
+        .catch(err => {
+            console.error('Error loading logs:', err);
+            tbody.innerHTML = '<tr><td colspan="3" class="px-6 py-12 text-center text-red-400">Error loading logs.</td></tr>';
+        });
 }
