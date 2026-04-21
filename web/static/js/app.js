@@ -319,6 +319,11 @@ function renderStreamsTable() {
             <button onclick="streamCurrentPage=Math.min(${totalPages}, streamCurrentPage+1);renderStreamsTable()" class="px-2 py-1 border border-slate-200 dark:border-slate-700 rounded text-xs hover:bg-slate-100 dark:hover:bg-slate-700">&gt;</button>
         `;
     }
+
+    // Reset selection state on page change to avoid count mismatches
+    const selectAllCheck = document.getElementById('selectAllCameras');
+    if (selectAllCheck) selectAllCheck.checked = false;
+    updateBulkActions();
 }
 
 function createStreamCard(name, url) {
@@ -1180,9 +1185,14 @@ function toggleAllCameras(checkbox) {
 }
 
 function updateBulkActions() {
-    const selected = document.querySelectorAll('.camera-checkbox:checked').length;
+    const checked = document.querySelectorAll('.camera-checkbox:checked');
+    const uniqueSelected = new Set(Array.from(checked).map(cb => cb.value));
+    const selected = uniqueSelected.size;
+    
     const bulkDiv = document.getElementById('bulkActions');
-    document.getElementById('bulkCount').innerText = selected;
+    const bulkCount = document.getElementById('bulkCount');
+    if (bulkCount) bulkCount.innerText = selected;
+    
     if (selected > 0) {
         bulkDiv.classList.remove('hidden');
         bulkDiv.classList.add('flex');
@@ -1193,7 +1203,8 @@ function updateBulkActions() {
 }
 
 async function executeBulkAction(action) {
-    const selected = Array.from(document.querySelectorAll('.camera-checkbox:checked')).map(cb => cb.value);
+    const checked = document.querySelectorAll('.camera-checkbox:checked');
+    const selected = Array.from(new Set(Array.from(checked).map(cb => cb.value)));
     if (selected.length === 0) return;
 
     if (action === 'export') {
