@@ -1574,10 +1574,9 @@ func diagnoseVPS() {
 				results += "❌ RTSP2go API: UNREACHABLE\n    " + err.Error() + "\n\n"
 				addLog("[Diagnose] RTSP2go API: UNREACHABLE — Auto-Register will fail!")
 			} else {
-				body, _ := io.ReadAll(resp.Body)
+				results += fmt.Sprintf("✅ RTSP2go API: OK (Code: %d)\n\n", resp.StatusCode)
+				addLog(fmt.Sprintf("[Diagnose] RTSP2go API connection: Status %d", resp.StatusCode))
 				resp.Body.Close()
-				results += fmt.Sprintf("✅ RTSP2go API: OK (Code: %d)\n    Cameras Registered: %s\n\n", resp.StatusCode, string(body))
-				addLog(fmt.Sprintf("[Diagnose] RTSP2go API: OK — Found streams: %s", string(body)))
 			}
 		}
 
