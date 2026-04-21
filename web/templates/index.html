@@ -904,9 +904,12 @@
                             <button id="btnCCGrid" onclick="switchCCTab('grid')" class="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:text-brand-600 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">All Cameras</button>
                         </div>
 
-                        <div class="flex-1 relative flex items-center min-w-0 pr-2">
+                        <div class="flex-1 relative flex items-center min-w-0">
                             <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                            <input type="text" id="mapSearchInput" oninput="debounceMapSearch(event.target.value)" placeholder="Search cameras..." class="w-full bg-transparent border-none text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 text-sm md:text-base py-2 pl-9">
+                            <input type="text" id="mapSearchInput" oninput="debounceMapSearch(event.target.value)" placeholder="Search cameras..." class="w-full bg-transparent border-none text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:ring-0 text-sm md:text-base py-2 pl-9 pr-10">
+                            <button id="ccClearSearchBtn" onclick="clearCCMapSearch()" class="hidden absolute right-2 p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
                         </div>
                     </div>
 

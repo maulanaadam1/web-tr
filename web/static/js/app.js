@@ -2246,15 +2246,34 @@ function debounceMapSearch(query) {
     clearTimeout(window.mapSearchTimer);
     const resultsDropdown = document.getElementById('ccMapSearchResults');
     const resultsList = document.getElementById('ccSearchResultsList');
+    const clearBtn = document.getElementById('ccClearSearchBtn');
 
     if (!query || query.trim() === '') {
         if (resultsDropdown) resultsDropdown.classList.add('hidden');
+        if (clearBtn) clearBtn.classList.add('hidden');
+        // Show all markers if query is empty
+        Object.values(commandCenterMarkers).forEach(m => {
+            if (globalCameraMap && !globalCameraMap.hasLayer(m)) {
+                m.addTo(globalCameraMap);
+            }
+        });
         return;
     }
+
+    if (clearBtn) clearBtn.classList.remove('hidden');
 
     window.mapSearchTimer = setTimeout(() => {
         const q = String(query).toLowerCase().trim();
         const matches = Object.keys(commandCenterMarkers).filter(name => name.toLowerCase().includes(q));
+
+        // Filter markers on map
+        Object.entries(commandCenterMarkers).forEach(([name, marker]) => {
+            if (name.toLowerCase().includes(q)) {
+                if (!globalCameraMap.hasLayer(marker)) marker.addTo(globalCameraMap);
+            } else {
+                if (globalCameraMap.hasLayer(marker)) marker.remove();
+            }
+        });
 
         // Populate dropdown
         if (resultsList) {
@@ -2275,6 +2294,14 @@ function debounceMapSearch(query) {
     }, 300);
 }
 
+function clearCCMapSearch() {
+    const input = document.getElementById('mapSearchInput');
+    if (input) {
+        input.value = '';
+        debounceMapSearch('');
+    }
+}
+
 function selectCCSearchResult(name) {
     const input = document.getElementById('mapSearchInput');
     if (input) input.value = name;
@@ -2282,11 +2309,30 @@ function selectCCSearchResult(name) {
     const resultsDropdown = document.getElementById('ccMapSearchResults');
     if (resultsDropdown) resultsDropdown.classList.add('hidden');
     
+    focusCCCamera(name);
+}
+
+function focusCCCamera(name) {
     const marker = commandCenterMarkers[name];
     if (marker && globalCameraMap) {
+        // Force add marker if it was filtered out
+        if (!globalCameraMap.hasLayer(marker)) marker.addTo(globalCameraMap);
+        
         const currentZoom = globalCameraMap.getZoom();
-        globalCameraMap.setView(marker.getLatLng(), Math.max(currentZoom, 15), { animate: true, duration: 1.0 });
-        setTimeout(() => marker.openPopup(), 1100);
+        const targetZoom = Math.max(currentZoom, 17);
+        
+        globalCameraMap.setView(marker.getLatLng(), targetZoom, {
+            animate: true,
+            duration: 1
+        });
+        
+        marker.openPopup();
+        
+        const icon = marker.getElement();
+        if (icon) {
+            icon.classList.add('selected-marker');
+            setTimeout(() => icon.classList.remove('selected-marker'), 3000);
+        }
     }
 }
 
