@@ -184,11 +184,12 @@ async function loadStreams() {
         allStreams = await response.json() || [];
         streamCurrentPage = 1;
         
-        // Populate sidebar camera list for maps
-        renderMapSidebarCameraList(allStreams);
-        
-        applySubscriptionRestrictions();
         renderStreamsTable();
+        
+        // Also refresh Command Center map markers if we are in that view
+        if (currentView === 'commandcenter' && globalCameraMap) {
+            renderCommandCenterMarkers();
+        }
     } catch (e) {
         console.error("Failed to load streams", e);
     }
@@ -2129,7 +2130,14 @@ function initCommandCenterMap() {
     globalCameraMap = L.map('globalCameraMap', {
         zoomControl: false,
         attributionControl: false
-    }).setView([-2.5489, 118.0149], 5);
+    });
+
+    // Use a small timeout to ensure container has size
+    setTimeout(() => {
+        globalCameraMap.setView([-2.5489, 118.0149], 5);
+        globalCameraMap.invalidateSize();
+        renderCommandCenterMarkers();
+    }, 100);
 
     L.control.zoom({ position: 'bottomright' }).addTo(globalCameraMap);
 
