@@ -200,6 +200,13 @@
                 </svg>
                 <span class="nav-text whitespace-nowrap">Test Logs</span>
             </button>
+
+            <button type="button" onclick="switchView('waitinglist')" data-view="waitinglist" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Waiting List">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">Waiting List</span>
+            </button>
             {{ end }}
             
             <p class="menu-label px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6 transition-all">Environment</p>
@@ -449,6 +456,10 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                             <span class="hidden md:inline">Export</span>
                         </button>
+                        <button onclick="exportProcessedStreams()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg transition-colors" title="Export Playback Links">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 12h.01" /></svg>
+                            <span class="hidden md:inline">Export Links</span>
+                        </button>
                         <button onclick="openCSVImportModal()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Import CSV">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             <span class="hidden md:inline">Import</span>
@@ -612,6 +623,50 @@
                     <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                         <span class="text-xs text-slate-500" id="testLogPageInfo">Showing 0 entries</span>
                         <div class="flex gap-1" id="testLogPagination"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- WAITING LIST VIEW (Pre-launch Interests) -->
+            <div id="view-waitinglist" class="hidden space-y-6 p-4 md:p-8">
+                <div class="flex flex-col md:flex-row justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 gap-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 dark:text-white font-inter">Waiting List</h2>
+                        <p class="text-sm text-slate-500">Interested users registered for official launch notifications.</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="loadWaitingList()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                            <span class="hidden md:inline">Refresh</span>
+                        </button>
+                        <button type="button" onclick="exportWaitingListToCSV()" class="flex items-center gap-2 md:px-4 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-emerald-500/30 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                            <span class="hidden md:inline">Export CSV</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                    <div class="w-full overflow-x-auto">
+                        <table class="w-full text-left border-collapse table-auto">
+                            <thead>
+                                <tr class="bg-slate-50/80 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                                    <th class="px-6 py-4 w-16 text-center">#</th>
+                                    <th class="px-6 py-4">Email Address</th>
+                                    <th class="px-6 py-4">Registration Date</th>
+                                    <th class="px-6 py-4 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="waitingListTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Paging Controls -->
+                    <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                        <span class="text-xs text-slate-500" id="waitingListPageInfo">Showing 0 entries</span>
+                        <div class="flex gap-1" id="waitingListPagination"></div>
                     </div>
                 </div>
             </div>

@@ -359,6 +359,68 @@
         </div>
     </section>
 
+    <!-- Newsletter Section -->
+    <section id="newsletter" class="snap-slide min-h-[60vh] flex items-center bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-10 w-full">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-slate-800/50 dark:to-indigo-900/10 p-8 md:p-16 rounded-[2.5rem] border border-brand-100 dark:border-slate-700 shadow-2xl shadow-brand-500/5">
+                <h2 class="text-3xl md:text-4xl font-black mb-4">Segera Hadir.</h2>
+                <p class="text-lg text-slate-600 dark:text-slate-400 mb-10 max-w-xl mx-auto">
+                    Daftarkan email Anda untuk info peluncuran resmi dan dapatkan penawaran eksklusif Early Bird.
+                </p>
+                
+                <form id="interestForm" class="max-w-md mx-auto">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input 
+                            type="email" 
+                            id="emailInput"
+                            required
+                            placeholder="Alamat email Anda" 
+                            class="flex-1 px-6 py-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 ring-brand-500/20 text-slate-900 dark:text-white transition-all shadow-inner"
+                        />
+                        <button 
+                            type="submit"
+                            class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl shadow-brand-500/30 flex items-center justify-center gap-2"
+                        >
+                            Daftarkan
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                        </button>
+                    </div>
+                </form>
+                <div id="statusMessage" class="mt-6 text-sm font-semibold opacity-0 transition-opacity"></div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        document.getElementById('interestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('emailInput').value;
+            const status = document.getElementById('statusMessage');
+            
+            status.textContent = "Mendaftarkan...";
+            status.className = "mt-6 text-sm font-semibold text-slate-500 transition-opacity opacity-100";
+
+            try {
+                const response = await fetch('/api/interest', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (response.ok) {
+                    status.textContent = "Terima kasih! Email Anda telah terdaftar untuk peluncuran resmi.";
+                    status.classList.replace('text-slate-500', 'text-green-500');
+                    document.getElementById('emailInput').value = '';
+                } else {
+                    throw new Error();
+                }
+            } catch (err) {
+                status.textContent = "Gagal mendaftarkan email. Silakan coba lagi nanti.";
+                status.classList.replace('text-slate-500', 'text-red-500');
+            }
+        });
+    </script>
+
     <!-- Footer / Contact -->
     <footer id="contact" class="snap-slide bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-900 z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

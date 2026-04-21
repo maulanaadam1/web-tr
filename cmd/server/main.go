@@ -990,6 +990,26 @@ func main() {
 		}
 	}))
 
+	// Admin-only Waiting List (Pre-launch interests)
+	http.HandleFunc("/api/admin/interests", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			interests, err := store.GetInterests()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(interests)
+			return
+		}
+	}))
+
 	http.HandleFunc("/docs/gateway", func(w http.ResponseWriter, r *http.Request) {
 		if prelaunch || hideDocs {
 			http.Redirect(w, r, "/", http.StatusSeeOther)

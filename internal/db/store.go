@@ -636,3 +636,21 @@ func (s *Store) GetTestLogs() ([]models.TestLog, error) {
 	}
 	return logs, nil
 }
+func (s *Store) GetInterests() ([]models.Interest, error) {
+	query := "SELECT id, email, created_at FROM interests ORDER BY created_at DESC"
+	rows, err := s.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []models.Interest
+	for rows.Next() {
+		var i models.Interest
+		if err := rows.Scan(&i.ID, &i.Email, &i.CreatedAt); err != nil {
+			return nil, err
+		}
+		result = append(result, i)
+	}
+	return result, nil
+}

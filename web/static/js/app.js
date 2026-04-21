@@ -69,6 +69,10 @@ function switchView(viewName) {
         loadTestLogs();
     }
 
+    if (viewName === 'waitinglist') {
+        loadWaitingList();
+    }
+
     // Refresh Data for specific views
     if (viewName === 'dashboard') {
         fetchSysInfo();
@@ -2762,4 +2766,135 @@ function exportTestLogsToCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// --- Waiting List (Interests) Management ---
+let allWaitingList = [];
+let waitingListCurrentPage = 1;
+const waitingListPerPage = 10;
+
+async function loadWaitingList() {
+    try {
+        const res = await fetch('/api/admin/interests');
+        if (!res.ok) throw new Error('API Error');
+        allWaitingList = await res.json() || [];
+        waitingListCurrentPage = 1;
+        renderWaitingListPage(1);
+    } catch (e) {
+        console.error("Failed to load waiting list", e);
+        const body = document.getElementById('waitingListTableBody');
+        if (body) {
+            body.innerHTML = `<tr><td colspan="4" class="px-6 py-10 text-center text-red-500 font-bold">Failed to load data from server</td></tr>`;
+        }
+    }
+}
+
+function renderWaitingListPage(page) {
+    waitingListCurrentPage = page;
+    const body = document.getElementById('waitingListTableBody');
+    if (!body) return;
+    
+    body.innerHTML = '';
+    const start = (page - 1) * waitingListPerPage;
+    const end = start + waitingListPerPage;
+    const pageData = allWaitingList.slice(start, end);
+
+    if (pageData.length === 0) {
+        body.innerHTML = `<tr><td colspan="4" class="px-6 py-16 text-center text-slate-400">
+            <div class="flex flex-col items-center gap-3">
+                <svg class="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <p class="font-medium">No registrations yet</p>
+            </div>
+        </td></tr>`;
+    } else {
+        pageData.forEach((item, index) => {
+            const date = new Date(item.created_at).toLocaleString();
+            const row = document.createElement('tr');
+            row.className = "hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors";
+            row.innerHTML = `
+                <td class="px-6 py-4 text-center font-mono text-slate-400 text-xs">${start + index + 1}</td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </div>
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">${item.email}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-slate-500 dark:text-slate-400 font-medium">${date}</td>
+                <td class="px-6 py-4 text-right">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400">Pending</span>
+                </td>
+            `;
+            body.appendChild(row);
+        });
+    }
+
+    // Update paging UI
+    const totalPages = Math.ceil(allWaitingList.length / waitingListPerPage) || 1;
+    const info = document.getElementById('waitingListPageInfo');
+    if (info) {
+        info.innerText = `Showing ${Math.min(start + 1, allWaitingList.length)} - ${Math.min(end, allWaitingList.length)} of ${allWaitingList.length} entries`;
+    }
+
+    const pagin = document.getElementById('waitingListPagination');
+    if (pagin) {
+        pagin.innerHTML = '';
+        if (totalPages > 1) {
+            for (let i = 1; i <= totalPages; i++) {
+                const btn = document.createElement('button');
+                btn.className = `w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all ${i === page ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white dark:bg-slate-800 text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'}`;
+                btn.innerText = i;
+                btn.onclick = () => renderWaitingListPage(i);
+                pagin.appendChild(btn);
+            }
+        }
+    }
+}
+
+function exportWaitingListToCSV() {
+    if (allWaitingList.length === 0) {
+        alert("No data to export");
+        return;
+    }
+    
+    let csv = "ID,Email,Date\n";
+    allWaitingList.forEach((item, index) => {
+        csv += `${index + 1},${item.email},${new Date(item.created_at).toLocaleString()}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `waiting_list_${new Date().toISOString().split('T')[0]}.csv`);
+    a.click();
+}
+function exportProcessedStreams() {
+    if (!allStreams || allStreams.length === 0) {
+        alert("No camera data to export");
+        return;
+    }
+    
+    let csv = "name,url,lat,lng\n";
+    const origin = window.location.origin;
+    
+    allStreams.forEach(s => {
+        // Generate the processed playback URL
+        const playbackUrl = `${origin}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
+        
+        // Escape name if it contains commas
+        const safeName = s.name.includes(',') ? `"${s.name}"` : s.name;
+        
+        csv += `${safeName},${playbackUrl},${s.lat || 0},${s.lng || 0}\n`;
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `camera_links_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
