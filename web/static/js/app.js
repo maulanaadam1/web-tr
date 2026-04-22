@@ -1,4 +1,4 @@
-// Global State - v45 (Race Condition Fix)
+// Global State - v46 (Debug & State Audit)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -659,13 +659,18 @@ async function generatePublicLink(userId) {
             }
             
             // Update local allUsers cache so UI updates instantly
+            console.log(`Regenerating token for user ${userId}...`);
             const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(userId));
             if (userIdx !== -1) {
+                console.log(`Old token: ${allUsers[userIdx].public_token}`);
+                console.log(`New token: ${data.public_token}`);
                 allUsers[userIdx].public_token = data.public_token;
+            } else {
+                console.warn(`User ${userId} not found in allUsers array`);
             }
             
             renderUsersTable(); // Re-render immediately
-            // loadUsers(); // Removed to prevent race condition with local state update
+            console.log("UI Re-rendered with new token data.");
         } else {
             const err = await response.text();
             showToast(`Failed: ${err}`, "error");
