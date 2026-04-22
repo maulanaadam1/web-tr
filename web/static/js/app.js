@@ -1877,7 +1877,7 @@ async function initMaintenanceMap() {
             const opt = document.createElement('option');
             opt.value = s.name;
             const status = !s.lat || !s.lng ? ' (No Marker - Click map to place)' : '';
-            opt.textContent = `${s.name}${status}`;
+            opt.textContent = `${s.display_name || s.name}${status}`;
             dashSelect.appendChild(opt);
         }
     });
@@ -1933,10 +1933,11 @@ function selectCameraOnMap(name) {
     }
     
     // UI Updates
+    const stream = allStreams.find(s => s.name === name);
     document.getElementById('noCameraSelected').classList.add('hidden');
     document.getElementById('previewPlayerArea').classList.remove('hidden');
     document.getElementById('previewStatus').classList.remove('hidden');
-    document.getElementById('previewCamName').textContent = name;
+    document.getElementById('previewCamName').textContent = stream ? (stream.display_name || stream.name) : name;
 
     reloadDashboardPreview('mse');
 }
