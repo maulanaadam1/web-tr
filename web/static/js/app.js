@@ -1,4 +1,4 @@
-// Global State - v37 (Responsive Toolbar & Table Columns)
+// Global State - v38 (User Public Token Refresh)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -2966,4 +2966,19 @@ function exportProcessedStreams() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+async function refreshMyPublicToken() {
+    if (!confirm("Re-generate your Public Hub token? This will break old links.")) return;
+    try {
+        const res = await fetch(`/api/users/token?id=${window.USER_ID}`, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            window.USER_PUBLIC_TOKEN = data.public_token;
+            showToast("Public Hub token re-generated", "success");
+        } else {
+            showToast("Failed to re-generate token", "error");
+        }
+    } catch (e) {
+        showToast("Network error", "error");
+    }
 }
