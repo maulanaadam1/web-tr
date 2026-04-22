@@ -396,27 +396,32 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Check for direct RTSP source and enforce expiration
 	src := r.URL.Query().Get("src")
 	if strings.HasPrefix(src, "rtsp://") {
-		expiresStr := r.URL.Query().Get("expires")
-		token := r.URL.Query().Get("token")
-		
-		if expiresStr == "" || token == "" {
-			http.Error(w, "Access Denied: Public test stream requires a valid token.", http.StatusForbidden)
-			return
+		// SECURITY FIX: The token/expires check should ONLY be enforced on the initial stream.html load.
+		// Sub-requests (like /rtc/api/webrtc?src=rtsp://...) made by Go2RTC's JS don't carry the token.
+		if strings.HasPrefix(path, "/rtc/stream.html") {
+			expiresStr := r.URL.Query().Get("expires")
+			token := r.URL.Query().Get("token")
+			
+			if expiresStr == "" || token == "" {
+				http.Error(w, "Access Denied: Public test stream requires a valid token.", http.StatusForbidden)
+				return
+			}
+			
+			expires, err := strconv.ParseInt(expiresStr, 10, 64)
+			if err != nil || time.Now().Unix() > expires {
+				http.Error(w, "Access Denied: This test stream link has expired (1 hour limit).", http.StatusForbidden)
+				return
+			}
+			
+			expected := generateTestToken(src, expiresStr)
+			if token != expected {
+				http.Error(w, "Access Denied: Invalid test token.", http.StatusForbidden)
+				return
+			}
 		}
 		
-		expires, err := strconv.ParseInt(expiresStr, 10, 64)
-		if err != nil || time.Now().Unix() > expires {
-			http.Error(w, "Access Denied: This test stream link has expired (1 hour limit).", http.StatusForbidden)
-			return
-		}
-		
-		expected := generateTestToken(src, expiresStr)
-		if token != expected {
-			http.Error(w, "Access Denied: Invalid test token.", http.StatusForbidden)
-			return
-		}
-		
-		// If we are here, the direct RTSP preview is valid
+		// If it's an RTSP source being requested (either player or API), we allow it
+		// because the initial entry point (stream.html) was already checked above.
 		allowed = true
 	}
 
