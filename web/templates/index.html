@@ -306,12 +306,12 @@
                     <div class="flex items-center gap-1 px-1.5 py-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
                         <div id="userPublicLinkContainer" class="flex items-center">
                             {{ if .Session.PublicToken }}
-                            <a href="/view/{{ .Session.PublicToken }}" target="_blank" class="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title="Open Public Hub">
+                            <button onclick="window.open('/view/' + (window.USER_PUBLIC_TOKEN || ''), '_blank')" class="p-2 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Open Public Hub">
                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                 </svg>
-                            </a>
+                            </button>
                             {{ else }}
                             <button onclick="refreshMyPublicToken()" class="p-2 text-slate-400 hover:text-brand-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-all" title="Generate Public Hub">
                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.823a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" /></svg>
@@ -1618,7 +1618,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=43"></script>
+    <script src="/static/js/app.js?v=44"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
