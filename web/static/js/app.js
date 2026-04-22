@@ -1,4 +1,4 @@
-// Global State - v42 (Instant Token Refresh Fix)
+// Global State - v43 (Token Sync & Visual Polish)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -2987,6 +2987,17 @@ async function refreshMyPublicToken() {
             const data = await res.json();
             window.USER_PUBLIC_TOKEN = data.public_token;
             showToast("Public Hub token re-generated", "success");
+            
+            // Sync with allUsers array so Manage User view is updated instantly
+            const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(window.USER_ID));
+            if (userIdx !== -1) {
+                allUsers[userIdx].public_token = data.public_token;
+            }
+            
+            // Re-render table if we are currently looking at it
+            if (currentView === 'users') {
+                renderUsersTable();
+            }
         } else {
             showToast("Failed to re-generate token", "error");
         }
