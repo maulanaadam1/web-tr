@@ -1,4 +1,4 @@
-// Global State - v36 (Dashboard Dropdown Fix)
+// Global State - v37 (Responsive Toolbar & Table Columns)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -281,7 +281,7 @@ function renderStreamsTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-tighter">${s.type === 'ffmpeg' ? 'FFmpeg' : 'Direct'}</span>
             </td>
-            <td class="hidden md:table-cell px-6 py-4 max-w-[200px]">
+            <td class="hidden md:table-cell px-6 py-4 max-w-[200px] col-source-url">
                 <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded inline-block w-full" title="${s.url}">${s.url}</div>
             </td>
             

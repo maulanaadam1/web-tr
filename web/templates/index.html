@@ -144,6 +144,13 @@
             padding-right: 0;
             justify-content: center;
         }
+
+        /* --- Custom Responsive Breakdown --- */
+        @media (max-width: 1165px) {
+            .responsive-label { display: none !important; }
+            .responsive-btn { gap: 0 !important; padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+            .col-source-url { display: none !important; }
+        }
     </style>
 </head>
 
@@ -438,27 +445,27 @@
                         <p class="text-sm text-slate-500">Configure stream sources and access control.</p>
                     </div>
                      <div class="flex flex-wrap gap-2 md:gap-3">
-                         <button onclick="loadStreams()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
+                         <button onclick="loadStreams()" class="responsive-btn flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                            <span class="hidden md:inline">Refresh</span>
+                            <span class="responsive-label hidden md:inline">Refresh</span>
                         </button>
-                        <button onclick="window.open('/api/streams/export', '_blank')" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Export CSV">
+                        <button onclick="window.open('/api/streams/export', '_blank')" class="responsive-btn flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Export CSV">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            <span class="hidden md:inline">Export</span>
+                            <span class="responsive-label hidden md:inline">Export</span>
                         </button>
-                        <button onclick="exportProcessedStreams()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg transition-colors" title="Export Playback Links">
+                        <button onclick="exportProcessedStreams()" class="responsive-btn flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg transition-colors" title="Export Playback Links">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
                             </svg>
-                            <span class="hidden md:inline">Export Links</span>
+                            <span class="responsive-label hidden md:inline">Export Links</span>
                         </button>
-                        <button onclick="openCSVImportModal()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Import CSV">
+                        <button onclick="openCSVImportModal()" class="responsive-btn flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Import CSV">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                            <span class="hidden md:inline">Import</span>
+                            <span class="responsive-label hidden md:inline">Import</span>
                         </button>
-                        <button onclick="openAddModal()" class="flex items-center gap-2 md:px-4 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-brand-500/30 transition-all" title="Add Camera">
+                        <button onclick="openAddModal()" class="responsive-btn flex items-center gap-2 md:px-4 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-brand-500/30 transition-all" title="Add Camera">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            <span class="hidden md:inline">Add Camera</span>
+                            <span class="responsive-label hidden md:inline">Add Camera</span>
                         </button>
                     </div>
                 </div>
@@ -493,7 +500,7 @@
                                     <th class="px-3 md:px-4 py-4 w-20 md:w-auto">Status</th>
                                     <th class="px-3 md:px-4 py-4 truncate max-w-[120px] md:max-w-none">Name / URL</th>
                                     <th class="px-4 py-4 hidden md:table-cell">Method</th>
-                                    <th class="px-4 py-4 hidden md:table-cell">Source URL</th>
+                                    <th class="px-4 py-4 hidden md:table-cell col-source-url">Source URL</th>
                                     <th class="px-6 py-4 hidden md:table-cell w-10 text-center">Link</th>
                                     <th class="px-3 md:px-4 py-4 text-right w-24 md:w-auto">Actions</th>
                                 </tr>
@@ -1606,7 +1613,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=36"></script>
+    <script src="/static/js/app.js?v=37"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
