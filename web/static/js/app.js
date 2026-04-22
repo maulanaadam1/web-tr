@@ -1,4 +1,4 @@
-// Global State - v38 (User Public Token Refresh)
+// Global State - v39 (Public Hub Consistency Fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -653,6 +653,10 @@ async function generatePublicLink(userId) {
         const response = await fetch(`/api/users/token?id=${userId}`, { method: 'POST' });
         if (response.ok) {
             showToast("Public link generated successfully!", "success");
+            const data = await response.json();
+            if (parseInt(userId) === parseInt(window.USER_ID)) {
+                window.USER_PUBLIC_TOKEN = data.public_token;
+            }
             loadUsers(); // Refresh table
         } else {
             const err = await response.text();
