@@ -269,7 +269,12 @@
             </div>
             
             <div class="flex items-center gap-2 md:gap-3">
-                <!-- Close Button -->
+                <!-- Snapshot Button -->
+                <button id="publicSnapshotBtn" class="bg-white/10 hover:bg-blue-500 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl pointer-events-auto" title="Take Snapshot">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                </button>
+
+                <!-- Exit Button -->
                 <button onclick="closePublicPlayerModal()" class="bg-black/40 hover:bg-red-600 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 group shadow-2xl pointer-events-auto border border-white/5" title="Exit Fullscreen">
                     <svg class="w-5 h-5 md:h-6 md:w-6 transform group-hover:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -470,7 +475,15 @@
 
         function openPublicPlayerModal(name) {
             const stream = publicStreams.find(s => s.name === name);
-            titleEl.textContent = stream ? (stream.display_name || stream.name) : name;
+            const displayName = stream ? (stream.display_name || stream.name) : name;
+            titleEl.textContent = displayName;
+
+            // Update snapshot button
+            const snapBtn = document.getElementById('publicSnapshotBtn');
+            if (snapBtn) {
+                snapBtn.onclick = () => takeSnapshot(name, displayName);
+            }
+
             // Use standard rtc mode for primary public viewing
             const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
 
@@ -517,6 +530,22 @@
         });
 
         // New Toolbar & Side Panel Logic
+        async function takeSnapshot(name, displayName = "") {
+            try {
+                const response = await fetch(`/api/snapshot?stream=${encodeURIComponent(name)}`);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = displayName ? `${displayName}-snapshot.jpg` : `${name}-snapshot.jpg`;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) { alert(`Failed to take snapshot: ${error.message}`); }
+        }
+
         function toggleSidePanel() {
             const panel = document.getElementById('sidePanel');
             if (panel) panel.classList.toggle('open');
@@ -540,14 +569,17 @@
             if(!window.allMarkers) return;
             
             const q = query.toLowerCase();
-            const matches = window.allMarkers.filter(item => item.name.toLowerCase().includes(q));
+            const matches = window.allMarkers.filter(item => 
+                item.name.toLowerCase().includes(q) || 
+                item.displayName.toLowerCase().includes(q)
+            );
 
             // Populate results dropdown
             if (resultsList) {
                 resultsList.innerHTML = matches.slice(0, 10).map(match => `
                     <button onclick="selectSearchResult('${match.name.replace(/'/g, "\\'")}')" class="w-full flex items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-none text-left">
                         <i data-lucide="map-pin" class="w-4 h-4 text-brand-500 mr-3 shrink-0"></i>
-                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${match.name}</span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${match.displayName || match.name}</span>
                     </button>
                 `).join('');
                 
@@ -709,7 +741,7 @@
                     marker.__popup = popup; 
 
                     // Store for search
-                    window.allMarkers.push({ marker, name: stream.name });
+                    window.allMarkers.push({ marker, name: stream.name, displayName: stream.display_name || stream.name });
 
                     bounds.push([stream.lat, stream.lng]);
                 });

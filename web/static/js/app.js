@@ -1,4 +1,4 @@
-// Global State - v35 (Labeling & Security Refinements)
+// Global State - v36 (Dashboard Dropdown Fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -1877,7 +1877,7 @@ async function initMaintenanceMap() {
             const opt = document.createElement('option');
             opt.value = s.name;
             const status = !s.lat || !s.lng ? ' (No Marker - Click map to place)' : '';
-            opt.textContent = `${s.name}${status}`;
+            opt.textContent = `${s.display_name || s.name}${status}`;
             dashSelect.appendChild(opt);
         }
     });
