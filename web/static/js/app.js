@@ -1,4 +1,4 @@
-// Global State - v43 (Token Sync & Visual Polish)
+// Global State - v45 (Race Condition Fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -665,7 +665,7 @@ async function generatePublicLink(userId) {
             }
             
             renderUsersTable(); // Re-render immediately
-            loadUsers(); // Sync with server
+            // loadUsers(); // Removed to prevent race condition with local state update
         } else {
             const err = await response.text();
             showToast(`Failed: ${err}`, "error");
