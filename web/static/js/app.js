@@ -341,7 +341,7 @@ function createStreamCard(name, url, displayName = name) {
     card.innerHTML = `
         <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
             <h3 class="font-bold text-sm truncate text-slate-800 dark:text-white" title="${displayName}">${displayName}</h3>
-            <button onclick="takeSnapshot('${name}')" class="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors">
+            <button onclick="takeSnapshot('${name}', '${escapeJS(displayName)}')" class="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
             </button>
         </div>
@@ -866,14 +866,15 @@ async function submitChangePw() {
 }
 
 // --- Snapshot & Shared Functions ---
-async function takeSnapshot(name) {
+async function takeSnapshot(name, displayName = "") {
     try {
         const response = await fetch(`/api/snapshot?stream=${encodeURIComponent(name)}`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${name}-snapshot.jpg`;
+        const filename = displayName ? `${displayName}-snapshot.jpg` : `${name}-snapshot.jpg`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -2035,7 +2036,7 @@ async function updateCameraLocation(name, lat, lng) {
             // Show subtle feedback
             const toast = document.createElement('div');
             toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-green-600 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold animate-bounce';
-            toast.textContent = `Location updated for ${name}`;
+            toast.textContent = `Location updated for ${stream.display_name || stream.name}`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
             
@@ -2067,7 +2068,8 @@ function openCameraPreviewModal(name) {
     const title = document.getElementById('cameraPreviewTitle');
     if (!modal || !player) return;
 
-    title.textContent = name;
+    const stream = allStreams.find(s => s.name === name);
+    title.textContent = stream ? (stream.display_name || stream.name) : name;
 
     // Loading spinner
     player.innerHTML = `
@@ -2481,7 +2483,7 @@ function renderCCGridPage(page) {
             card.onclick = () => openCameraPreviewModal(stream.name);
             card.innerHTML = `
                 <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
-                    <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.name}">${stream.name}</h3>
+                    <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.display_name || stream.name}">${stream.display_name || stream.name}</h3>
                     <div class="flex items-center gap-1">
                         <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -2557,7 +2559,8 @@ function openShareModal(manualName) {
     
     if (!modal || !urlInput || !iframeText) return;
     
-    nameSpan.textContent = name;
+    const stream = allStreams.find(s => s.name === name);
+    nameSpan.textContent = stream ? (stream.display_name || stream.name) : name;
     
     // Construct URLs
     const protocol = window.location.protocol;
@@ -2615,9 +2618,9 @@ function renderMapSidebarCameraList(streams) {
                 ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
             </div>
             <div class="p-2.5">
-                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-0.5">${s.name}</div>
+                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-0.5">${s.display_name || s.name}</div>
                 <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.substring(0,8)}...</span>
                     <div class="flex gap-1.5 items-center">
                         <svg class="w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
