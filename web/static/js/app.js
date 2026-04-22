@@ -1,4 +1,4 @@
-// Global State - v46 (Debug & State Audit)
+// Global State - v47 (Dynamic Table Link Sync)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -549,12 +549,12 @@ function renderUsersTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex items-center gap-2">
                     ${hasToken ? `
-                        <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
+                        <button onclick="copyUserTokenLink(${u.id})" class="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                         </button>
-                        <a href="/view/${u.public_token}" target="_blank" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
+                        <button onclick="openUserHub(${u.id})" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </a>
+                        </button>
                         <button onclick="generatePublicLink(${u.id})" class="p-1.5 text-slate-300 hover:text-amber-500 transition-colors" title="Regenerate Link">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                         </button>
@@ -3008,5 +3008,22 @@ async function refreshMyPublicToken() {
         }
     } catch (e) {
         showToast("Network error", "error");
+    }
+}
+function copyUserTokenLink(userId) {
+    const u = allUsers.find(x => parseInt(x.id) === parseInt(userId));
+    if (u && u.public_token) {
+        copyToClipboard(`${window.location.origin}/view/${u.public_token}`);
+    } else {
+        showToast("No public token available", "error");
+    }
+}
+
+function openUserHub(userId) {
+    const u = allUsers.find(x => parseInt(x.id) === parseInt(userId));
+    if (u && u.public_token) {
+        window.open(`/view/${u.public_token}`, '_blank');
+    } else {
+        showToast("No public token available", "error");
     }
 }
