@@ -1,4 +1,4 @@
-// Global State
+// Global State - v32 (Fresh Refresh)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
