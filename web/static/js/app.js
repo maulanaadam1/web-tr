@@ -1,4 +1,4 @@
-// Global State - v39 (Public Hub Consistency Fix)
+// Global State - v42 (Instant Token Refresh Fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -657,7 +657,15 @@ async function generatePublicLink(userId) {
             if (parseInt(userId) === parseInt(window.USER_ID)) {
                 window.USER_PUBLIC_TOKEN = data.public_token;
             }
-            loadUsers(); // Refresh table
+            
+            // Update local allUsers cache so UI updates instantly
+            const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(userId));
+            if (userIdx !== -1) {
+                allUsers[userIdx].public_token = data.public_token;
+            }
+            
+            renderUsersTable(); // Re-render immediately
+            loadUsers(); // Sync with server
         } else {
             const err = await response.text();
             showToast(`Failed: ${err}`, "error");
