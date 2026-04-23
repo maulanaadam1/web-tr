@@ -1,4 +1,4 @@
-// Global State - v53 (NVR fullscreen + sidebar auto-hide)
+// Global State - v54 (NVR fullscreen var fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3036,6 +3036,7 @@ function openUserHub(userId) {
 let nvrGridSize    = 2;    // columns x rows
 let nvrGridPage    = 0;    // current grid page (0-indexed)
 let nvrSelectedIndex = 0;  // active slot for manual assign
+let nvrIsFullscreen  = false;  // NVR fullscreen state
 
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
