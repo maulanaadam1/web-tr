@@ -3162,6 +3162,9 @@ function nvrGridNext() {
 
 // ── Render grid from camera pool ────────────────────────────────────────────
 function renderNVRGrid() {
+    // Destroy old HLS instances before re-rendering
+    _destroyNVRHls();
+
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
 
@@ -3177,42 +3180,63 @@ function renderNVRGrid() {
     area.style.height = '100%';
 
     for (let i = 0; i < cap; i++) {
-        const s = pageSlice[i] || null;
-        const slot = document.createElement('div');
+        const s        = pageSlice[i] || null;
         const isActive = nvrSelectedIndex === i;
 
+        const slot = document.createElement('div');
         slot.className = [
-            'nvr-cell relative group overflow-hidden flex items-center justify-center transition-all duration-150 cursor-crosshair',
-            'bg-slate-300 dark:bg-slate-900',
+            'nvr-cell relative group overflow-hidden flex items-center justify-center transition-all duration-150 cursor-crosshair bg-black',
             isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
 
         if (s) {
-            const globalIdx = startIdx + i;
-            slot.innerHTML = `
-                <div class="absolute inset-0 z-0" style="overflow:hidden;">
-                    <iframe
-                        src="/rtc/stream.html?src=${encodeURIComponent(s.name)}"
-                        style="width:100%;height:calc(100% + 44px);margin-top:-44px;border:none;display:block;"
-                        allow="autoplay; fullscreen"
-                        scrolling="no"
-                    ></iframe>
-                </div>
-                <div class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    <p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>
-                </div>
-                <div class="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="removeNVRSlot(${i}, event)" class="p-1 bg-red-500/90 hover:bg-red-500 text-white rounded">
-                        <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-                ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20"></div>' : ''}
-            `;
+            // Create video element (HLS player)
+            const vid = document.createElement('video');
+            vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;background:#000;';
+            vid.muted      = true;
+            vid.autoplay   = true;
+            vid.playsInline = true;
+            slot.appendChild(vid);
+
+            // Camera name overlay (hover)
+            const overlay = document.createElement('div');
+            overlay.className = 'absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none';
+            overlay.innerHTML = `<p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>`;
+            slot.appendChild(overlay);
+
+            // Offline badge
+            if (!s.online) {
+                const badge = document.createElement('div');
+                badge.className = 'absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-5 pointer-events-none';
+                badge.innerHTML = `<svg class="w-6 h-6 text-slate-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 17.657a9 9 0 010-12.728M9.172 15.536a5 5 0 010-7.072"/></svg><span class="text-[9px] text-slate-500 font-bold uppercase">Offline</span>`;
+                slot.appendChild(badge);
+            }
+
+            // Remove button (hover)
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'absolute top-1 right-1 z-10 p-1 bg-red-500/90 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity';
+            removeBtn.innerHTML = '<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>';
+            removeBtn.onclick = (e) => { e.stopPropagation(); removeNVRSlot(i, e); };
+            slot.appendChild(removeBtn);
+
+            // Active ring
+            if (isActive) {
+                const ringDiv = document.createElement('div');
+                ringDiv.className = 'absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20';
+                slot.appendChild(ringDiv);
+            }
+
+            // Attach HLS player
+            const hlsKey = `${nvrGridPage}_${i}`;
+            const hlsInst = _attachHLS(vid, s.name);
+            if (hlsInst) nvrHlsInstances[hlsKey] = hlsInst;
+
         } else {
+            // Empty slot
             slot.innerHTML = `
-                <div class="flex flex-col items-center gap-1 pointer-events-none select-none ${'text-slate-400 dark:text-slate-700'} group-hover:text-slate-500 transition-colors">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" /></svg>
+                <div class="flex flex-col items-center gap-1 pointer-events-none select-none text-slate-700 group-hover:text-slate-500 transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
                     <span class="text-[8px] font-black uppercase tracking-widest">Empty</span>
                 </div>
                 ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none"></div>' : ''}
@@ -3221,19 +3245,6 @@ function renderNVRGrid() {
         area.appendChild(slot);
     }
 }
-
-// Remove a camera from the pool at a specific page slot
-function removeNVRSlot(slotIdx, e) {
-    if (e) e.stopPropagation();
-    const globalIdx = nvrGridPage * (nvrGridSize * nvrGridSize) + slotIdx;
-    if (globalIdx < nvrCameraPool.length) {
-        nvrCameraPool.splice(globalIdx, 1);
-    }
-    renderNVRGrid();
-    _updateNVRGridPager();
-}
-
-// Manual assign: put camera into selected slot on this page
 function selectCameraForNVR(camera) {
     const cap       = nvrGridSize * nvrGridSize;
     const globalIdx = nvrGridPage * cap + nvrSelectedIndex;
