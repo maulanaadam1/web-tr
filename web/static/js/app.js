@@ -1,4 +1,4 @@
-// Global State - v59 (NVR global nvrHlsInstances fix)
+// Global State - v60 (NVR: MJPEG via <img> tag)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3046,53 +3046,15 @@ let nvrIsFullscreen  = false;  // NVR fullscreen state
 
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
-let nvrHlsInstances = {};  // Active HLS instances keyed by page_slot
 
-// ── HLS Helper Functions ──────────────────────────────────────────────────
-// Destroy all active HLS instances (call before re-rendering grid)
-function _destroyNVRHls() {
-    if (typeof nvrHlsInstances === 'undefined') return;
-    Object.values(nvrHlsInstances).forEach(h => {
-        try { if (h && h.destroy) h.destroy(); } catch(e) {}
+// ── MJPEG Helper Functions ────────────────────────────────────────────────
+// Stop all active MJPEG streams by clearing <img> src (releases HTTP connection)
+function _stopNVRMjpeg() {
+    const area = document.getElementById('nvrGridArea');
+    if (!area) return;
+    area.querySelectorAll('img.nvr-stream').forEach(img => {
+        img.src = '';  // stops the MJPEG HTTP stream
     });
-    nvrHlsInstances = {};
-}
-
-// Attach HLS.js (or native Safari HLS) to a <video> element
-function _attachHLS(video, streamName) {
-    const hlsUrl = '/rtc/api/stream.m3u8?src=' + encodeURIComponent(streamName);
-    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-        var hls = new Hls({
-            lowLatencyMode: true,
-            liveSyncDurationCount: 1,
-            liveMaxLatencyDurationCount: 3,
-            maxBufferLength: 10,
-            enableWorker: true,
-        });
-        hls.loadSource(hlsUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            video.play().catch(function() {});
-        });
-        hls.on(Hls.Events.ERROR, function(event, data) {
-            if (data.fatal) {
-                setTimeout(function() {
-                    if (video.isConnected) {
-                        hls.loadSource(hlsUrl);
-                        hls.startLoad();
-                    }
-                }, 5000);
-            }
-        });
-        video._hlsInstance = hls;
-        return hls;
-    } else if (video.canPlayType && video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
-        video.src = hlsUrl;
-        video.play().catch(function() {});
-        return null;
-    }
-    return null;
 }
 
 function initNVRView() {
@@ -3226,8 +3188,8 @@ function nvrGridNext() {
 
 // ── Render grid from camera pool ────────────────────────────────────────────
 function renderNVRGrid() {
-    // Destroy old HLS instances before re-rendering
-    _destroyNVRHls();
+    // Stop existing MJPEG streams before re-rendering
+    _stopNVRMjpeg();
 
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
@@ -3249,58 +3211,62 @@ function renderNVRGrid() {
 
         const slot = document.createElement('div');
         slot.className = [
-            'nvr-cell relative group overflow-hidden flex items-center justify-center transition-all duration-150 cursor-crosshair bg-black',
+            'nvr-cell relative group overflow-hidden flex items-center justify-center bg-black cursor-crosshair transition-all duration-150',
             isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
 
         if (s) {
-            // Create video element (HLS player)
-            const vid = document.createElement('video');
-            vid.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;background:#000;';
-            vid.muted      = true;
-            vid.autoplay   = true;
-            vid.playsInline = true;
-            slot.appendChild(vid);
+            // ── MJPEG <img> — zero JS required ──
+            const img = document.createElement('img');
+            img.className = 'nvr-stream absolute inset-0 w-full h-full';
+            img.style.cssText = 'object-fit:cover;display:block;background:#000;';
+            img.src = `/rtc/api/stream.mjpeg?src=${encodeURIComponent(s.name)}`;
+            img.alt = s.display_name || s.name;
+            // On error: show offline badge
+            img.onerror = () => {
+                img.style.display = 'none';
+                offBadge.style.display = 'flex';
+            };
+            slot.appendChild(img);
 
-            // Camera name overlay (hover)
-            const overlay = document.createElement('div');
-            overlay.className = 'absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none';
-            overlay.innerHTML = `<p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>`;
-            slot.appendChild(overlay);
+            // Offline badge (hidden initially, shown on img error)
+            const offBadge = document.createElement('div');
+            offBadge.style.display = 'none';
+            offBadge.className = 'absolute inset-0 flex flex-col items-center justify-center bg-black/80 pointer-events-none';
+            offBadge.innerHTML = `
+                <svg class="w-6 h-6 text-slate-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 17.657a9 9 0 010-12.728M9.172 15.536a5 5 0 010-7.072"/>
+                </svg>
+                <span class="text-[9px] text-slate-500 font-bold uppercase">Offline</span>`;
+            slot.appendChild(offBadge);
 
-            // Offline badge
-            if (!s.online) {
-                const badge = document.createElement('div');
-                badge.className = 'absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-5 pointer-events-none';
-                badge.innerHTML = `<svg class="w-6 h-6 text-slate-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 17.657a9 9 0 010-12.728M9.172 15.536a5 5 0 010-7.072"/></svg><span class="text-[9px] text-slate-500 font-bold uppercase">Offline</span>`;
-                slot.appendChild(badge);
-            }
+            // Camera name overlay (on hover)
+            const nameOverlay = document.createElement('div');
+            nameOverlay.className = 'absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none';
+            nameOverlay.innerHTML = `<p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>`;
+            slot.appendChild(nameOverlay);
 
-            // Remove button (hover)
+            // Remove button (on hover)
             const removeBtn = document.createElement('button');
-            removeBtn.className = 'absolute top-1 right-1 z-10 p-1 bg-red-500/90 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity';
+            removeBtn.className = 'absolute top-1 right-1 z-20 p-1 bg-red-500/90 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity';
             removeBtn.innerHTML = '<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>';
             removeBtn.onclick = (e) => { e.stopPropagation(); removeNVRSlot(i, e); };
             slot.appendChild(removeBtn);
 
             // Active ring
             if (isActive) {
-                const ringDiv = document.createElement('div');
-                ringDiv.className = 'absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20';
-                slot.appendChild(ringDiv);
+                const ring = document.createElement('div');
+                ring.className = 'absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20';
+                slot.appendChild(ring);
             }
-
-            // Attach HLS player
-            const hlsKey = `${nvrGridPage}_${i}`;
-            const hlsInst = _attachHLS(vid, s.name);
-            if (hlsInst) nvrHlsInstances[hlsKey] = hlsInst;
-
         } else {
             // Empty slot
             slot.innerHTML = `
                 <div class="flex flex-col items-center gap-1 pointer-events-none select-none text-slate-700 group-hover:text-slate-500 transition-colors">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/></svg>
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
+                    </svg>
                     <span class="text-[8px] font-black uppercase tracking-widest">Empty</span>
                 </div>
                 ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none"></div>' : ''}
@@ -3309,6 +3275,7 @@ function renderNVRGrid() {
         area.appendChild(slot);
     }
 }
+
 function selectCameraForNVR(camera) {
     const cap       = nvrGridSize * nvrGridSize;
     const globalIdx = nvrGridPage * cap + nvrSelectedIndex;
