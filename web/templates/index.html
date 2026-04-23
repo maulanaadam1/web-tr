@@ -225,6 +225,13 @@
                 <span class="nav-text whitespace-nowrap">Command Center</span>
             </button>
 
+            <button type="button" onclick="switchView('nvr')" data-view="nvr" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="NVR View (Multi-stream)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">NVR View</span>
+            </button>
+
             {{ if eq .Session.Role "admin" }}
             <button type="button" onclick="switchView('timelapse')" data-view="timelapse" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Timelapse">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -985,6 +992,56 @@
                                 <div class="text-center py-8 text-slate-400 italic text-xs">Loading cameras...</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NVR VIEW (MULTI-STREAM) -->
+            <div id="view-nvr" class="hidden flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-950">
+                <!-- NVR SIDEBAR -->
+                <div class="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
+                    <div class="p-4 border-b border-slate-800">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Device List</h3>
+                        <div class="relative">
+                            <input type="text" id="nvrSearch" onkeyup="filterNVRCameras()" placeholder="Quick search..." 
+                                class="w-full bg-slate-800 border-none rounded-lg text-xs py-2 pl-8 pr-3 text-slate-300 focus:ring-1 focus:ring-brand-500 outline-none">
+                            <svg class="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="nvrCameraList" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+                        <div class="text-center py-8 text-slate-600 italic text-xs">No cameras available</div>
+                    </div>
+                </div>
+
+                <!-- NVR GRID AREA -->
+                <div class="flex-1 flex flex-col relative">
+                    <div class="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4">
+                        <div class="flex items-center gap-4">
+                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="nvrStatusText">0 SLOTS ACTIVE</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="setNVRGrid(2)" class="grid-btn p-1.5 rounded transition-all bg-slate-800 text-brand-400" data-size="2" title="2x2 Grid">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+                            </button>
+                            <button onclick="setNVRGrid(3)" class="grid-btn p-1.5 rounded transition-all text-slate-500 hover:text-brand-400" data-size="3" title="3x3 Grid">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+                            </button>
+                            <button onclick="setNVRGrid(4)" class="grid-btn p-1.5 rounded transition-all text-slate-500 hover:text-brand-400" data-size="4" title="4x4 Grid">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h3v3H4V4zm4 0h3v3H8V4zm4 0h3v3h-3V4zm4 0h3v3h-3V4zm-12 5h3v3H4V9zm4 0h3v3H8V9zm4 0h3v3h-3V9zm4 0h3v3h-3V9zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3z"/></svg>
+                            </button>
+                            <div class="w-px h-4 bg-slate-800 mx-2"></div>
+                            <button onclick="autoPlayAllNVR()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-black rounded transition-all shadow-lg shadow-brand-500/20 mr-2" id="nvrAutoPlayBtn">
+                                AUTO PLAY
+                            </button>
+                            <button onclick="clearNVRGrid()" class="px-3 py-1.5 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 text-[10px] font-black rounded transition-all">
+                                CLEAR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="nvrGridArea" class="flex-1 bg-black p-1 overflow-hidden">
                     </div>
                 </div>
             </div>

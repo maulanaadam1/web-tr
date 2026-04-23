@@ -1,4 +1,4 @@
-// Global State - v47 (Dynamic Table Link Sync)
+// Global State - v48 (NVR Multi-view Sync)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3026,4 +3026,173 @@ function openUserHub(userId) {
     } else {
         showToast("No public token available", "error");
     }
+}
+
+// --- NVR / Multi-Stream View Logic ---
+let nvrGridSize = 2; // Default 2x2
+let nvrSelectedIndex = 0; // Slot mana yang sedang dipilih
+let nvrSlots = Array(16).fill(null); // Data kamera di setiap slot
+
+function initNVRView() {
+    renderNVRGrid();
+    renderNVRCameraList();
+}
+
+function filterNVRCameras() {
+    renderNVRCameraList();
+}
+
+function renderNVRCameraList() {
+    const list = document.getElementById('nvrCameraList');
+    if (!list) return;
+    
+    list.innerHTML = '';
+    const query = (document.getElementById('nvrSearch')?.value || '').toLowerCase();
+    
+    // Sort cameras to show online ones first
+    const sorted = [...allStreams].sort((a,b) => (b.online?1:0) - (a.online?1:0));
+
+    sorted.forEach(s => {
+        if (query && !s.name.toLowerCase().includes(query) && !s.display_name?.toLowerCase().includes(query)) return;
+        if (s.enabled === false) return; // Skip disabled
+
+        const div = document.createElement('div');
+        div.className = `p-3 rounded-lg cursor-pointer transition-all border border-transparent hover:bg-slate-800 flex items-center gap-3 group`;
+        div.onclick = () => selectCameraForNVR(s);
+        
+        div.innerHTML = `
+            <div class="w-8 h-8 rounded bg-slate-800 flex items-center justify-center ${s.online ? 'text-brand-400' : 'text-slate-600'}">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            </div>
+            <div class="flex-1 overflow-hidden">
+                <p class="text-[11px] font-bold text-slate-300 truncate leading-tight">${s.display_name || s.name}</p>
+                <div class="flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full ${s.online ? 'bg-green-500' : 'bg-slate-600'}"></span>
+                    <p class="text-[9px] text-slate-500 truncate">${s.online ? 'Online' : 'Offline'}</p>
+                </div>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+
+function setNVRGrid(size) {
+    nvrGridSize = size;
+    // Reset selected index if now out of bounds
+    if (nvrSelectedIndex >= size*size) nvrSelectedIndex = 0;
+    
+    renderNVRGrid();
+    
+    // Update button styling
+    document.querySelectorAll('.grid-btn').forEach(btn => {
+        if (parseInt(btn.dataset.size) === size) {
+            btn.classList.add('bg-slate-800', 'text-brand-400');
+            btn.classList.remove('text-slate-500');
+        } else {
+            btn.classList.remove('bg-slate-800', 'text-brand-400');
+            btn.classList.add('text-slate-500');
+        }
+    });
+
+    const activeCount = nvrSlots.filter((s, i) => i < size*size && s !== null).length;
+    document.getElementById('nvrStatusText').textContent = `${activeCount} / ${size*size} SLOTS ACTIVE`;
+}
+
+function renderNVRGrid() {
+    const area = document.getElementById('nvrGridArea');
+    if (!area) return;
+    
+    area.innerHTML = '';
+    const totalSlots = nvrGridSize * nvrGridSize;
+    
+    // Use dynamic grid
+    area.className = `flex-1 bg-black p-1 grid gap-[2px]`;
+    area.style.gridTemplateColumns = `repeat(${nvrGridSize}, 1fr)`;
+    area.style.gridTemplateRows = `repeat(${nvrGridSize}, 1fr)`;
+
+    for (let i = 0; i < totalSlots; i++) {
+        const slot = document.createElement('div');
+        slot.className = `nvr-cell bg-slate-900 border border-slate-800/30 relative group flex items-center justify-center overflow-hidden transition-all duration-200 cursor-crosshair ${nvrSelectedIndex === i ? 'ring-2 ring-brand-500 ring-inset z-10 bg-slate-800' : ''}`;
+        slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
+        
+        if (nvrSlots[i]) {
+            const s = nvrSlots[i];
+            slot.innerHTML = `
+                <div class="absolute inset-0 z-0">
+                    <iframe src="/stream/${s.name}" class="w-full h-full border-none" allow="autoplay; fullscreen"></iframe>
+                </div>
+                <div class="absolute top-2 left-2 z-10 px-2 py-0.5 bg-black/80 backdrop-blur-md rounded text-[9px] font-black text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
+                    ${s.display_name || s.name}
+                </div>
+                <button onclick="removeNVRStream(${i}, event)" class="absolute top-2 right-2 z-10 p-1 bg-red-500/80 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            `;
+        } else {
+            slot.innerHTML = `
+                <div class="flex flex-col items-center gap-2 text-slate-700/50 group-hover:text-slate-500 transition-colors pointer-events-none">
+                    <svg class="w-6 h-6 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 4v16m8-8H4" /></svg>
+                    <span class="text-[8px] font-black uppercase tracking-[0.2em]">Slot ${i+1}</span>
+                </div>
+            `;
+        }
+        area.appendChild(slot);
+    }
+}
+
+function selectCameraForNVR(camera) {
+    nvrSlots[nvrSelectedIndex] = camera;
+    
+    // Auto move to next empty slot
+    let nextEmpty = nvrSlots.findIndex((s, i) => i < nvrGridSize*nvrGridSize && s === null);
+    if (nextEmpty !== -1) {
+        nvrSelectedIndex = nextEmpty;
+    } else {
+        // Find next slot sequence
+        nvrSelectedIndex = (nvrSelectedIndex + 1) % (nvrGridSize * nvrGridSize);
+    }
+    
+    renderNVRGrid();
+    setNVRGrid(nvrGridSize);
+}
+
+function removeNVRStream(idx, e) {
+    if (e) e.stopPropagation();
+    nvrSlots[idx] = null;
+    renderNVRGrid();
+    setNVRGrid(nvrGridSize);
+}
+
+function clearNVRGrid() {
+    nvrSlots = Array(16).fill(null);
+    renderNVRGrid();
+    setNVRGrid(nvrGridSize);
+}
+
+async function autoPlayAllNVR() {
+    const btn = document.getElementById('nvrAutoPlayBtn');
+    const originalText = btn.textContent;
+    btn.textContent = '...';
+    btn.disabled = true;
+
+    // Filter online streams
+    let available = allStreams.filter(s => s.online && s.enabled !== false);
+    
+    // Clear existing to prevent overlap
+    nvrSlots = Array(16).fill(null);
+
+    // Fill slots up to current grid cap
+    const cap = nvrGridSize * nvrGridSize;
+    for (let i = 0; i < cap && i < available.length; i++) {
+        nvrSlots[i] = available[i];
+    }
+    
+    renderNVRGrid();
+    setNVRGrid(nvrGridSize);
+    
+    setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        showToast(`Auto-played ${nvrSlots.filter(s => s !== null).length} active streams`);
+    }, 1000);
 }
