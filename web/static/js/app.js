@@ -1,4 +1,4 @@
-// Global State - v55 (NVR footer controls + sidebar auto-hide)
+// Global State - v57 (NVR race condition fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -2063,6 +2063,12 @@ async function updateCameraLocation(name, lat, lng) {
             
             // Refresh table if in cameras view
             if (currentView === 'cameras') renderStreamsTable();
+    if (currentView === 'nvr') {
+        _buildCameraPool();
+        renderNVRGrid();
+        renderNVRCameraList();
+        _updateNVRGridPager();
+    }
         } else {
             alert("Failed to update location");
         }
@@ -3044,6 +3050,16 @@ let nvrCameraPool  = [];   // full sorted list for the grid paging
 function initNVRView() {
     nvrGridPage = 0;
     nvrSelectedIndex = 0;
+
+    if (!allStreams || allStreams.length === 0) {
+        // Streams not loaded yet — wait for loadStreams() to finish
+        const list = document.getElementById('nvrCameraList');
+        if (list) list.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs animate-pulse">Loading cameras...</div>';
+        // loadStreams() will call initNVRView-equivalent when done (see patched loadStreams)
+        loadStreams();
+        return;
+    }
+
     _buildCameraPool();
     renderNVRGrid();
     renderNVRCameraList();
