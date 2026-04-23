@@ -1,4 +1,4 @@
-// Global State - v58 (NVR HLS helpers fix)
+// Global State - v59 (NVR global nvrHlsInstances fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3046,6 +3046,7 @@ let nvrIsFullscreen  = false;  // NVR fullscreen state
 
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
+let nvrHlsInstances = {};  // Active HLS instances keyed by page_slot
 
 // ── HLS Helper Functions ──────────────────────────────────────────────────
 // Destroy all active HLS instances (call before re-rendering grid)
