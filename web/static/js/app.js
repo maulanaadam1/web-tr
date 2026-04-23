@@ -1,4 +1,4 @@
-// Global State - v61 (NVR: MSE MP4 for performance)
+// Global State - v62 (NVR improvements)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3215,6 +3215,18 @@ function renderNVRGrid() {
             isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
+        slot.ondblclick = () => { 
+            if (s) {
+                // If single camera, maybe go 1x1 or toggle fullscreen for this element?
+                // Requesting fullscreen on the slot itself for a "zoom" effect
+                if (!document.fullscreenElement) {
+                    if (slot.requestFullscreen) slot.requestFullscreen();
+                    else if (slot.webkitRequestFullscreen) slot.webkitRequestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        };
 
         if (s) {
             // ── MSE (MP4) <video> — High performance, hardware decoded ──
@@ -3377,12 +3389,15 @@ document.addEventListener('webkitfullscreenchange', () => {
 });
 
 async function autoPlayAllNVR() {
-    const btn  = document.getElementById('nvrAutoPlayBtn');
-    const orig = btn.textContent.trim();
-    btn.textContent = '...';
-    btn.disabled    = true;
+    const btn = document.getElementById('nvrAutoPlayBtn');
+    if (!btn) return;
+    
+    // Visual feedback: spin and change color
+    btn.classList.add('text-brand-600', 'animate-pulse');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
 
-    _buildCameraPool();   // rebuild from allStreams (online first)
+    _buildCameraPool();
     nvrGridPage = 0;
     nvrSelectedIndex = 0;
 
@@ -3390,8 +3405,10 @@ async function autoPlayAllNVR() {
     _updateNVRGridPager();
 
     setTimeout(() => {
-        btn.textContent = orig;
-        btn.disabled    = false;
-        showToast(`Loaded ${nvrCameraPool.length} cameras across ${_totalGridPages()} pages`);
+        btn.classList.remove('text-brand-600', 'animate-pulse');
+        btn.innerHTML = originalHtml;
+        showToast(`Auto-populated ${nvrCameraPool.length} online cameras`);
+    }, 600);
+} cameras across ${_totalGridPages()} pages`);
     }, 800);
 }

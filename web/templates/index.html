@@ -1081,6 +1081,9 @@
 
                         <!-- Center: grid size + paging -->
                         <div class="flex items-center gap-1">
+                            <button onclick="setNVRGrid(1)" class="grid-btn p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-size="1" title="1x1 Grid">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4z"/></svg>
+                            </button>
                             <button onclick="setNVRGrid(2)" class="grid-btn p-1.5 rounded transition-all bg-slate-200 dark:bg-slate-800 text-brand-600 dark:text-brand-400" data-size="2" title="2x2 Grid">
                                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
                             </button>
@@ -1124,7 +1127,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                                 </svg>
                                 <svg id="nvrFsIconOut" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4m0 5H4m5 0L3 3m18 6h-5m5 0V4m0 5l-6-6M9 15v5m0-5H4m5 5l-6 6m18-6h-5m5 0v5m0-5l-6 6"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 14h6m0 0v6m0-6l-7 7m17-7h-6m0 0v6m0-6l7 7M20 10h-6m0 0V4m0 6l7-7M4 10h6m0 0V4m0 6l-7-7"/>
                                 </svg>
                             </button>
                         </div>
@@ -1760,7 +1763,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=61"></script>
+    <script src="/static/js/app.js?v=62"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
