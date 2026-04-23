@@ -121,29 +121,16 @@ func startsWithString(s, prefix string) bool {
 }
 
 func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
-	// Security: Block access to the root of the RTC proxy to hide the dashboard
-	// but allow stream-related files and necessary API endpoints.
 	path := r.URL.Path
-	if path == "/rtc/" || path == "/rtc" {
-		http.Error(w, "Access Denied: You do not have permission to view the dashboard.", http.StatusForbidden)
-		return
-	}
-
+	// Allow /rtc/api/ and /api/ stream endpoints
 	allowed := false
-	// Safe paths for public viewing and underlying WebRTC/MSE mechanics
-	safePaths := []string{
-		"/rtc/stream.html",
-		"/rtc/api/ws",      // WebSockets for signaling
-		"/rtc/api/webrtc",  // WebRTC negotiation
-		"/rtc/api/mse",     // MediaSource Extensions
-		"/rtc/api/streams", // Needed to query stream info
+	if strings.HasPrefix(path, "/rtc/api/") || strings.HasPrefix(path, "/api/stream.") || strings.HasPrefix(path, "/rtc/stream.html") {
+		allowed = true
 	}
-
-	for _, sp := range safePaths {
-		if strings.HasPrefix(path, sp) {
-			allowed = true
-			break
-		}
+	
+	// Block dashboard
+	if path == "/rtc/" || path == "/rtc" {
+		allowed = false
 	}
 
 	if !allowed {
@@ -1676,7 +1663,8 @@ func main() {
 	})
 
 	// HLS & MSE Proxy Handlers
-	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC) // MSE/MP4
+	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC)    // MSE/MP4
+	http.HandleFunc("/api/stream.mjpeg", proxyToGo2RTC) // MJPEG
 
 	// Start Server
 	port := os.Getenv("PORT")

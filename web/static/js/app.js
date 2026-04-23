@@ -1,4 +1,4 @@
-// Global State - v60 (NVR: MJPEG via <img> tag)
+// Global State - v61 (NVR: MSE MP4 for performance)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3052,8 +3052,8 @@ let nvrCameraPool  = [];   // full sorted list for the grid paging
 function _stopNVRMjpeg() {
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
-    area.querySelectorAll('img.nvr-stream').forEach(img => {
-        img.src = '';  // stops the MJPEG HTTP stream
+    area.querySelectorAll('.nvr-stream').forEach(el => {
+        el.src = ''; el.load(); // stops the stream connection
     });
 }
 
@@ -3217,18 +3217,22 @@ function renderNVRGrid() {
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
 
         if (s) {
-            // ── MJPEG <img> — zero JS required ──
-            const img = document.createElement('img');
-            img.className = 'nvr-stream absolute inset-0 w-full h-full';
-            img.style.cssText = 'object-fit:cover;display:block;background:#000;';
-            img.src = `/rtc/api/stream.mjpeg?src=${encodeURIComponent(s.name)}`;
-            img.alt = s.display_name || s.name;
+            // ── MSE (MP4) <video> — High performance, hardware decoded ──
+            const vid = document.createElement('video');
+            vid.className = 'nvr-stream absolute inset-0 w-full h-full';
+            vid.style.cssText = 'object-fit:cover;display:block;background:#000;';
+            vid.muted = true;
+            vid.autoplay = true;
+            vid.playsInline = true;
+            // Use mp4 (MSE) stream - much lighter than HLS and MJPEG
+            vid.src = `/rtc/api/stream.mp4?src=${encodeURIComponent(s.name)}`;
+            
             // On error: show offline badge
-            img.onerror = () => {
-                img.style.display = 'none';
-                offBadge.style.display = 'flex';
+            vid.onerror = () => {
+                vid.style.display = 'none';
+                if (offBadge) offBadge.style.display = 'flex';
             };
-            slot.appendChild(img);
+            slot.appendChild(vid);
 
             // Offline badge (hidden initially, shown on img error)
             const offBadge = document.createElement('div');
