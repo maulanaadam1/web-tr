@@ -1,4 +1,4 @@
-// Global State - v57 (NVR race condition fix)
+// Global State - v58 (NVR HLS helpers fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3046,6 +3046,53 @@ let nvrIsFullscreen  = false;  // NVR fullscreen state
 
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
+
+// ── HLS Helper Functions ──────────────────────────────────────────────────
+// Destroy all active HLS instances (call before re-rendering grid)
+function _destroyNVRHls() {
+    if (typeof nvrHlsInstances === 'undefined') return;
+    Object.values(nvrHlsInstances).forEach(h => {
+        try { if (h && h.destroy) h.destroy(); } catch(e) {}
+    });
+    nvrHlsInstances = {};
+}
+
+// Attach HLS.js (or native Safari HLS) to a <video> element
+function _attachHLS(video, streamName) {
+    const hlsUrl = '/rtc/api/stream.m3u8?src=' + encodeURIComponent(streamName);
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        var hls = new Hls({
+            lowLatencyMode: true,
+            liveSyncDurationCount: 1,
+            liveMaxLatencyDurationCount: 3,
+            maxBufferLength: 10,
+            enableWorker: true,
+        });
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play().catch(function() {});
+        });
+        hls.on(Hls.Events.ERROR, function(event, data) {
+            if (data.fatal) {
+                setTimeout(function() {
+                    if (video.isConnected) {
+                        hls.loadSource(hlsUrl);
+                        hls.startLoad();
+                    }
+                }, 5000);
+            }
+        });
+        video._hlsInstance = hls;
+        return hls;
+    } else if (video.canPlayType && video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS
+        video.src = hlsUrl;
+        video.play().catch(function() {});
+        return null;
+    }
+    return null;
+}
 
 function initNVRView() {
     nvrGridPage = 0;
