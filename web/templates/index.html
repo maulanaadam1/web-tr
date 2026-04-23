@@ -151,6 +151,41 @@
             .responsive-btn { gap: 0 !important; padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
             .col-source-url { display: none !important; }
         }
+
+        /* NVR Fullscreen */
+        #view-nvr.nvr-fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 9999 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+        #view-nvr .nvr-sidebar {
+            transition: width 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
+        }
+        #view-nvr .nvr-sidebar.nvr-sidebar-hidden {
+            width: 0 !important;
+            min-width: 0 !important;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateX(-100%);
+        }
+        #view-nvr .nvr-sidebar.nvr-sidebar-peek {
+            width: 16rem !important;
+            opacity: 1 !important;
+            transform: translateX(0) !important;
+            position: absolute;
+            top: 0; left: 0; bottom: 0;
+            z-index: 100;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+        }
+        /* Hover trigger zone in fullscreen */
+        #view-nvr.nvr-fullscreen .nvr-peek-trigger {
+            display: block !important;
+        }
+        #view-nvr .nvr-peek-trigger {
+            display: none;
+        }
     </style>
 </head>
 
@@ -1000,7 +1035,11 @@
             <div id="view-nvr" class="hidden flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-100 dark:bg-slate-950 transition-colors">
 
                 <!-- NVR SIDEBAR -->
-                <div class="nvr-sidebar w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-colors">
+                <!-- Hover trigger zone: visible only in fullscreen -->
+                <div class="nvr-peek-trigger absolute top-0 left-0 bottom-0 w-4 z-50 cursor-pointer"
+                    onmouseenter="nvrSidebarPeek(true)"></div>
+                <div class="nvr-sidebar w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-colors"
+                    onmouseleave="nvrSidebarPeek(false)">
                     <div class="p-3 border-b border-slate-200 dark:border-slate-800">
                         <h3 class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Device List</h3>
                         <div class="relative">
@@ -1054,6 +1093,19 @@
                             <button onclick="clearNVRGrid()"
                                 class="ml-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-[10px] font-black rounded transition-all">
                                 CLEAR
+                            </button>
+                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 ml-2 mr-1"></div>
+                            <!-- Fullscreen toggle -->
+                            <button id="nvrFullscreenBtn" onclick="toggleNVRFullscreen()" title="Fullscreen"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <!-- Enter fullscreen icon -->
+                                <svg id="nvrFsIconIn" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                                </svg>
+                                <!-- Exit fullscreen icon -->
+                                <svg id="nvrFsIconOut" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4m0 0H4m5 0L3 10m12-6v5m0 0h5m-5 0l6-6M9 15v5m0 0H4m5 0l-6-6m12 6l-5-5m5 5v-4m0 4h-4"/>
+                                </svg>
                             </button>
                         </div>
                     </div>
@@ -1693,7 +1745,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=52"></script>
+    <script src="/static/js/app.js?v=53"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>

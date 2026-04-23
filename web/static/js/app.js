@@ -1,4 +1,4 @@
-// Global State - v52 (NVR: CSS dark: Tailwind fix)
+// Global State - v53 (NVR fullscreen + sidebar auto-hide)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3256,6 +3256,77 @@ function clearNVRGrid() {
     renderNVRGrid();
     _updateNVRGridPager();
 }
+
+// ── Fullscreen ─────────────────────────────────────────────────────────────
+function toggleNVRFullscreen() {
+    const view    = document.getElementById('view-nvr');
+    const sidebar = view ? view.querySelector('.nvr-sidebar') : null;
+    if (!view) return;
+
+    if (!nvrIsFullscreen) {
+        // Enter fullscreen
+        const req = view.requestFullscreen || view.webkitRequestFullscreen || view.mozRequestFullscreen;
+        if (req) req.call(view);
+        view.classList.add('nvr-fullscreen');
+        if (sidebar) sidebar.classList.add('nvr-sidebar-hidden');
+        nvrIsFullscreen = true;
+        _updateFullscreenBtn(true);
+    } else {
+        _exitNVRFullscreen();
+    }
+}
+
+function _exitNVRFullscreen() {
+    const view    = document.getElementById('view-nvr');
+    const sidebar = view ? view.querySelector('.nvr-sidebar') : null;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+    if (view)    view.classList.remove('nvr-fullscreen');
+    if (sidebar) sidebar.classList.remove('nvr-sidebar-hidden', 'nvr-sidebar-peek');
+    nvrIsFullscreen = false;
+    _updateFullscreenBtn(false);
+}
+
+function _updateFullscreenBtn(isFs) {
+    const btn   = document.getElementById('nvrFullscreenBtn');
+    const iconIn  = document.getElementById('nvrFsIconIn');
+    const iconOut = document.getElementById('nvrFsIconOut');
+    if (!btn) return;
+    if (isFs) {
+        if (iconIn)  iconIn.classList.add('hidden');
+        if (iconOut) iconOut.classList.remove('hidden');
+        btn.title = 'Exit Fullscreen';
+    } else {
+        if (iconIn)  iconIn.classList.remove('hidden');
+        if (iconOut) iconOut.classList.add('hidden');
+        btn.title = 'Fullscreen';
+    }
+}
+
+// Reveal sidebar on hover in fullscreen (peek mode)
+function nvrSidebarPeek(show) {
+    if (!nvrIsFullscreen) return;
+    const sidebar = document.querySelector('#view-nvr .nvr-sidebar');
+    if (!sidebar) return;
+    if (show) {
+        sidebar.classList.add('nvr-sidebar-peek');
+    } else {
+        sidebar.classList.remove('nvr-sidebar-peek');
+    }
+}
+
+// Listen for native fullscreen exit (ESC key / browser UI)
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && nvrIsFullscreen) {
+        _exitNVRFullscreen();
+    }
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    if (!document.webkitFullscreenElement && nvrIsFullscreen) {
+        _exitNVRFullscreen();
+    }
+});
 
 async function autoPlayAllNVR() {
     const btn  = document.getElementById('nvrAutoPlayBtn');
