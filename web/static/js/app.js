@@ -1,4 +1,4 @@
-// Global State - v51 (NVR: grid paging, sidebar full list)
+// Global State - v52 (NVR: CSS dark: Tailwind fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3058,25 +3058,6 @@ function _buildCameraPool(query) {
         .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
 }
 
-// ── Theme support ──────────────────────────────────────────────────────────
-function updateNVRTheme() {
-    const isDark = document.documentElement.classList.contains('dark');
-    const view   = document.getElementById('view-nvr');
-    if (!view) return;
-    const sidebar = view.querySelector('.nvr-sidebar');
-    const toolbar = view.querySelector('.nvr-toolbar');
-    if (isDark) {
-        view.classList.add('bg-slate-950'); view.classList.remove('bg-slate-100');
-        if (sidebar) { sidebar.classList.add('bg-slate-900','border-slate-800'); sidebar.classList.remove('bg-white','border-slate-200'); }
-        if (toolbar) { toolbar.classList.add('bg-slate-900','border-slate-800'); toolbar.classList.remove('bg-white','border-slate-200'); }
-    } else {
-        view.classList.remove('bg-slate-950'); view.classList.add('bg-slate-100');
-        if (sidebar) { sidebar.classList.remove('bg-slate-900','border-slate-800'); sidebar.classList.add('bg-white','border-slate-200'); }
-        if (toolbar) { toolbar.classList.remove('bg-slate-900','border-slate-800'); toolbar.classList.add('bg-white','border-slate-200'); }
-    }
-    renderNVRGrid();
-}
-
 // ── Sidebar: full camera list for manual assign ────────────────────────────
 function filterNVRCameras() {
     renderNVRCameraList();
@@ -3180,7 +3161,6 @@ function renderNVRGrid() {
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
 
-    const isDark    = document.documentElement.classList.contains('dark');
     const cap       = nvrGridSize * nvrGridSize;
     const startIdx  = nvrGridPage * cap;
     const pageSlice = nvrCameraPool.slice(startIdx, startIdx + cap);
@@ -3199,7 +3179,7 @@ function renderNVRGrid() {
 
         slot.className = [
             'nvr-cell relative group overflow-hidden flex items-center justify-center transition-all duration-150 cursor-crosshair',
-            isDark ? 'bg-slate-900' : 'bg-slate-300',
+            'bg-slate-300 dark:bg-slate-900',
             isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
@@ -3227,7 +3207,7 @@ function renderNVRGrid() {
             `;
         } else {
             slot.innerHTML = `
-                <div class="flex flex-col items-center gap-1 pointer-events-none select-none ${isDark?'text-slate-700':'text-slate-400'} group-hover:text-slate-500 transition-colors">
+                <div class="flex flex-col items-center gap-1 pointer-events-none select-none ${'text-slate-400 dark:text-slate-700'} group-hover:text-slate-500 transition-colors">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" /></svg>
                     <span class="text-[8px] font-black uppercase tracking-widest">Empty</span>
                 </div>
