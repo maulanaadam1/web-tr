@@ -1013,27 +1013,17 @@
                     <div id="nvrCameraList" class="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
                         <div class="text-center py-8 text-slate-400 italic text-xs">Loading...</div>
                     </div>
-                    <!-- Paging Controls -->
-                    <div class="p-2 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
-                        <button id="nvrPrevBtn" onclick="nvrPagePrev()" disabled
-                            class="flex-1 px-2 py-1.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                            &#8592; Prev
-                        </button>
-                        <span id="nvrPageText" class="text-[10px] font-black text-slate-400 dark:text-slate-500 min-w-[40px] text-center">1 / 1</span>
-                        <button id="nvrNextBtn" onclick="nvrPageNext()"
-                            class="flex-1 px-2 py-1.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-600 dark:hover:text-brand-400 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
-                            Next &#8594;
-                        </button>
-                    </div>
+
                 </div>
 
                 <!-- NVR GRID AREA -->
                 <div class="flex-1 flex flex-col relative">
                     <div class="nvr-toolbar h-11 bg-slate-900 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 transition-colors">
                         <div class="flex items-center gap-4">
-                             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest" id="nvrStatusText">0 SLOTS ACTIVE</span>
+                             <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest" id="nvrStatusText">0 / 0 SLOTS</span>
                         </div>
                         <div class="flex items-center gap-1">
+                            <!-- Grid size buttons -->
                             <button onclick="setNVRGrid(2)" class="grid-btn p-1.5 rounded transition-all bg-slate-800 text-brand-400" data-size="2" title="2x2 Grid">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
                             </button>
@@ -1043,11 +1033,22 @@
                             <button onclick="setNVRGrid(4)" class="grid-btn p-1.5 rounded transition-all text-slate-500 hover:text-brand-400" data-size="4" title="4x4 Grid">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h3v3H4V4zm4 0h3v3H8V4zm4 0h3v3h-3V4zm4 0h3v3h-3V4zm-12 5h3v3H4V9zm4 0h3v3H8V9zm4 0h3v3h-3V9zm4 0h3v3h-3V9zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3z"/></svg>
                             </button>
-                            <div class="w-px h-4 bg-slate-800 mx-2"></div>
-                            <button onclick="autoPlayAllNVR()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-black rounded transition-all shadow-lg shadow-brand-500/20 mr-2" id="nvrAutoPlayBtn">
+                            <div class="w-px h-4 bg-slate-700 mx-2"></div>
+                            <!-- Grid page navigation -->
+                            <button id="nvrGridPrevBtn" onclick="nvrGridPrev()" disabled title="Previous Page"
+                                class="p-1.5 rounded transition-all text-slate-500 hover:text-brand-400 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                            <span id="nvrGridPageText" class="text-[10px] font-black text-slate-400 min-w-[36px] text-center tabular-nums">1 / 1</span>
+                            <button id="nvrGridNextBtn" onclick="nvrGridNext()" title="Next Page"
+                                class="p-1.5 rounded transition-all text-slate-500 hover:text-brand-400 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                            <div class="w-px h-4 bg-slate-700 mx-2"></div>
+                            <button onclick="autoPlayAllNVR()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-black rounded transition-all shadow-lg shadow-brand-500/20" id="nvrAutoPlayBtn">
                                 AUTO PLAY
                             </button>
-                            <button onclick="clearNVRGrid()" class="px-3 py-1.5 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 text-[10px] font-black rounded transition-all">
+                            <button onclick="clearNVRGrid()" class="ml-1 px-3 py-1.5 bg-slate-800 hover:bg-red-900/40 text-slate-400 hover:text-red-400 text-[10px] font-black rounded transition-all">
                                 CLEAR
                             </button>
                         </div>
@@ -1687,7 +1688,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=50"></script>
+    <script src="/static/js/app.js?v=51"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>

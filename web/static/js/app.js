@@ -1,4 +1,4 @@
-// Global State - v50 (NVR: themes, paging, fill, auto-fill grid)
+// Global State - v51 (NVR: grid paging, sidebar full list)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3033,124 +3033,98 @@ function openUserHub(userId) {
 }
 
 // --- NVR / Multi-Stream View Logic ---
-let nvrGridSize = 2;         // Default 2x2
-let nvrSelectedIndex = 0;   // Active slot index
-let nvrSlots = Array(16).fill(null); // Camera per slot
-let nvrPage = 0;             // Paging: which "page" of cameras shown in list
+let nvrGridSize    = 2;    // columns x rows
+let nvrGridPage    = 0;    // current grid page (0-indexed)
+let nvrSelectedIndex = 0;  // active slot for manual assign
 
-const NVR_PER_PAGE = 20;
+// All enabled streams for NVR (populated from allStreams)
+let nvrCameraPool  = [];   // full sorted list for the grid paging
 
 function initNVRView() {
-    nvrPage = 0;
+    nvrGridPage = 0;
+    nvrSelectedIndex = 0;
+    _buildCameraPool();
     renderNVRGrid();
     renderNVRCameraList();
-    updateNVRTheme();
+    _updateNVRGridPager();
+}
+
+// Build sorted pool from allStreams
+function _buildCameraPool(query) {
+    const q = (query || '').toLowerCase();
+    nvrCameraPool = [...allStreams]
+        .filter(s => s.enabled !== false)
+        .filter(s => !q || s.name.toLowerCase().includes(q) || (s.display_name||'').toLowerCase().includes(q))
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
 }
 
 // ── Theme support ──────────────────────────────────────────────────────────
 function updateNVRTheme() {
     const isDark = document.documentElement.classList.contains('dark');
-    const view = document.getElementById('view-nvr');
+    const view   = document.getElementById('view-nvr');
     if (!view) return;
     const sidebar = view.querySelector('.nvr-sidebar');
     const toolbar = view.querySelector('.nvr-toolbar');
-    const grid    = document.getElementById('nvrGridArea');
     if (isDark) {
-        view.classList.add('bg-slate-950');
-        view.classList.remove('bg-slate-100');
+        view.classList.add('bg-slate-950'); view.classList.remove('bg-slate-100');
         if (sidebar) { sidebar.classList.add('bg-slate-900','border-slate-800'); sidebar.classList.remove('bg-white','border-slate-200'); }
         if (toolbar) { toolbar.classList.add('bg-slate-900','border-slate-800'); toolbar.classList.remove('bg-white','border-slate-200'); }
-        if (grid)    { grid.classList.add('bg-black'); grid.classList.remove('bg-slate-200'); }
     } else {
-        view.classList.remove('bg-slate-950');
-        view.classList.add('bg-slate-100');
+        view.classList.remove('bg-slate-950'); view.classList.add('bg-slate-100');
         if (sidebar) { sidebar.classList.remove('bg-slate-900','border-slate-800'); sidebar.classList.add('bg-white','border-slate-200'); }
         if (toolbar) { toolbar.classList.remove('bg-slate-900','border-slate-800'); toolbar.classList.add('bg-white','border-slate-200'); }
-        if (grid)    { grid.classList.remove('bg-black'); grid.classList.add('bg-slate-200'); }
     }
+    renderNVRGrid();
 }
 
-// ── Camera list & search ───────────────────────────────────────────────────
+// ── Sidebar: full camera list for manual assign ────────────────────────────
 function filterNVRCameras() {
-    nvrPage = 0;
     renderNVRCameraList();
 }
 
 function renderNVRCameraList() {
-    const list   = document.getElementById('nvrCameraList');
-    const pageEl = document.getElementById('nvrPageText');
+    const list  = document.getElementById('nvrCameraList');
     if (!list) return;
 
     const query  = (document.getElementById('nvrSearch')?.value || '').toLowerCase();
-    const sorted = [...allStreams]
+    const isDark = document.documentElement.classList.contains('dark');
+    const pools  = [...allStreams]
         .filter(s => s.enabled !== false)
         .filter(s => !query || s.name.toLowerCase().includes(query) || (s.display_name||'').toLowerCase().includes(query))
-        .sort((a,b) => (b.online?1:0) - (a.online?1:0));
-
-    const total = sorted.length;
-    const pages = Math.ceil(total / NVR_PER_PAGE) || 1;
-    if (nvrPage >= pages) nvrPage = pages - 1;
-
-    const slice = sorted.slice(nvrPage * NVR_PER_PAGE, (nvrPage + 1) * NVR_PER_PAGE);
-    const isDark = document.documentElement.classList.contains('dark');
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
 
     list.innerHTML = '';
-    if (slice.length === 0) {
+    if (pools.length === 0) {
         list.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs">No cameras</div>';
+        return;
     }
-    slice.forEach(s => {
+    pools.forEach(s => {
         const div = document.createElement('div');
-        div.className = `p-2.5 rounded-lg cursor-pointer transition-all border border-transparent flex items-center gap-2.5 group ${isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`;
+        div.className = `p-2.5 rounded-lg cursor-pointer transition-all border border-transparent flex items-center gap-2 group ${isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`;
         div.onclick = () => selectCameraForNVR(s);
         div.innerHTML = `
-            <div class="w-7 h-7 rounded flex-shrink-0 flex items-center justify-center ${s.online ? (isDark?'bg-brand-900/30 text-brand-400':'bg-brand-50 text-brand-600') : (isDark?'bg-slate-800 text-slate-600':'bg-slate-100 text-slate-400')}">
+            <div class="w-6 h-6 rounded flex-shrink-0 flex items-center justify-center ${s.online ? (isDark?'text-brand-400':'text-brand-600') : (isDark?'text-slate-600':'text-slate-400')}">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
             </div>
             <div class="flex-1 min-w-0">
-                <p class="text-[11px] font-bold truncate leading-tight">${s.display_name || s.name}</p>
+                <p class="text-[10px] font-bold truncate">${s.display_name || s.name}</p>
                 <div class="flex items-center gap-1">
                     <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.online ? 'bg-green-500' : 'bg-slate-400'}"></span>
                     <p class="text-[9px] text-slate-500 truncate">${s.online ? 'Online' : 'Offline'}</p>
                 </div>
-            </div>
-        `;
+            </div>`;
         list.appendChild(div);
     });
-
-    // Update paging
-    if (pageEl) pageEl.textContent = `${nvrPage + 1} / ${pages}`;
-    const prevBtn = document.getElementById('nvrPrevBtn');
-    const nextBtn = document.getElementById('nvrNextBtn');
-    if (prevBtn) prevBtn.disabled = nvrPage === 0;
-    if (nextBtn) nextBtn.disabled = nvrPage >= pages - 1;
 }
 
-function nvrPagePrev() { if (nvrPage > 0) { nvrPage--; renderNVRCameraList(); } }
-function nvrPageNext() {
-    const query  = (document.getElementById('nvrSearch')?.value || '').toLowerCase();
-    const total  = allStreams.filter(s => s.enabled !== false && (!query || s.name.toLowerCase().includes(query) || (s.display_name||'').toLowerCase().includes(query))).length;
-    if ((nvrPage + 1) * NVR_PER_PAGE < total) { nvrPage++; renderNVRCameraList(); }
-}
-
-// ── Grid ───────────────────────────────────────────────────────────────────
+// ── Grid SIZE change ───────────────────────────────────────────────────────
 function setNVRGrid(size) {
-    const prevSize = nvrGridSize;
-    nvrGridSize = size;
-    if (nvrSelectedIndex >= size * size) nvrSelectedIndex = 0;
-
-    // Auto-fill newly uncovered empty slots from remaining online cameras
-    if (size > prevSize) {
-        const usedNames = nvrSlots.filter(Boolean).map(s => s.name);
-        const available = allStreams.filter(s => s.online && s.enabled !== false && !usedNames.includes(s.name));
-        let ai = 0;
-        for (let i = prevSize * prevSize; i < size * size; i++) {
-            if (!nvrSlots[i] && ai < available.length) {
-                nvrSlots[i] = available[ai++];
-            }
-        }
-    }
-
+    nvrGridSize  = size;
+    nvrGridPage  = 0;       // reset to first page on grid size change
+    nvrSelectedIndex = 0;
+    _buildCameraPool();
     renderNVRGrid();
+    _updateNVRGridPager();
 
     document.querySelectorAll('.grid-btn').forEach(btn => {
         const active = parseInt(btn.dataset.size) === size;
@@ -3158,113 +3132,167 @@ function setNVRGrid(size) {
         btn.classList.toggle('text-brand-400', active);
         btn.classList.toggle('text-slate-500', !active);
     });
-
-    const active = nvrSlots.filter((s, i) => i < size * size && s !== null).length;
-    const statusEl = document.getElementById('nvrStatusText');
-    if (statusEl) statusEl.textContent = `${active} / ${size * size} SLOTS ACTIVE`;
 }
 
+// ── Grid PAGING ────────────────────────────────────────────────────────────
+function _totalGridPages() {
+    const cap = nvrGridSize * nvrGridSize;
+    return Math.max(1, Math.ceil(nvrCameraPool.length / cap));
+}
+
+function _updateNVRGridPager() {
+    const total   = _totalGridPages();
+    const pageEl  = document.getElementById('nvrGridPageText');
+    const prevBtn = document.getElementById('nvrGridPrevBtn');
+    const nextBtn = document.getElementById('nvrGridNextBtn');
+    const status  = document.getElementById('nvrStatusText');
+    const cap     = nvrGridSize * nvrGridSize;
+
+    if (pageEl)  pageEl.textContent = `${nvrGridPage + 1} / ${total}`;
+    if (prevBtn) prevBtn.disabled   = nvrGridPage === 0;
+    if (nextBtn) nextBtn.disabled   = nvrGridPage >= total - 1;
+
+    // Active slot count on this page
+    const startIdx  = nvrGridPage * cap;
+    const pageSlice = nvrCameraPool.slice(startIdx, startIdx + cap);
+    const active    = pageSlice.length;
+    if (status) status.textContent = `${active} / ${cap} SLOTS  |  PAGE ${nvrGridPage + 1} / ${total}`;
+}
+
+function nvrGridPrev() {
+    if (nvrGridPage > 0) {
+        nvrGridPage--;
+        renderNVRGrid();
+        _updateNVRGridPager();
+    }
+}
+
+function nvrGridNext() {
+    if (nvrGridPage < _totalGridPages() - 1) {
+        nvrGridPage++;
+        renderNVRGrid();
+        _updateNVRGridPager();
+    }
+}
+
+// ── Render grid from camera pool ────────────────────────────────────────────
 function renderNVRGrid() {
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
 
-    area.innerHTML = '';
-    const totalSlots = nvrGridSize * nvrGridSize;
+    const isDark    = document.documentElement.classList.contains('dark');
+    const cap       = nvrGridSize * nvrGridSize;
+    const startIdx  = nvrGridPage * cap;
+    const pageSlice = nvrCameraPool.slice(startIdx, startIdx + cap);
 
-    area.className = 'flex-1 p-0.5 grid';
+    area.innerHTML = '';
     area.style.display = 'grid';
     area.style.gridTemplateColumns = `repeat(${nvrGridSize}, 1fr)`;
-    area.style.gridTemplateRows = `repeat(${nvrGridSize}, 1fr)`;
-    area.style.gap = '2px';
+    area.style.gridTemplateRows    = `repeat(${nvrGridSize}, 1fr)`;
+    area.style.gap    = '2px';
     area.style.height = '100%';
 
-    const isDark = document.documentElement.classList.contains('dark');
-
-    for (let i = 0; i < totalSlots; i++) {
+    for (let i = 0; i < cap; i++) {
+        const s = pageSlice[i] || null;
         const slot = document.createElement('div');
         const isActive = nvrSelectedIndex === i;
+
         slot.className = [
-            'nvr-cell relative group overflow-hidden transition-all duration-200 cursor-crosshair flex items-center justify-center',
-            isDark ? 'bg-slate-900' : 'bg-slate-200',
-            isActive ? 'ring-2 ring-brand-500 ring-inset z-10' : '',
+            'nvr-cell relative group overflow-hidden flex items-center justify-center transition-all duration-150 cursor-crosshair',
+            isDark ? 'bg-slate-900' : 'bg-slate-300',
+            isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
         slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
 
-        if (nvrSlots[i]) {
-            const s = nvrSlots[i];
-            // Inject CSS to hide go2rtc status bar and force video fill
+        if (s) {
+            const globalIdx = startIdx + i;
             slot.innerHTML = `
-                <style>
-                    .nvr-cell iframe { border:0; display:block; }
-                </style>
                 <div class="absolute inset-0 z-0" style="overflow:hidden;">
                     <iframe
-                        src="/rtc/stream.html?src=${encodeURIComponent(s.name)}&controls=0&mse=0"
-                        style="width:100%;height:calc(100% + 40px);margin-top:-40px;border:none;display:block;"
+                        src="/rtc/stream.html?src=${encodeURIComponent(s.name)}"
+                        style="width:100%;height:calc(100% + 44px);margin-top:-44px;border:none;display:block;"
                         allow="autoplay; fullscreen"
                         scrolling="no"
                     ></iframe>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                <div class="absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     <p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>
                 </div>
                 <div class="absolute top-1 right-1 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="removeNVRStream(${i}, event)" class="p-1 bg-red-500/90 hover:bg-red-500 text-white rounded">
+                    <button onclick="removeNVRSlot(${i}, event)" class="p-1 bg-red-500/90 hover:bg-red-500 text-white rounded">
                         <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                 </div>
-                ${isActive ? '<div class="absolute inset-0 ring-2 ring-brand-500 pointer-events-none z-20"></div>' : ''}
+                ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20"></div>' : ''}
             `;
         } else {
             slot.innerHTML = `
-                <div class="flex flex-col items-center gap-1.5 ${isDark?'text-slate-700':'text-slate-400'} group-hover:text-slate-500 transition-colors pointer-events-none select-none">
+                <div class="flex flex-col items-center gap-1 pointer-events-none select-none ${isDark?'text-slate-700':'text-slate-400'} group-hover:text-slate-500 transition-colors">
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" /></svg>
-                    <span class="text-[8px] font-black uppercase tracking-[0.15em]">Slot ${i+1}</span>
+                    <span class="text-[8px] font-black uppercase tracking-widest">Empty</span>
                 </div>
-                ${isActive ? '<div class="absolute inset-0 ring-2 ring-brand-500 pointer-events-none"></div>' : ''}
+                ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none"></div>' : ''}
             `;
         }
         area.appendChild(slot);
     }
 }
 
-function selectCameraForNVR(camera) {
-    nvrSlots[nvrSelectedIndex] = camera;
-    // Move to next empty slot
-    let nextEmpty = nvrSlots.findIndex((s, i) => i < nvrGridSize * nvrGridSize && s === null);
-    nvrSelectedIndex = nextEmpty !== -1 ? nextEmpty : (nvrSelectedIndex + 1) % (nvrGridSize * nvrGridSize);
+// Remove a camera from the pool at a specific page slot
+function removeNVRSlot(slotIdx, e) {
+    if (e) e.stopPropagation();
+    const globalIdx = nvrGridPage * (nvrGridSize * nvrGridSize) + slotIdx;
+    if (globalIdx < nvrCameraPool.length) {
+        nvrCameraPool.splice(globalIdx, 1);
+    }
     renderNVRGrid();
-    setNVRGrid(nvrGridSize);
+    _updateNVRGridPager();
 }
 
-function removeNVRStream(idx, e) {
-    if (e) e.stopPropagation();
-    nvrSlots[idx] = null;
+// Manual assign: put camera into selected slot on this page
+function selectCameraForNVR(camera) {
+    const cap       = nvrGridSize * nvrGridSize;
+    const globalIdx = nvrGridPage * cap + nvrSelectedIndex;
+
+    // Replace or insert
+    if (globalIdx < nvrCameraPool.length) {
+        nvrCameraPool[globalIdx] = camera;
+    } else {
+        // fill gaps with nulls then insert
+        while (nvrCameraPool.length < globalIdx) nvrCameraPool.push(null);
+        nvrCameraPool[globalIdx] = camera;
+    }
+
+    // Move to next slot
+    nvrSelectedIndex = (nvrSelectedIndex + 1) % cap;
     renderNVRGrid();
-    setNVRGrid(nvrGridSize);
+    _updateNVRGridPager();
 }
 
 function clearNVRGrid() {
-    nvrSlots = Array(16).fill(null);
+    nvrCameraPool    = [];
+    nvrGridPage      = 0;
     nvrSelectedIndex = 0;
     renderNVRGrid();
-    setNVRGrid(nvrGridSize);
+    _updateNVRGridPager();
 }
 
 async function autoPlayAllNVR() {
-    const btn = document.getElementById('nvrAutoPlayBtn');
-    const orig = btn.textContent;
+    const btn  = document.getElementById('nvrAutoPlayBtn');
+    const orig = btn.textContent.trim();
     btn.textContent = '...';
-    btn.disabled = true;
-    nvrSlots = Array(16).fill(null);
-    const available = allStreams.filter(s => s.online && s.enabled !== false);
-    const cap = nvrGridSize * nvrGridSize;
-    for (let i = 0; i < cap && i < available.length; i++) nvrSlots[i] = available[i];
+    btn.disabled    = true;
+
+    _buildCameraPool();   // rebuild from allStreams (online first)
+    nvrGridPage = 0;
+    nvrSelectedIndex = 0;
+
     renderNVRGrid();
-    setNVRGrid(nvrGridSize);
+    _updateNVRGridPager();
+
     setTimeout(() => {
         btn.textContent = orig;
-        btn.disabled = false;
-        showToast(`Auto-played ${nvrSlots.filter(s => s !== null).length} active streams`);
-    }, 1000);
+        btn.disabled    = false;
+        showToast(`Loaded ${nvrCameraPool.length} cameras across ${_totalGridPages()} pages`);
+    }, 800);
 }
