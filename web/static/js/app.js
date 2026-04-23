@@ -1,4 +1,4 @@
-// Global State - v48 (NVR Multi-view Sync)
+// Global State - v49 (NVR Init Fix + Correct Stream URL)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -71,6 +71,10 @@ function switchView(viewName) {
 
     if (viewName === 'waitinglist') {
         loadWaitingList();
+    }
+
+    if (viewName === 'nvr') {
+        initNVRView();
     }
 
     // Refresh Data for specific views
@@ -3119,7 +3123,7 @@ function renderNVRGrid() {
             const s = nvrSlots[i];
             slot.innerHTML = `
                 <div class="absolute inset-0 z-0">
-                    <iframe src="/stream/${s.name}" class="w-full h-full border-none" allow="autoplay; fullscreen"></iframe>
+                    <iframe src="/rtc/stream.html?src=${encodeURIComponent(s.name)}" class="w-full h-full border-none" allow="autoplay; fullscreen"></iframe>
                 </div>
                 <div class="absolute top-2 left-2 z-10 px-2 py-0.5 bg-black/80 backdrop-blur-md rounded text-[9px] font-black text-white border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-tighter">
                     ${s.display_name || s.name}
