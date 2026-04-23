@@ -1,4 +1,4 @@
-// Global State - v63 (Clean up syntax error)
+// Global State - v64 (NVR fix syntax + re-push v61 logic)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3409,6 +3409,4 @@ async function autoPlayAllNVR() {
         btn.innerHTML = originalHtml;
         showToast(`Auto-populated ${nvrCameraPool.length} online cameras`);
     }, 600);
-} pages`);
-    }, 800);
 }
