@@ -152,33 +152,6 @@
             .col-source-url { display: none !important; }
         }
 
-        /* NVR Fullscreen */
-        #view-nvr.nvr-fullscreen {
-            position: fixed !important;
-            inset: 0 !important;
-            z-index: 9999 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-        }
-        #view-nvr .nvr-sidebar {
-            transition: width 0.25s ease, opacity 0.25s ease, transform 0.25s ease;
-        }
-        #view-nvr .nvr-sidebar.nvr-sidebar-hidden {
-            width: 0 !important;
-            min-width: 0 !important;
-            overflow: hidden;
-            opacity: 0;
-            transform: translateX(-100%);
-        }
-        #view-nvr .nvr-sidebar.nvr-sidebar-peek {
-            width: 16rem !important;
-            opacity: 1 !important;
-            transform: translateX(0) !important;
-            position: absolute;
-            top: 0; left: 0; bottom: 0;
-            z-index: 100;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.4);
-        }
         /* Hover trigger zone in fullscreen */
         #view-nvr.nvr-fullscreen .nvr-peek-trigger {
             display: block !important;
@@ -932,7 +905,29 @@
                         height: 4px !important;
                         margin: 3px !important;
                     }
-                </style>
+                    /* ── NVR View ─────────────────────────────────────────── */
+        #view-nvr .nvr-sidebar {
+            transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        #view-nvr .nvr-sidebar.nvr-sidebar-peek {
+            transform: translateX(0) !important;
+            opacity: 1 !important;
+        }
+        /* Fullscreen: expand NVR to cover viewport */
+        #view-nvr.nvr-fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 9999 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+        /* Wider peek trigger in fullscreen */
+        #view-nvr.nvr-fullscreen .nvr-peek-trigger {
+            width: 1rem;
+        }
+    </style>
 
                 <!-- Map Action Bar -->
                 <div id="ccMapActionBar" class="absolute top-4 left-2 right-2 md:left-4 md:right-auto z-[1000] flex flex-col items-start gap-2 md:max-w-xl transition-all duration-300 pointer-events-none">
@@ -1032,88 +1027,108 @@
             </div>
 
             <!-- NVR VIEW (MULTI-STREAM) -->
-            <div id="view-nvr" class="hidden flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-100 dark:bg-slate-950 transition-colors">
+            <div id="view-nvr" class="hidden flex h-[calc(100vh-4rem)] overflow-hidden bg-slate-100 dark:bg-slate-950 transition-colors relative">
 
-                <!-- NVR SIDEBAR -->
-                <!-- Hover trigger zone: visible only in fullscreen -->
-                <div class="nvr-peek-trigger absolute top-0 left-0 bottom-0 w-4 z-50 cursor-pointer"
+                <!-- Sidebar hover-trigger zone (always, not just fullscreen) -->
+                <div class="nvr-peek-trigger absolute top-0 left-0 bottom-0 w-2 z-50 cursor-pointer"
                     onmouseenter="nvrSidebarPeek(true)"></div>
-                <div class="nvr-sidebar w-64 flex-shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-colors"
+
+                <!-- NVR SIDEBAR (always auto-hidden, peek on hover) -->
+                <div class="nvr-sidebar absolute top-0 left-0 bottom-0 w-64 z-40 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-xl transition-all duration-300"
+                    style="transform: translateX(-100%);"
                     onmouseleave="nvrSidebarPeek(false)">
-                    <div class="p-3 border-b border-slate-200 dark:border-slate-800">
-                        <h3 class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Device List</h3>
-                        <div class="relative">
+
+                    <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2">
+                        <div class="relative flex-1">
                             <input type="text" id="nvrSearch" onkeyup="filterNVRCameras()" placeholder="Quick search..."
                                 class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs py-1.5 pl-7 pr-3 text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-600 focus:ring-1 focus:ring-brand-500 outline-none transition-colors">
                             <svg class="absolute left-2 top-2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                             </svg>
                         </div>
+                        <!-- Close sidebar button -->
+                        <button onclick="nvrSidebarPeek(false)" class="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
+
                     <div id="nvrCameraList" class="flex-1 overflow-y-auto p-2 space-y-0.5 custom-scrollbar">
                         <div class="text-center py-8 text-slate-400 dark:text-slate-600 italic text-xs">Loading...</div>
                     </div>
+
+                    <!-- Device count -->
+                    <div class="px-3 py-2 border-t border-slate-200 dark:border-slate-800 text-[9px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-widest text-center" id="nvrDeviceCount"></div>
                 </div>
 
-                <!-- NVR GRID AREA -->
+                <!-- NVR GRID AREA (fills all space since sidebar is overlaid) -->
                 <div class="flex-1 flex flex-col relative overflow-hidden">
-
-                    <!-- TOOLBAR -->
-                    <div class="nvr-toolbar flex-shrink-0 h-11 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 transition-colors">
-                        <div class="flex items-center gap-4">
-                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" id="nvrStatusText">0 / 0 SLOTS</span>
-                        </div>
-                        <div class="flex items-center gap-1">
-                            <!-- Grid size buttons -->
-                            <button onclick="setNVRGrid(2)" class="grid-btn p-1.5 rounded transition-all bg-slate-200 dark:bg-slate-800 text-brand-600 dark:text-brand-400" data-size="2" title="2x2 Grid">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
-                            </button>
-                            <button onclick="setNVRGrid(3)" class="grid-btn p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-size="3" title="3x3 Grid">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
-                            </button>
-                            <button onclick="setNVRGrid(4)" class="grid-btn p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-size="4" title="4x4 Grid">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h3v3H4V4zm4 0h3v3H8V4zm4 0h3v3h-3V4zm4 0h3v3h-3V4zm-12 5h3v3H4V9zm4 0h3v3H8V9zm4 0h3v3h-3V9zm4 0h3v3h-3V9zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3z"/></svg>
-                            </button>
-                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                            <!-- Grid paging -->
-                            <button id="nvrGridPrevBtn" onclick="nvrGridPrev()" disabled title="Previous Page"
-                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                            <span id="nvrGridPageText" class="text-[10px] font-black text-slate-400 dark:text-slate-500 min-w-[36px] text-center tabular-nums">1 / 1</span>
-                            <button id="nvrGridNextBtn" onclick="nvrGridNext()" title="Next Page"
-                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" /></svg>
-                            </button>
-                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-2"></div>
-                            <button onclick="autoPlayAllNVR()" id="nvrAutoPlayBtn"
-                                class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-[10px] font-black rounded transition-all shadow-sm">
-                                AUTO PLAY
-                            </button>
-                            <button onclick="clearNVRGrid()"
-                                class="ml-1 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/30 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 text-[10px] font-black rounded transition-all">
-                                CLEAR
-                            </button>
-                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 ml-2 mr-1"></div>
-                            <!-- Fullscreen toggle -->
-                            <button id="nvrFullscreenBtn" onclick="toggleNVRFullscreen()" title="Fullscreen"
-                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800">
-                                <!-- Enter fullscreen icon -->
-                                <svg id="nvrFsIconIn" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
-                                </svg>
-                                <!-- Exit fullscreen icon -->
-                                <svg id="nvrFsIconOut" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4m0 0H4m5 0L3 10m12-6v5m0 0h5m-5 0l6-6M9 15v5m0 0H4m5 0l-6-6m12 6l-5-5m5 5v-4m0 4h-4"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
 
                     <!-- GRID -->
                     <div id="nvrGridArea" class="flex-1 bg-slate-200 dark:bg-black overflow-hidden">
                     </div>
 
+                    <!-- FOOTER CONTROLS -->
+                    <div class="nvr-toolbar flex-shrink-0 h-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 transition-colors">
+
+                        <!-- Left: sidebar toggle + status -->
+                        <div class="flex items-center gap-2">
+                            <button onclick="nvrSidebarPeek(true)" title="Show Camera List"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            </button>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest" id="nvrStatusText">0 / 0 SLOTS</span>
+                        </div>
+
+                        <!-- Center: grid size + paging -->
+                        <div class="flex items-center gap-1">
+                            <button onclick="setNVRGrid(2)" class="grid-btn p-1.5 rounded transition-all bg-slate-200 dark:bg-slate-800 text-brand-600 dark:text-brand-400" data-size="2" title="2x2 Grid">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z"/></svg>
+                            </button>
+                            <button onclick="setNVRGrid(3)" class="grid-btn p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-size="3" title="3x3 Grid">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+                            </button>
+                            <button onclick="setNVRGrid(4)" class="grid-btn p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800" data-size="4" title="4x4 Grid">
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M4 4h3v3H4V4zm4 0h3v3H8V4zm4 0h3v3h-3V4zm4 0h3v3h-3V4zm-12 5h3v3H4V9zm4 0h3v3H8V9zm4 0h3v3h-3V9zm4 0h3v3h-3V9zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3zm-12 5h3v3H4v-3zm4 0h3v3H8v-3zm4 0h3v3h-3v-3zm4 0h3v3h-3v-3z"/></svg>
+                            </button>
+
+                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                            <button id="nvrGridPrevBtn" onclick="nvrGridPrev()" disabled title="Previous Page"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <span id="nvrGridPageText" class="text-[10px] font-black text-slate-400 dark:text-slate-500 min-w-[36px] text-center tabular-nums">1 / 1</span>
+                            <button id="nvrGridNextBtn" onclick="nvrGridNext()" title="Next Page"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+
+                        <!-- Right: autoplay, clear, fullscreen -->
+                        <div class="flex items-center gap-1">
+                            <!-- Auto Play icon -->
+                            <button id="nvrAutoPlayBtn" onclick="autoPlayAllNVR()" title="Auto Play All Cameras"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </button>
+                            <!-- Clear icon -->
+                            <button onclick="clearNVRGrid()" title="Clear All Slots"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </button>
+                            <div class="w-px h-4 bg-slate-200 dark:bg-slate-700"></div>
+                            <!-- Fullscreen icon -->
+                            <button id="nvrFullscreenBtn" onclick="toggleNVRFullscreen()" title="Fullscreen"
+                                class="p-1.5 rounded transition-all text-slate-400 dark:text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                                <svg id="nvrFsIconIn" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+                                </svg>
+                                <svg id="nvrFsIconOut" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9V4m0 5H4m5 0L3 3m18 6h-5m5 0V4m0 5l-6-6M9 15v5m0-5H4m5 5l-6 6m18-6h-5m5 0v5m0-5l-6 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -1745,7 +1760,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=54"></script>
+    <script src="/static/js/app.js?v=55"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
