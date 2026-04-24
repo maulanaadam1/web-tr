@@ -90,6 +90,7 @@ function switchView(viewName) {
 function applySubscriptionRestrictions() {
     const plan = window.CURRENT_PLAN || 'Free';
     const role = window.CURRENT_ROLE || 'user';
+    console.log("V94: Applying restrictions for plan:", plan);
     
     // Admins have no restrictions
     if (role === 'admin') return;
