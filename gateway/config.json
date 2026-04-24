@@ -13,7 +13,7 @@
   "cameras": [
     {
       "name": "Local",
-      "local_rtsp": "rtsp://localhost/live",
+      "local_rtsp": "rtsp://admin:o38SiN@192.168.1.8:8556/live",
       "vps_port": 0,
       "server_id": "d65681bb-d4cf-4bb4-b86f-4df02a75d405"
     }

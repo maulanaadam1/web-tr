@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/rand"
-	"crypto/tls"
 	_ "embed"
-	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -20,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -101,7 +99,7 @@ type TunnelInstance struct {
 	Card        fyne.CanvasObject
 	proxyLn     net.Listener
 	proxyPort   int
-	bridgeConn  net.Conn // used in Bridge Mode
+	pushCmd     *exec.Cmd // used for Bridge Mode (FFmpeg Push)
 	ApiCamName  string
 	PublicURL   string
 	PublicLabel *widget.Entry // Use Entry for easy selection/copy
@@ -356,9 +354,9 @@ func buildSettings() fyne.CanvasObject {
 	bridgeSection := container.NewVBox(
 		widget.NewSeparator(),
 		widget.NewLabelWithStyle("Bridge Mode (No VPN Required)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("✅ The gateway connects directly to VPS via HTTP Upgrade tunnel.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
-		widget.NewLabelWithStyle("✅ No VPN installation needed. Works behind NAT without port forwarding.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
-		widget.NewLabelWithStyle("✅ Use Server URL + API credentials above to authenticate.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("✅ The gateway PUSHES stream directly to VPS (Mode: ffmpeg-push).", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("✅ No VPN installation needed. Most stable for high-resolution cameras.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("✅ Requirements: ffmpeg.exe must be in this folder.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
 	)
 
 	checkKeepCamera := widget.NewCheck("Keep camera on server when stopped (manual stop)", nil)
@@ -1169,10 +1167,10 @@ func (inst *TunnelInstance) Stop() {
 		inst.proxyLn = nil
 	}
 
-	// Bridge Mode: close the raw TCP connection to trigger relay goroutine exit
-	if inst.bridgeConn != nil {
-		inst.bridgeConn.Close()
-		inst.bridgeConn = nil
+	// Bridge Mode v2: kill FFmpeg push process
+	if inst.pushCmd != nil && inst.pushCmd.Process != nil {
+		inst.pushCmd.Process.Kill()
+		inst.pushCmd = nil
 	}
 
 	close(inst.StopChan)
@@ -1566,23 +1564,23 @@ func registerToBackend(inst *TunnelInstance) {
 	// Save the strict UUID used for the API so we can deregister correctly later
 	inst.ApiCamName = camName
 	
-	// === Bridge Mode: Tidak pakai VPN, konek langsung ke /api/bridge ===
+	// === Bridge Mode v2: Push Mode via FFmpeg ===
 	if config.VPNMode == "bridge" {
-		err := startBridgeTunnel(inst, camName, originalRTSP)
+		err := startPushMode(inst, camName, originalRTSP)
 		if err != nil {
-			addLog(fmt.Sprintf("[%s] ❌ Bridge tunnel failed: %v", camName, err))
-			inst.updateStatus("Bridge Failed", theme.ColorNameError)
+			addLog(fmt.Sprintf("[%s] ❌ Push failed: %v", camName, err))
+			inst.updateStatus("Push Failed", theme.ColorNameError)
 			return
 		}
-		// Public URL tetap sama, stream sudah terdaftar otomatis oleh VPS bridge handler
+		
 		baseURL := strings.TrimSuffix(config.ServerURL, "/")
 		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
 		inst.PublicURL = webURL
 		if inst.PublicLabel != nil {
 			inst.PublicLabel.SetText(webURL)
 		}
-		addLog(fmt.Sprintf("[%s] ✅ Bridge aktif! Stream: %s", camName, webURL))
-		return // Tidak perlu POST ke /api/streams — VPS bridge handler yang daftarkan
+		addLog(fmt.Sprintf("[%s] ✅ Push Aktif! Stream: %s", camName, webURL))
+		return 
 	}
 
 	var rtspSource string
@@ -1890,140 +1888,86 @@ func generateUUID() string {
 }
 
 // =============================================================
-// startBridgeTunnel — Bridge Mode (No VPN)
-// Menghubungkan kamera lokal ke VPS melalui HTTP Upgrade tunnel.
-// VPS akan auto-assign port internal dan daftarkan ke go2rtc.
-// Tidak butuh VPN, tidak butuh IP Public, tidak butuh buka port.
+// startPushMode — Bridge Mode v2 (Push/ANNOUNCE)
+// Menggunakan FFmpeg untuk "mendorong" stream RTSP ke VPS.
+// Ini 1000% lebih stabil daripada mode tunnel TCP mentah.
 // =============================================================
-func startBridgeTunnel(inst *TunnelInstance, camName string, localRTSP string) error {
-	serverURL := strings.TrimSuffix(config.ServerURL, "/")
-	u, err := url.Parse(serverURL)
+func startPushMode(inst *TunnelInstance, camName string, localRTSP string) error {
+	// 1. Cek apakah ffmpeg.exe ada
+	ffmpegPath := filepath.Join(filepath.Dir(os.Args[0]), "ffmpeg.exe")
+	if _, err := os.Stat(ffmpegPath); os.IsNotExist(err) {
+		// Coba cek di PATH sistem
+		ffmpegPath, err = exec.LookPath("ffmpeg")
+		if err != nil {
+			return fmt.Errorf("ffmpeg.exe tidak ditemukan di folder gateway atau PATH")
+		}
+	}
+
+	// 2. Siapkan URL tujuan (RTSP Push ke VPS port 8554)
+	u, err := url.Parse(config.ServerURL)
 	if err != nil {
 		return fmt.Errorf("invalid server URL: %v", err)
 	}
+	vpsHost := u.Hostname()
+	
+	// Gunakan port 8554 (standar RTSP Push go2rtc)
+	pushURL := fmt.Sprintf("rtsp://%s:8554/%s", vpsHost, camName)
 
-	host := u.Hostname()
-	portStr := u.Port()
-	useSSL := u.Scheme == "https"
-	if portStr == "" {
-		if useSSL {
-			portStr = "443"
-		} else {
-			portStr = "80"
-		}
+	addLog(fmt.Sprintf("[%s] Push: Memulai FFmpeg push ke %s...", inst.Camera.Name, pushURL))
+
+	// 3. Jalankan FFmpeg dengan parameter "copy" (0% CPU)
+	// -rtsp_transport tcp: sangat penting agar stabil di internet
+	args := []string{
+		"-hide_banner", "-loglevel", "error",
+		"-rtsp_transport", "tcp",
+		"-i", localRTSP,
+		"-c", "copy",
+		"-f", "rtsp",
+		"-rtsp_transport", "tcp",
+		pushURL,
 	}
-	addr := host + ":" + portStr
 
-	addLog(fmt.Sprintf("[%s] Bridge: Menghubungkan ke VPS %s...", inst.Camera.Name, addr))
+	cmd := exec.Command(ffmpegPath, args...)
+	
+	// Sembunyikan window CMD di windows
+	hideWindow(cmd)
 
-	// Buat koneksi TCP (dengan TLS jika HTTPS)
-	var rawConn net.Conn
-	if useSSL {
-		// Coba dengan verifikasi penuh terlebih dahulu
-		rawConn, err = tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: false})
-		if err != nil {
-			// Fallback: skip verifikasi (untuk sertifikat self-signed/EasyPanel)
-			rawConn, err = tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
-		}
-	} else {
-		rawConn, err = net.Dial("tcp", addr)
-	}
+	err = cmd.Start()
 	if err != nil {
-		return fmt.Errorf("tidak dapat konek ke VPS %s: %v", addr, err)
+		return fmt.Errorf("gagal menjalankan ffmpeg: %v", err)
 	}
 
-	// Ekstrak host:port kamera lokal dari URL RTSP
-	localHostPort := extractHostPort(localRTSP)
-	if localHostPort == "" {
-		rawConn.Close()
-		return fmt.Errorf("tidak dapat parse host:port dari RTSP URL: %s", localRTSP)
-	}
-
-	// Build HTTP Upgrade request
-	authHeader := ""
-	if config.ApiUsername != "" {
-		creds := base64.StdEncoding.EncodeToString([]byte(config.ApiUsername + ":" + config.ApiPassword))
-		authHeader = "Authorization: Basic " + creds + "\r\n"
-	}
-	reqStr := "GET /api/bridge/" + camName + " HTTP/1.1\r\n" +
-		"Host: " + host + "\r\n" +
-		"Upgrade: rtsp-bridge\r\n" +
-		"Connection: Upgrade\r\n" +
-		"X-Display-Name: " + inst.Camera.Name + "\r\n" +
-		authHeader +
-		"\r\n"
-
-	if _, err := io.WriteString(rawConn, reqStr); err != nil {
-		rawConn.Close()
-		return fmt.Errorf("gagal kirim bridge request: %v", err)
-	}
-
-	// Baca respons HTTP menggunakan bufio (penting: jaga byte setelah header)
-	rawConn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	reader := bufio.NewReader(rawConn)
-	statusLine, err := reader.ReadString('\n')
-	if err != nil {
-		rawConn.Close()
-		return fmt.Errorf("VPS tidak merespons: %v", err)
-	}
-	rawConn.SetReadDeadline(time.Time{}) // Reset deadline
-
-	if !strings.HasPrefix(statusLine, "HTTP/1.1 101") {
-		rawConn.Close()
-		return fmt.Errorf("VPS menolak bridge: %s", strings.TrimSpace(statusLine))
-	}
-
-	// Drain sisa header
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil || strings.TrimSpace(line) == "" {
-			break
-		}
-	}
-
-	addLog(fmt.Sprintf("[%s] Bridge: VPS OK, konek ke kamera lokal %s...", inst.Camera.Name, localHostPort))
-
-	// Konek ke kamera lokal
-	localConn, err := net.DialTimeout("tcp", localHostPort, 5*time.Second)
-	if err != nil {
-		rawConn.Close()
-		return fmt.Errorf("kamera lokal tidak bisa dijangkau %s: %v", localHostPort, err)
-	}
-
-	// Simpan koneksi untuk cleanup saat Stop()
 	inst.mu.Lock()
-	inst.bridgeConn = rawConn
+	inst.pushCmd = cmd
 	inst.mu.Unlock()
 
-	// Goroutine relay — berjalan sampai salah satu sisi tutup
+	// Monitoring goroutine
 	go func() {
-		defer rawConn.Close()
-		defer localConn.Close()
-		defer func() {
+		err := cmd.Wait()
+		
+		inst.mu.Lock()
+		activeCmd := inst.pushCmd
+		inst.mu.Unlock()
+		
+		// Jika matinya bukan karena kita yang stop
+		if activeCmd != nil {
+			addLog(fmt.Sprintf("[%s] Push: Terputus atau FFmpeg error: %v", inst.Camera.Name, err))
+			inst.updateStatus("Push Disconnected", theme.ColorNameWarning)
+			
 			inst.mu.Lock()
-			inst.bridgeConn = nil
+			inst.pushCmd = nil
 			inst.mu.Unlock()
-		}()
-
-		done := make(chan struct{}, 2)
-		go func() {
-			defer func() { done <- struct{}{} }()
-			// VPS → Kamera Lokal (pakai bufio reader agar byte buffer tidak terbuang)
-			io.Copy(localConn, reader)
-		}()
-		go func() {
-			defer func() { done <- struct{}{} }()
-			// Kamera Lokal → VPS
-			io.Copy(rawConn, localConn)
-		}()
-		<-done
-
-		addLog(fmt.Sprintf("[%s] Bridge tunnel terputus.", inst.Camera.Name))
-		inst.updateStatus("Disconnected (Bridge)", theme.ColorNameWarning)
-		if inst.ToggleBtn != nil {
-			inst.ToggleBtn.SetIcon(theme.MediaPlayIcon())
+			
+			if inst.ToggleBtn != nil {
+				inst.ToggleBtn.SetIcon(theme.MediaPlayIcon())
+			}
 		}
 	}()
 
 	return nil
+}
+
+func hideWindow(cmd *exec.Cmd) {
+	// Khusus Windows: sembunyikan console window
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 }
