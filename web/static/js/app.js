@@ -1,4 +1,4 @@
-// Global State - v70 (NVR: Selection fix)
+// Global State - v71 (User Subscription column)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -487,7 +487,7 @@ function renderUsersTable() {
     let filtered = allUsers.filter(u => {
         if (!query) return true;
         const statusStr = u.is_active ? 'active' : 'disabled';
-        const searchStr = `${u.full_name||''} ${u.username||''} ${u.email||''} ${u.whatsapp||''} ${u.role||''} ${statusStr}`.toLowerCase();
+        const searchStr = `${u.full_name||''} ${u.username||''} ${u.email||''} ${u.whatsapp||''} ${u.role||''} ${u.subscription_plan||''} ${statusStr}`.toLowerCase();
         return searchStr.includes(query);
     });
 
@@ -538,6 +538,16 @@ function renderUsersTable() {
 
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${roleBadgeClass}">${u.role}</span>
+            </td>
+
+            <td class="hidden md:table-cell px-6 py-4">
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                    u.subscription_plan === 'Enterprise' ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800' :
+                    u.subscription_plan === 'Advance' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' :
+                    u.subscription_plan === 'Premium' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' :
+                    u.subscription_plan === 'Basic' ? 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400' :
+                    'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }">${u.subscription_plan || 'Free'}</span>
             </td>
             
             <td class="hidden md:table-cell px-6 py-4">
