@@ -119,6 +119,12 @@ function applySubscriptionRestrictions() {
         if (dashMapHeader) dashMapHeader.style.display = 'none';
         if (dashMapCol) dashMapCol.style.display = 'none';
         if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
+
+        // NEW: Hide Share buttons
+        const btnShare = document.getElementById('btnShareDashboard');
+        const colLinkHeader = document.getElementById('colLinkHeader');
+        if (btnShare) btnShare.style.display = 'none';
+        if (colLinkHeader) colLinkHeader.style.display = 'none';
     } else {
         if (dashboardLink) dashboardLink.style.display = 'flex';
         if (ccLink) ccLink.style.display = 'flex';
@@ -131,6 +137,12 @@ function applySubscriptionRestrictions() {
         if (dashMapHeader) dashMapHeader.style.display = 'flex';
         if (dashMapCol) dashMapCol.style.display = 'block';
         if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
+
+        // NEW: Show Share buttons
+        const btnShare = document.getElementById('btnShareDashboard');
+        const colLinkHeader = document.getElementById('colLinkHeader');
+        if (btnShare) btnShare.style.display = 'flex';
+        if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
     }
 
 
@@ -285,9 +297,10 @@ function renderStreamsTable() {
                         ${s.enabled === false ? '<span class="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 uppercase">Disabled</span>' : ''}
                     </div>
                     <!-- REPLACED LIGHTNING WITH COPY LINK -->
+                    ${(window.CURRENT_PLAN === 'Enterprise' || window.CURRENT_PLAN === 'Advance') ? `
                     <button onclick="copyToClipboard('${window.location.origin}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg')" class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 rounded-lg hover:bg-emerald-100 transition-colors shadow-sm" title="Copy Processed Stream URL">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
 
@@ -322,7 +335,7 @@ function renderStreamsTable() {
                 <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded inline-block w-full" title="${s.url}">${s.url}</div>
             </td>
             
-            <td class="hidden md:table-cell px-6 py-4 text-center">
+            <td class="hidden md:table-cell px-6 py-4 text-center" style="display: ${(window.CURRENT_PLAN === 'Free' || window.CURRENT_PLAN === 'Basic' || window.CURRENT_PLAN === 'Premium') ? 'none' : ''}">
                 <button onclick="copyToClipboard('${window.location.origin}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg')" class="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors" title="Copy Processed Stream URL">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                 </button>

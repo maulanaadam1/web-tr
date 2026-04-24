@@ -453,7 +453,7 @@
                                     <div class="flex gap-2">
                                         <button onclick="reloadDashboardPreview('webrtc')" class="px-2 py-1 rounded-lg bg-blue-500/80 hover:bg-blue-600 text-[10px] font-bold text-white backdrop-blur">WebRTC</button>
                                         <button onclick="reloadDashboardPreview('mse')" class="px-2 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-800 text-[10px] font-bold text-white backdrop-blur">MSE</button>
-                                        <button onclick="openShareModal()" class="px-2 py-1 rounded-lg bg-emerald-500/80 hover:bg-emerald-600 text-[10px] font-bold text-white backdrop-blur flex items-center gap-1">
+                                        <button id="btnShareDashboard" onclick="openShareModal()" class="px-2 py-1 rounded-lg bg-emerald-500/80 hover:bg-emerald-600 text-[10px] font-bold text-white backdrop-blur flex items-center gap-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                                             Share
                                         </button>
@@ -529,7 +529,7 @@
                                     <th class="px-3 md:px-4 py-4 truncate max-w-[120px] md:max-w-none">Name / URL</th>
                                     <th class="px-4 py-4 hidden md:table-cell">Method</th>
                                     <th class="px-4 py-4 hidden md:table-cell col-source-url">Source URL</th>
-                                    <th class="px-6 py-4 hidden md:table-cell w-10 text-center">Link</th>
+                                    <th id="colLinkHeader" class="px-6 py-4 hidden md:table-cell w-10 text-center">Link</th>
                                     <th class="px-3 md:px-4 py-4 text-right w-24 md:w-auto">Actions</th>
                                 </tr>
                             </thead>
@@ -1776,7 +1776,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=88"></script>
+    <script src="/static/js/app.js?v=89"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
