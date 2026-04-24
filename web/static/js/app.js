@@ -1167,6 +1167,45 @@ async function submitStreamForm(isEdit) {
     } catch (e) { alert(e.message); }
 }
 
+async function scanLocalCameras() {
+    const listDiv = document.getElementById("scanList");
+    const container = document.getElementById("scanResults");
+    if(!listDiv || !container) return;
+
+    listDiv.innerHTML = '<p class="text-xs text-blue-500 animate-pulse">Scanning network (Port 554)... This may take a few seconds.</p>';
+    container.classList.remove("hidden");
+
+    try {
+        const response = await fetch('/api/discover');
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0) {
+                listDiv.innerHTML = '';
+                data.forEach(cam => {
+                    const btn = document.createElement("button");
+                    btn.className = "w-full text-left text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors";
+                    btn.type = "button";
+                    btn.innerHTML = `<span class="font-bold text-blue-600 dark:text-blue-400">${cam.address}</span><br><span class="text-[10px] text-gray-500 font-mono">${cam.url}</span>`;
+                    btn.onclick = () => {
+                        document.getElementById("streamUrl").value = cam.url;
+                        if(document.getElementById("streamName") && !document.getElementById("streamName").value) {
+                            document.getElementById("streamName").value = "Cam-" + cam.address.replace(/\./g, "-");
+                        }
+                        container.classList.add("hidden"); // Auto hide after selection
+                    };
+                    listDiv.appendChild(btn);
+                });
+            } else {
+                listDiv.innerHTML = '<p class="text-xs text-orange-500">No cameras found on local network.</p>';
+            }
+        } else {
+            listDiv.innerHTML = '<p class="text-xs text-red-500">Scan failed. Try again.</p>';
+        }
+    } catch (err) {
+        listDiv.innerHTML = `<p class="text-xs text-red-500">Error: ${err.message}</p>`;
+    }
+}
+
 async function testStreamConnection() {
     const urlInput = document.getElementById('streamUrl').value.trim();
     if (!urlInput) { alert("Please enter a URL first"); return; }

@@ -1195,11 +1195,14 @@
                                         <div id="scanList" class="space-y-1"></div>
                                     </div>
                                 </div>
-                                <div>
-                                    <label for="streamUrl"
-                                        class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">Source
-                                        URL
-                                        (RTSP/HTTP)</label>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label for="streamUrl"
+                                            class="block text-sm font-medium text-gray-700 dark:text-gray-400">Source URL (RTSP/HTTP)</label>
+                                        <button type="button" onclick="scanLocalCameras()" class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                            Scan Lokal
+                                        </button>
+                                    </div>
                                     <input type="text" id="streamUrl" name="url" required
                                         placeholder="rtsp://user:pass@ip:554/stream"
                                         class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -1256,7 +1259,7 @@
                                         class="w-full bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                                         <option value="go2rtc">Go2RTC (WebRTC - Ultra Low Latency)</option>
                                         <option value="ffmpeg">FFmpeg (Transcoding / Hardware Acceleration)</option>
-                                        <option value="mediamtx">MediaMTX (Enterprise Scalable Server)</option>
+                                        <option value="mediamtx" disabled>MediaMTX (Enterprise Server - Coming Soon)</option>
                                     </select>
                                     <p id="backendHelperText" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                         <span class="font-semibold text-blue-500">Default:</span> Fastest real-time streaming directly to web browsers.
