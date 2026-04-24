@@ -126,9 +126,15 @@ function applySubscriptionRestrictions() {
         if (btnShare) btnShare.style.display = 'none';
         if (colLinkHeader) colLinkHeader.style.display = 'none';
 
-        // NEW: Show Trial Session info for Free/Basic
+        // ONLY Show Trial Session info for Free
         const trialInfo = document.getElementById('trialStatusInfo');
-        if (trialInfo) trialInfo.style.display = 'block';
+        if (trialInfo) trialInfo.style.display = (plan === 'Free') ? 'block' : 'none';
+
+        // Hide Public Hub buttons in header for Free/Basic
+        const hubContainer = document.getElementById('userPublicLinkContainer');
+        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
+        if (hubContainer) hubContainer.style.display = 'none';
+        if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
     } else {
         // Higher plans (Premium, Advance, Enterprise)
         if (dashboardLink) dashboardLink.style.display = 'flex';
@@ -153,15 +159,22 @@ function applySubscriptionRestrictions() {
         if (dashMapCol) dashMapCol.style.display = 'block';
         if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
 
-        // Share buttons logic: Restricted for Premium
+        // Share/Public Hub Logic: Restricted for Premium as well
         const btnShare = document.getElementById('btnShareDashboard');
         const colLinkHeader = document.getElementById('colLinkHeader');
+        const hubContainer = document.getElementById('userPublicLinkContainer');
+        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
+
         if (plan === 'Premium') {
             if (btnShare) btnShare.style.display = 'none';
             if (colLinkHeader) colLinkHeader.style.display = 'none';
+            if (hubContainer) hubContainer.style.display = 'none';
+            if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
         } else {
             if (btnShare) btnShare.style.display = 'flex';
             if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
+            if (hubContainer) hubContainer.style.display = 'flex';
+            if (hubRefreshBtn) hubRefreshBtn.style.display = 'inline-flex';
         }
     }
 
