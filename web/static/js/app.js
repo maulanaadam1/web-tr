@@ -122,9 +122,14 @@ function applySubscriptionRestrictions() {
         if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
 
         // Hide Share buttons
-        const btnShare = document.getElementById('btnShareDashboard');
-        const colLinkHeader = document.getElementById('colLinkHeader');
-        const btnBulkExport = document.getElementById('btnBulkExport');
+        let btnShare = document.getElementById('btnShareDashboard');
+        let colLinkHeader = document.getElementById('colLinkHeader');
+        let btnBulkExport = document.getElementById('btnBulkExport');
+
+        // Fallback for older HTML cache
+        if (!btnBulkExport) {
+            btnBulkExport = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Export') || b.title.includes('Export'));
+        }
 
         if (btnShare) btnShare.style.display = 'none';
         if (colLinkHeader) colLinkHeader.style.display = 'none';
@@ -138,6 +143,17 @@ function applySubscriptionRestrictions() {
                 startTrialCountdown(60); // 60 minutes
             } else {
                 trialInfo.style.display = 'none';
+            }
+        } else if (plan === 'Free' && !document.getElementById('tempTrialBanner')) {
+            // Fallback: Create a temporary banner if the HTML div is missing
+            const banner = document.createElement('div');
+            banner.id = 'tempTrialBanner';
+            banner.className = 'px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-lg ml-2 animate-pulse';
+            banner.innerHTML = 'FREE TRIAL: <span id="trialCountdown">60:00</span>';
+            const breadcrumb = document.getElementById('headerBreadcrumb');
+            if (breadcrumb && breadcrumb.parentElement) {
+                breadcrumb.parentElement.appendChild(banner);
+                startTrialCountdown(60);
             }
         }
 
@@ -171,11 +187,16 @@ function applySubscriptionRestrictions() {
         if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
 
         // Share/Public Hub Logic: Restricted for Premium as well
-        const btnShare = document.getElementById('btnShareDashboard');
-        const colLinkHeader = document.getElementById('colLinkHeader');
-        const btnBulkExport = document.getElementById('btnBulkExport');
+        let btnShare = document.getElementById('btnShareDashboard');
+        let colLinkHeader = document.getElementById('colLinkHeader');
+        let btnBulkExport = document.getElementById('btnBulkExport');
         const hubContainer = document.getElementById('userPublicLinkContainer');
         const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
+
+        // Fallback for older HTML cache
+        if (!btnBulkExport) {
+            btnBulkExport = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Export') || b.title.includes('Export'));
+        }
 
         if (plan === 'Premium') {
             if (btnShare) btnShare.style.display = 'none';
