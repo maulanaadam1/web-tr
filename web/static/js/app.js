@@ -104,10 +104,10 @@ function applySubscriptionRestrictions() {
         publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
     }
 
-    if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
+    if (plan === 'Free' || plan === 'Basic') {
         if (ccLink) ccLink.style.display = 'none';
         if (nvrLink) nvrLink.style.display = 'none';
-        // If they are on a hidden view, move them to cameras (Dashboard is now allowed)
+        // If they are on a hidden view, move them to cameras
         if (currentView === 'commandcenter' || currentView === 'nvr') {
             switchView('cameras');
         }
@@ -120,17 +120,25 @@ function applySubscriptionRestrictions() {
         if (dashMapCol) dashMapCol.style.display = 'none';
         if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
 
-        // NEW: Hide Share buttons
+        // Hide Share buttons
         const btnShare = document.getElementById('btnShareDashboard');
         const colLinkHeader = document.getElementById('colLinkHeader');
         if (btnShare) btnShare.style.display = 'none';
         if (colLinkHeader) colLinkHeader.style.display = 'none';
     } else {
+        // Higher plans (Premium, Advance, Enterprise)
         if (dashboardLink) dashboardLink.style.display = 'flex';
         if (ccLink) ccLink.style.display = 'flex';
-        if (nvrLink) nvrLink.style.display = 'flex';
         
-        // Show everything in Dashboard
+        // NVR logic: Restricted for Premium only
+        if (plan === 'Premium') {
+            if (nvrLink) nvrLink.style.display = 'none';
+            if (currentView === 'nvr') switchView('cameras');
+        } else {
+            if (nvrLink) nvrLink.style.display = 'flex';
+        }
+
+        // Dashboard Map visibility
         const dashMapHeader = document.getElementById('dashboardMapHeader');
         const dashMapCol = document.getElementById('dashboardMapColumn');
         const dashPrevCol = document.getElementById('dashboardPreviewColumn');
@@ -138,11 +146,16 @@ function applySubscriptionRestrictions() {
         if (dashMapCol) dashMapCol.style.display = 'block';
         if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
 
-        // NEW: Show Share buttons
+        // Share buttons logic: Restricted for Premium
         const btnShare = document.getElementById('btnShareDashboard');
         const colLinkHeader = document.getElementById('colLinkHeader');
-        if (btnShare) btnShare.style.display = 'flex';
-        if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
+        if (plan === 'Premium') {
+            if (btnShare) btnShare.style.display = 'none';
+            if (colLinkHeader) colLinkHeader.style.display = 'none';
+        } else {
+            if (btnShare) btnShare.style.display = 'flex';
+            if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
+        }
     }
 
 
@@ -177,7 +190,7 @@ function applySubscriptionRestrictions() {
     // 4. Camera Location Visibility Let people see it if they have Command Center / Dashboard
     const cameraLocationSection = document.getElementById('cameraLocationSection');
     if (cameraLocationSection) {
-        if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
+        if (plan === 'Free' || plan === 'Basic') {
             cameraLocationSection.style.display = 'none';
         } else {
             cameraLocationSection.style.display = 'block';
