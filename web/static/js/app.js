@@ -1,4 +1,4 @@
-// Global State - v68 (NVR: Physical UI Crop + Zoom)
+// Global State - v69 (NVR Clean UI Injection)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3224,35 +3224,43 @@ function renderNVRGrid() {
         };
 
         if (s) {
-            // ── Optimized Iframe Player (Physical UI Crop & Zoom) ──
+            // ── Clean NVR Player (Injection Mode) ──
             const container = document.createElement('div');
             container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black rounded-sm border border-slate-800/30';
             
             const iframe = document.createElement('iframe');
-            // OFFSET TECHNIQUE: 
-            // 1. Make iframe taller than container (to hide bottom status)
-            // 2. Scale slightly to hide any sidebars and force "fill"
-            // 3. Center the transform
-            iframe.className = 'absolute border-0';
-            iframe.style.width = '100%';
-            iframe.style.height = 'calc(100% + 42px)'; // Hide bottom 42px (status bar)
-            iframe.style.top = '0';
-            iframe.style.left = '0';
-            iframe.style.transform = 'scale(1.05)'; // Subtle zoom to remove any borders/black bars
-            iframe.style.transformOrigin = 'center top';
-            iframe.style.pointerEvents = 'none'; // Prevent interaction with internal controls
-            
+            iframe.className = 'absolute inset-0 w-full h-full border-0';
             iframe.src = `/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse`;
             iframe.allow = "autoplay; fullscreen";
+            iframe.style.pointerEvents = 'none'; 
             
-            // Double layer: still try to inject CSS if possible
+            // Interval injection logic to force-hide UI as soon as it appears
             iframe.onload = () => {
-                try {
-                    const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    const style = doc.createElement('style');
-                    style.textContent = 'video { object-fit: cover !important; } .status, .controls { display: none !important; }';
-                    doc.head.appendChild(style);
-                } catch(e) {}
+                const inject = () => {
+                    try {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!doc) return;
+                        
+                        // Hide internal components
+                        const status = doc.querySelector('.status');
+                        const controls = doc.querySelector('.controls');
+                        if (status) status.style.display = 'none';
+                        if (controls) controls.style.display = 'none';
+                        
+                        // Ensure video is zoomed (Fill)
+                        const video = doc.querySelector('video');
+                        if (video) {
+                            video.style.objectFit = 'cover';
+                            video.style.width = '100% !important';
+                            video.style.height = '100% !important';
+                        }
+                    } catch(e) {}
+                };
+                
+                // Run immediately and every 500ms for 3 seconds to catch dynamic UI updates
+                inject();
+                const timer = setInterval(inject, 500);
+                setTimeout(() => clearInterval(timer), 3000);
             };
             
             container.appendChild(iframe);
