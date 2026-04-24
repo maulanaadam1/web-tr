@@ -1,4 +1,4 @@
-// Global State - v67 (NVR: Clean player + Auto Zoom)
+// Global State - v68 (NVR: Physical UI Crop + Zoom)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3224,35 +3224,35 @@ function renderNVRGrid() {
         };
 
         if (s) {
-            // ── Optimized Iframe Player (Clean & Zoom) ──
+            // ── Optimized Iframe Player (Physical UI Crop & Zoom) ──
             const container = document.createElement('div');
-            container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black';
+            container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black rounded-sm border border-slate-800/30';
             
             const iframe = document.createElement('iframe');
-            iframe.className = 'absolute inset-0 w-full h-full border-0';
+            // OFFSET TECHNIQUE: 
+            // 1. Make iframe taller than container (to hide bottom status)
+            // 2. Scale slightly to hide any sidebars and force "fill"
+            // 3. Center the transform
+            iframe.className = 'absolute border-0';
+            iframe.style.width = '100%';
+            iframe.style.height = 'calc(100% + 42px)'; // Hide bottom 42px (status bar)
+            iframe.style.top = '0';
+            iframe.style.left = '0';
+            iframe.style.transform = 'scale(1.05)'; // Subtle zoom to remove any borders/black bars
+            iframe.style.transformOrigin = 'center top';
+            iframe.style.pointerEvents = 'none'; // Prevent interaction with internal controls
+            
             iframe.src = `/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse`;
             iframe.allow = "autoplay; fullscreen";
             
-            // Inject CSS to hide all internal UI and force "cover" mode (zoom)
+            // Double layer: still try to inject CSS if possible
             iframe.onload = () => {
                 try {
                     const doc = iframe.contentDocument || iframe.contentWindow.document;
                     const style = doc.createElement('style');
-                    style.textContent = `
-                        .status { display: none !important; }
-                        .controls { display: none !important; }
-                        video { 
-                            object-fit: cover !important; 
-                            width: 100% !important; 
-                            height: 100% !important; 
-                        }
-                    `;
+                    style.textContent = 'video { object-fit: cover !important; } .status, .controls { display: none !important; }';
                     doc.head.appendChild(style);
-                } catch(e) {
-                    console.warn('Iframe CSS injection blocked (cross-origin), falling back to CSS crop');
-                    // Fallback: simple CSS crop if origin check fails
-                    iframe.style.height = 'calc(100% + 50px)';
-                }
+                } catch(e) {}
             };
             
             container.appendChild(iframe);
