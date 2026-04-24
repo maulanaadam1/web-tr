@@ -1,4 +1,4 @@
-// Global State - v69 (NVR Clean UI Injection)
+// Global State - v70 (NVR: Selection fix)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3206,10 +3206,17 @@ function renderNVRGrid() {
 
         const slot = document.createElement('div');
         slot.className = [
-            'nvr-cell relative group overflow-hidden flex items-center justify-center bg-black cursor-crosshair transition-all duration-150',
+            'nvr-cell nvr-slot-box relative group overflow-hidden flex items-center justify-center bg-black cursor-crosshair transition-all duration-150',
             isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
         ].join(' ');
-        slot.onclick = () => { nvrSelectedIndex = i; renderNVRGrid(); };
+        slot.onclick = () => { 
+            nvrSelectedIndex = i; 
+            // Update selection UI only, no full re-render (avoids stream refresh)
+            area.querySelectorAll('.nvr-slot-box').forEach((box, idx) => {
+                if (idx === i) box.classList.add('ring-2', 'ring-inset', 'ring-brand-500', 'z-10');
+                else box.classList.remove('ring-2', 'ring-inset', 'ring-brand-500', 'z-10');
+            });
+        };
         slot.ondblclick = () => { 
             if (s) {
                 // If single camera, maybe go 1x1 or toggle fullscreen for this element?
