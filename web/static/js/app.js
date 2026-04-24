@@ -1039,7 +1039,81 @@ async function openEditModal(name, url, displayName = "") {
 }
 
 function closeModal() { document.getElementById("streamModal").classList.add("hidden"); }
-function resetAdvancedOptions() { document.getElementById("advancedOptions")?.classList.add("hidden"); }
+function resetAdvancedOptions() { 
+    document.getElementById("advancedOptions")?.classList.add("hidden"); 
+    document.querySelectorAll('.opt-card').forEach(el => {
+        el.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+    });
+}
+
+function updateBackendHelperText() {
+    const backend = document.getElementById("streamBackend").value;
+    const helper = document.getElementById("backendHelperText");
+    if(backend === 'go2rtc') {
+        helper.innerHTML = '<span class="font-semibold text-blue-500">Default:</span> Fastest real-time streaming directly to web browsers.';
+    } else if (backend === 'ffmpeg') {
+        helper.innerHTML = '<span class="font-semibold text-purple-500">FFmpeg:</span> Enables deep transcoding for incompatible cameras.';
+    } else {
+        helper.innerHTML = '<span class="font-semibold text-emerald-500">MediaMTX:</span> Enterprise-grade scalable media server routing.';
+    }
+}
+
+function toggleAdvancedSettings() {
+    const opts = document.getElementById("advancedOptions");
+    if (opts) opts.classList.toggle("hidden");
+}
+
+function toggleFFmpegOptions() {
+    const type = document.getElementById('streamType')?.value;
+    const fOpts = document.getElementById('ffmpegOptions');
+    if(type === 'ffmpeg') {
+        fOpts?.classList.remove('hidden');
+    } else {
+        fOpts?.classList.add('hidden');
+    }
+}
+
+function selectOptimization(type, element) {
+    // Reset borders
+    document.querySelectorAll('.opt-card').forEach(el => {
+        el.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+    });
+    
+    // Highlight
+    if(element) {
+        element.classList.add('ring-2', 'ring-blue-500', 'border-blue-500');
+    }
+
+    const opts = document.getElementById("advancedOptions");
+    if (opts) opts.classList.remove("hidden"); // Auto expand
+
+    const typeSel = document.getElementById('streamType');
+    const vC = document.getElementById('videoCodec');
+    const aC = document.getElementById('audioCodec');
+    const hw = document.getElementById('hwAccel');
+
+    if(!typeSel || !vC) return;
+
+    if(type === 'h264_native') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h264';
+        aC.value = '';
+        hw.value = '';
+    } else if (type === 'h265_native') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h265';
+        aC.value = '';
+        hw.value = '';
+    } else if (type === 'ultra_low') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h264';
+        hw.value = 'auto'; // Suggest hw decoding
+    } else {
+        // manual
+        typeSel.value = 'direct';
+    }
+    toggleFFmpegOptions();
+}
 
 async function submitStreamForm(isEdit) {
     const displayName = document.getElementById("streamName").value.trim();
@@ -1049,6 +1123,25 @@ async function submitStreamForm(isEdit) {
     const lng = parseFloat(document.getElementById("streamLng").value) || 0;
     const enabled = document.getElementById("streamEnabled").checked;
     const disable_audio = document.getElementById("streamDisableAudio").checked;
+    const backend = document.getElementById("streamBackend")?.value || "go2rtc";
+
+    // Build URL if using Advanced tuning
+    const streamType = document.getElementById("streamType")?.value;
+    if (streamType === "ffmpeg") {
+        const vc = document.getElementById("videoCodec")?.value || "";
+        const ac = document.getElementById("audioCodec")?.value || "";
+        const hw = document.getElementById("hwAccel")?.value || "";
+        
+        let ffmpegArgs = [];
+        if (vc) ffmpegArgs.push("video=" + vc);
+        if (ac) ffmpegArgs.push("audio=" + ac);
+        if (hw) ffmpegArgs.push("hardware=" + hw);
+        
+        if (ffmpegArgs.length > 0 && !url.includes("ffmpeg:")) {
+            // Append the custom args to URL so Go2RTC parses it correctly
+            url = "ffmpeg:" + url + "#" + ffmpegArgs.join("#");
+        }
+    }
 
     if (!displayName || !url) { alert("Fields required"); return; }
 
@@ -1057,8 +1150,8 @@ async function submitStreamForm(isEdit) {
 
     const method = isEdit ? 'PUT' : 'POST';
     const body = isEdit 
-        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled, disable_audio }) 
-        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled, disable_audio });
+        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled, disable_audio, backend }) 
+        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled, disable_audio, backend });
 
     try {
         const response = await fetch('/api/streams', {
