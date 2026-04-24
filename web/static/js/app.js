@@ -1,4 +1,4 @@
-// Global State - v65 (NVR: WebRTC for ultra-smooth streaming)
+// Global State - v66 (NVR: Return to stable Iframe player)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3047,47 +3047,9 @@ let nvrIsFullscreen  = false;  // NVR fullscreen state
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
 
-// ── WebRTC Helper (optimized for zero-latency NVR) ─────────────────────────
-async function _attachWebRTC(video, streamName) {
-    const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-    });
-
-    pc.ontrack = (event) => {
-        video.srcObject = event.streams[0];
-    };
-
-    // Add dummy audio/video m-lines to trigger negotiation
-    pc.addTransceiver('video', { direction: 'sendrecv' });
-
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-
-    try {
-        const resp = await fetch(`/rtc/api/webrtc?src=${encodeURIComponent(streamName)}`, {
-            method: 'POST',
-            body: offer.sdp
-        });
-        const answer = await resp.text();
-        await pc.setRemoteDescription({ type: 'answer', sdp: answer });
-    } catch (e) {
-        console.error('WebRTC offer failed:', e);
-    }
-    
-    video._pc = pc; // store per-element for cleanup
-}
-
-function _stopNVRWebRTC() {
+function _cleanupNVRStreams() {
     const area = document.getElementById('nvrGridArea');
-    if (!area) return;
-    area.querySelectorAll('video.nvr-stream').forEach(vid => {
-        if (vid._pc) {
-            vid._pc.close();
-            vid._pc = null;
-        }
-        vid.srcObject = null;
-        vid.src = '';
-    });
+    if (area) area.querySelectorAll('iframe').forEach(f => f.src = '');
 }
 
 function initNVRView() {
@@ -3222,7 +3184,7 @@ function nvrGridNext() {
 // ── Render grid from camera pool ────────────────────────────────────────────
 function renderNVRGrid() {
     // Stop existing MJPEG streams before re-rendering
-    _stopNVRWebRTC();
+    _cleanupNVRStreams();
 
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
@@ -3262,18 +3224,18 @@ function renderNVRGrid() {
         };
 
         if (s) {
-            // ── WebRTC <video> — Zero latency, UDP based ──
-            const vid = document.createElement('video');
-            vid.className = 'nvr-stream absolute inset-0 w-full h-full';
-            vid.style.cssText = 'object-fit:cover;display:block;background:#000;';
-            vid.muted = true;
-            vid.autoplay = true;
-            vid.playsInline = true;
+            // ── Optimized Iframe Player (Stable Go2RTC) ──
+            const container = document.createElement('div');
+            container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black';
             
-            // Attach WebRTC stream
-            _attachWebRTC(vid, s.name);
+            const iframe = document.createElement('iframe');
+            // Hide the status bar by making iframe taller than the container
+            iframe.className = 'absolute inset-0 w-full h-[calc(100%+44px)] border-0';
+            iframe.src = `/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse`;
+            iframe.allow = "autoplay; fullscreen";
             
-            slot.appendChild(vid);
+            container.appendChild(iframe);
+            slot.appendChild(container);
 
             // Offline badge (hidden initially, shown on img error)
             const offBadge = document.createElement('div');
