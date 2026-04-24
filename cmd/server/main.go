@@ -368,7 +368,7 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 		allowed = true
 	}
 
-	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
+	// Allow all static assets (.js, .css, .ico, .png, .svg, .wasm, etc.) needed by the player
 	// This avoids whack-a-mole every time go2rtc adds a new dependency
 	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map"}
 	for _, ext := range staticExts {
@@ -426,7 +426,8 @@ func main() {
 	prelaunch := os.Getenv("APP_PRELAUNCH") == "true"
 	hideSignup := os.Getenv("HIDE_SIGNUP") == "true"
 	hideDocs := os.Getenv("HIDE_DOCS") == "true"
-	skipLanding := os.Getenv("SKIP_LANDING_PAGE") == "true"
+	hidePricing := os.Getenv("HIDE_PRICING") == "true"
+	skipLanding := os.Getenv("SKIP_LANDING") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
 
@@ -924,8 +925,9 @@ func main() {
 		}
 
 		tmpl.Execute(w, map[string]interface{}{
-			"HideDocs":   prelaunch || hideDocs,
-			"HideSignup": prelaunch || hideSignup,
+			"HideDocs":    prelaunch || hideDocs,
+			"HideSignup":  prelaunch || hideSignup,
+			"HidePricing": hidePricing,
 		})
 	})
 

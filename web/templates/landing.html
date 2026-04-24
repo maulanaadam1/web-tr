@@ -128,7 +128,9 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#try" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Try Now</a>
                     <a href="#features" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Features</a>
+                    {{if not .HidePricing}}
                     <a href="#pricing" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Pricing</a>
+                    {{end}}
                     <a href="#contact" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Contact</a>
                     <a href="/login" class="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">Sign In</a>
                     <a href="https://stream.campod.my.id/login?tab=signup" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Start Free</a>
@@ -304,6 +306,7 @@
     </section>
 
 
+    {{if not .HidePricing}}
     <!-- Pricing Section -->
     <section id="pricing" class="snap-slide min-h-screen flex items-center bg-slate-900 text-white z-10 overflow-hidden w-full relative">
         <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-brand-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
@@ -380,6 +383,7 @@
             </div>
         </div>
     </section>
+    {{end}}
 
     <!-- Newsletter Section -->
     <section id="newsletter" class="snap-slide min-h-[60vh] flex items-center bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-10 w-full">
@@ -461,7 +465,9 @@
                     <ul class="space-y-2 text-slate-500 dark:text-slate-400">
                         <li><a href="#try" class="hover:text-brand-600 dark:hover:text-brand-400">Coba Sekarang</a></li>
                         <li><a href="#features" class="hover:text-brand-600 dark:hover:text-brand-400">Fitur</a></li>
+                        {{if not .HidePricing}}
                         <li><a href="#pricing" class="hover:text-brand-600 dark:hover:text-brand-400">Harga</a></li>
+                        {{end}}
                         <li><a href="/login" class="hover:text-brand-600 dark:hover:text-brand-400">Login</a></li>
                     </ul>
                 </div>
