@@ -101,30 +101,33 @@ function applySubscriptionRestrictions() {
     const nvrLink = document.querySelector('.nav-link[data-view="nvr"]'); // Added NVR Link
     
     if (publicViewLink) {
-        publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
+        publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
     }
 
     if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
-        if (dashboardLink) dashboardLink.classList.add('hidden');
-        if (ccLink) ccLink.classList.add('hidden');
-        if (nvrLink) nvrLink.classList.add('hidden'); // Hide NVR
+        if (dashboardLink) dashboardLink.style.display = 'none';
+        if (ccLink) ccLink.style.display = 'none';
+        if (nvrLink) nvrLink.style.display = 'none';
         // If they are on a hidden view, move them to cameras
         if (currentView === 'dashboard' || currentView === 'commandcenter' || currentView === 'nvr') {
             switchView('cameras');
         }
 
     } else {
-        if (dashboardLink) dashboardLink.classList.remove('hidden');
-        if (ccLink) ccLink.classList.remove('hidden');
-        if (nvrLink) nvrLink.classList.remove('hidden');
+        if (dashboardLink) dashboardLink.style.display = 'flex';
+        if (ccLink) ccLink.style.display = 'flex';
+        if (nvrLink) nvrLink.style.display = 'flex';
     }
 
     // 2. Manage Camera Restrictions (Import/Export)
     const exportBtn = document.querySelector('button[onclick*="export"]');
     const importBtn = document.querySelector('button[onclick="openCSVImportModal()"]');
     if (plan !== 'Enterprise') {
-        if (exportBtn) exportBtn.classList.add('hidden');
-        if (importBtn) importBtn.classList.add('hidden');
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (importBtn) importBtn.style.display = 'none';
+    } else {
+        if (exportBtn) exportBtn.style.display = '';
+        if (importBtn) importBtn.style.display = '';
     }
 
     // 3. Add Camera Button Visibility
@@ -137,9 +140,9 @@ function applySubscriptionRestrictions() {
         if (plan === 'Enterprise') limit = 9999;
         
         if (allStreams.length >= limit) {
-            addCamBtn.classList.add('hidden');
+            addCamBtn.style.display = 'none';
         } else {
-            addCamBtn.classList.remove('hidden');
+            addCamBtn.style.display = 'inline-flex';
         }
     }
 
@@ -147,9 +150,9 @@ function applySubscriptionRestrictions() {
     const cameraLocationSection = document.getElementById('cameraLocationSection');
     if (cameraLocationSection) {
         if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
-            cameraLocationSection.classList.add('hidden');
+            cameraLocationSection.style.display = 'none';
         } else {
-            cameraLocationSection.classList.remove('hidden');
+            cameraLocationSection.style.display = 'block';
         }
     }
 }
