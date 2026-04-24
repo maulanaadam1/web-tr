@@ -15,9 +15,6 @@ type User struct {
 	BroadcastNotifications bool      `json:"broadcast_notifications"`
 	NotificationPaid       bool      `json:"notification_paid"`
 	SubscriptionPlan       string    `json:"subscription_plan"`
-	EnableSupport          bool      `json:"enable_support"`
-	EnableVPN              bool      `json:"enable_vpn"`
-	VPNPassword            string    `json:"vpn_password"`
 	PublicToken            string    `json:"public_token"`
 	CreatedAt              time.Time `json:"created_at"`
 }

@@ -37,8 +37,6 @@ type Session struct {
 	Role             string
 	SubscriptionPlan string
 	EnableSupport    bool
-	EnableVPN        bool
-	VPNPassword      string
 	PublicToken      string
 	Expiry           time.Time
 }
@@ -265,16 +263,16 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 			if err == nil && user != nil {
 				hash := db.HashPassword(password, user.Salt)
 				if hash == user.PasswordHash && user.IsActive {
-					sess := Session{
+					session := Session{
 						UserID:           user.ID,
 						Username:         user.Username,
 						Role:             user.Role,
 						SubscriptionPlan: user.SubscriptionPlan,
 						EnableSupport:    user.EnableSupport,
-						VPNPassword:      user.VPNPassword,
-						Expiry:           time.Now().Add(1 * time.Hour),
+						PublicToken:      user.PublicToken,
+						Expiry:           time.Now().Add(24 * time.Hour),
 					}
-					ctx := context.WithValue(r.Context(), sessionContextKey, sess)
+					ctx := context.WithValue(r.Context(), sessionContextKey, session)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
@@ -633,7 +631,6 @@ func main() {
 					Role:             dbUser.Role,
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
-					VPNPassword:      dbUser.VPNPassword,
 					PublicToken:      dbUser.PublicToken,
 					Expiry:           expiry,
 				}
@@ -1053,8 +1050,6 @@ func main() {
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams":   streams,
 			"Session":   sess,
-			"GlobalPSK": "jENJUbdPT49EtNG6eWkE",
-			"VPNServIP": "43.157.204.11",
 		})
 	})
 
