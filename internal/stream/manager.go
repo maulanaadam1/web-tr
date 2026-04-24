@@ -81,7 +81,7 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled bool, userID int) error {
+func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
 	if backend == "" {
 		backend = "go2rtc" // Default
 	}
@@ -94,7 +94,8 @@ func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled
 			Lat:     lat,
 			Lng:     lng,
 			Enabled: enabled,
-			UserID:  userID,
+			UserID:       userID,
+			DisableAudio: disableAudio,
 		}); err != nil {
 			return err
 		}
@@ -132,11 +133,11 @@ func (m *Manager) ClearAllStreams() error {
 	return m.ConfigManager.Save(cfg)
 }
 
-func (m *Manager) UpdateStream(oldName, name, displayName, url string, lat, lng float64, enabled bool, userID int) error {
+func (m *Manager) UpdateStream(oldName, name, displayName, url string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
 
 	backend := "go2rtc" // Forced backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, displayName, url, backend, lat, lng, enabled, userID); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, displayName, url, backend, lat, lng, enabled, userID, disableAudio); err != nil {
 			return err
 		}
 		return m.SyncFromDB()
@@ -195,7 +196,14 @@ func (m *Manager) SyncFromDB() error {
 	for _, s := range streams {
 		// Only add to go2rtc config if enabled
 		if s.Enabled {
-			cfg.Streams[s.Name] = s.URL
+			sourceURL := s.URL
+			if s.DisableAudio {
+				// go2rtc filter to only take video stream
+				if !strings.Contains(sourceURL, "#") {
+					sourceURL += "#video"
+				}
+			}
+			cfg.Streams[s.Name] = sourceURL
 		}
 	}
 

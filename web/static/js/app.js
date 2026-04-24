@@ -1013,6 +1013,7 @@ async function openEditModal(name, url, displayName = "") {
     
     const streamInfo = allStreams.find(s => s.name === name);
     document.getElementById("streamEnabled").checked = streamInfo ? streamInfo.enabled !== false : true;
+    document.getElementById("streamDisableAudio").checked = streamInfo ? streamInfo.disable_audio === true : false;
     initLocationMap(streamInfo?.lat || 0, streamInfo?.lng || 0);
 
     const testRes = document.getElementById("testConnectionResult");
@@ -1034,6 +1035,7 @@ async function submitStreamForm(isEdit) {
     const lat = parseFloat(document.getElementById("streamLat").value) || 0;
     const lng = parseFloat(document.getElementById("streamLng").value) || 0;
     const enabled = document.getElementById("streamEnabled").checked;
+    const disable_audio = document.getElementById("streamDisableAudio").checked;
 
     if (!displayName || !url) { alert("Fields required"); return; }
 
@@ -1042,8 +1044,8 @@ async function submitStreamForm(isEdit) {
 
     const method = isEdit ? 'PUT' : 'POST';
     const body = isEdit 
-        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled }) 
-        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled });
+        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled, disable_audio }) 
+        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled, disable_audio });
 
     try {
         const response = await fetch('/api/streams', {

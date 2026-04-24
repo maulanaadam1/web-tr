@@ -1123,13 +1123,13 @@ func main() {
 
 		if r.Method == http.MethodPost {
 			var req struct {
-				Name        string  `json:"name"`
-				DisplayName string  `json:"display_name"`
-				URL         string  `json:"url"`
-				Backend     string  `json:"backend,omitempty"`
-				Lat         float64 `json:"lat"`
-				Lng         float64 `json:"lng"`
-				Enabled     bool    `json:"enabled"`
+				Name         string  `json:"name"`
+				DisplayName  string  `json:"display_name"`
+				URL          string  `json:"url"`
+				Backend      string  `json:"backend,omitempty"`
+				Lat          float64 `json:"lat"`
+				Lng          float64 `json:"lng"`
+				DisableAudio *bool   `json:"disable_audio,omitempty"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1163,6 +1163,11 @@ func main() {
 				_ = store.RemoveStream(req.Name) 
 			}
 
+			disableAudio := true // Default to true as requested
+			if req.DisableAudio != nil {
+				disableAudio = *req.DisableAudio
+			}
+
 			if err := store.AddStream(models.Stream{
 				Name: req.Name,
 				DisplayName: req.DisplayName,
@@ -1173,6 +1178,7 @@ func main() {
 				Enabled: true,
 				UserID: sess.UserID,
 				IsPublic: sess.UserID == 0, // Make test streams public so they can be viewed for testing
+				DisableAudio: disableAudio,
 			}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1185,6 +1191,9 @@ func main() {
 				urlToSync := req.URL
 				if req.Backend == "ffmpeg" {
 					urlToSync = "ffmpeg:" + req.URL + "#video=h264#hardware"
+				}
+				if disableAudio && !strings.Contains(urlToSync, "#") {
+					urlToSync += "#video"
 				}
 				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
 					log.Printf("Failed to sync stream to go2rtc/ffmpeg: %v", err)
@@ -1209,6 +1218,7 @@ func main() {
 				Lat          float64 `json:"lat"`
 				Lng          float64 `json:"lng"`
 				Enabled      bool    `json:"enabled"`
+				DisableAudio bool    `json:"disable_audio"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1228,7 +1238,7 @@ func main() {
 
 			log.Printf("[API] Updating stream: OriginalName='%s', NewName='%s', Lat=%f, Lng=%f", req.OriginalName, req.Name, req.Lat, req.Lng)
 
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.DisplayName, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.DisplayName, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID, req.DisableAudio); err != nil {
 				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1243,6 +1253,9 @@ func main() {
 				// If name changed, delete old
 				if req.OriginalName != "" && req.OriginalName != req.Name {
 					syncStreamToGo2RTC(req.OriginalName, "", true)
+				}
+				if req.DisableAudio && !strings.Contains(urlToSync, "#") {
+					urlToSync += "#video"
 				}
 				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
 					log.Printf("Failed to update stream in go2rtc: %v", err)
@@ -1382,15 +1395,19 @@ func main() {
 			// Get session for user ownership
 			sess, _ := r.Context().Value(sessionContextKey).(Session)
 
-			// Add stream (default to go2rtc for CSV imports)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true, sess.UserID); err != nil {
+			// Add stream (default to go2rtc for CSV imports, auto-mute default)
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
 			}
 
-			// Sync with Go2RTC
-			if err := syncStreamToGo2RTC(name, streamURL, false); err != nil {
+			// Sync with Go2RTC (forced mute for CSV)
+			urlToSync := streamURL
+			if !strings.Contains(urlToSync, "#") {
+				urlToSync += "#video"
+			}
+			if err := syncStreamToGo2RTC(name, urlToSync, false); err != nil {
 				log.Printf("Failed to sync stream %s to go2rtc: %v", name, err)
 			}
 
