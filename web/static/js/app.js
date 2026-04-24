@@ -123,12 +123,22 @@ function applySubscriptionRestrictions() {
         // Hide Share buttons
         const btnShare = document.getElementById('btnShareDashboard');
         const colLinkHeader = document.getElementById('colLinkHeader');
+        const btnBulkExport = document.getElementById('btnBulkExport');
+
         if (btnShare) btnShare.style.display = 'none';
         if (colLinkHeader) colLinkHeader.style.display = 'none';
+        if (btnBulkExport) btnBulkExport.style.display = 'none';
 
         // ONLY Show Trial Session info for Free
         const trialInfo = document.getElementById('trialStatusInfo');
-        if (trialInfo) trialInfo.style.display = (plan === 'Free') ? 'block' : 'none';
+        if (trialInfo) {
+            if (plan === 'Free') {
+                trialInfo.style.display = 'flex';
+                startTrialCountdown(60); // 60 minutes
+            } else {
+                trialInfo.style.display = 'none';
+            }
+        }
 
         // Hide Public Hub buttons in header for Free/Basic
         const hubContainer = document.getElementById('userPublicLinkContainer');
@@ -162,17 +172,20 @@ function applySubscriptionRestrictions() {
         // Share/Public Hub Logic: Restricted for Premium as well
         const btnShare = document.getElementById('btnShareDashboard');
         const colLinkHeader = document.getElementById('colLinkHeader');
+        const btnBulkExport = document.getElementById('btnBulkExport');
         const hubContainer = document.getElementById('userPublicLinkContainer');
         const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
 
         if (plan === 'Premium') {
             if (btnShare) btnShare.style.display = 'none';
             if (colLinkHeader) colLinkHeader.style.display = 'none';
+            if (btnBulkExport) btnBulkExport.style.display = 'none';
             if (hubContainer) hubContainer.style.display = 'none';
             if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
         } else {
             if (btnShare) btnShare.style.display = 'flex';
             if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
+            if (btnBulkExport) btnBulkExport.style.display = (plan === 'Enterprise') ? 'block' : 'none';
             if (hubContainer) hubContainer.style.display = 'flex';
             if (hubRefreshBtn) hubRefreshBtn.style.display = 'inline-flex';
         }
@@ -247,6 +260,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// --- Trial Countdown ---
+let trialInterval = null;
+function startTrialCountdown(minutes) {
+    if (trialInterval) return; // Already running
+    
+    let seconds = minutes * 60;
+    const display = document.getElementById('trialCountdown');
+    if (!display) return;
+    
+    trialInterval = setInterval(() => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        
+        display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        if (seconds <= 0) {
+            clearInterval(trialInterval);
+            trialInterval = null;
+            showToast("Trial Session Expired. Please reload.", "warning");
+            // Optionally force reload or stop streams
+        } else {
+            seconds--;
+        }
+    }, 1000);
+}
 
 // Global theme toggle — called directly via onclick="toggleTheme()" from the button
 function toggleTheme() {
