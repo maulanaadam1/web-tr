@@ -125,10 +125,17 @@ function applySubscriptionRestrictions() {
         const colLinkHeader = document.getElementById('colLinkHeader');
         if (btnShare) btnShare.style.display = 'none';
         if (colLinkHeader) colLinkHeader.style.display = 'none';
+
+        // NEW: Show Trial Session info for Free/Basic
+        const trialInfo = document.getElementById('trialStatusInfo');
+        if (trialInfo) trialInfo.style.display = 'block';
     } else {
         // Higher plans (Premium, Advance, Enterprise)
         if (dashboardLink) dashboardLink.style.display = 'flex';
         if (ccLink) ccLink.style.display = 'flex';
+
+        const trialInfo = document.getElementById('trialStatusInfo');
+        if (trialInfo) trialInfo.style.display = 'none';
         
         // NVR logic: Restricted for Premium only
         if (plan === 'Premium') {
