@@ -2018,42 +2018,28 @@ func main() {
 				log.Printf("[ESP32 Bridge] go2rtc connected to bridge port %d for '%s'", localPort, camName)
 
 				// Bidirectional relay between go2rtc TCP ↔ ESP32 raw TCP
-				relayDone := make(chan struct{}, 2)
 				go func() {
-					defer func() { relayDone <- struct{}{} }()
-					buf := make([]byte, 32*1024)
-					for {
-						n, err := rtspConn.Read(buf)
-						if n > 0 {
-							espConn.Write(buf[:n])
-						}
-						if err != nil {
-							return
-						}
-					}
+					defer rtspConn.Close()
+					relayDone := make(chan struct{}, 2)
+					
+					go func() {
+						io.Copy(espConn, rtspConn)
+						relayDone <- struct{}{}
+					}()
+					go func() {
+						io.Copy(rtspConn, espConn)
+						relayDone <- struct{}{}
+					}()
+
+					<-relayDone
+					log.Printf("[ESP32 Bridge] go2rtc disconnected from bridge for '%s'", camName)
 				}()
-				go func() {
-					defer func() { relayDone <- struct{}{} }()
-					buf := make([]byte, 32*1024)
-					for {
-						n, err := espConn.Read(buf)
-						if n > 0 {
-							rtspConn.Write(buf[:n])
-						}
-						if err != nil {
-							return
-						}
-					}
-				}()
-				<-relayDone
-				rtspConn.Close()
-				log.Printf("[ESP32 Bridge] go2rtc disconnected from bridge for '%s'", camName)
 			}
 		}()
 
 		<-done
 
-		// --- Cleanup on ESP32 disconnect ---
+		// --- Cleanup on Bridge disconnect ---
 		log.Printf("[ESP32 Bridge] Camera '%s' disconnected, cleaning up", camName)
 		syncStreamToGo2RTC(camName, "", true)
 	})
