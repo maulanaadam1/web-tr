@@ -98,6 +98,7 @@ function applySubscriptionRestrictions() {
     const dashboardLink = document.querySelector('.nav-link[data-view="dashboard"]');
     const ccLink = document.querySelector('.nav-link[data-view="commandcenter"]');
     const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
+    const nvrLink = document.querySelector('.nav-link[data-view="nvr"]'); // Added NVR Link
     
     if (publicViewLink) {
         publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
@@ -106,13 +107,16 @@ function applySubscriptionRestrictions() {
     if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
         if (dashboardLink) dashboardLink.classList.add('hidden');
         if (ccLink) ccLink.classList.add('hidden');
+        if (nvrLink) nvrLink.classList.add('hidden'); // Hide NVR
         // If they are on a hidden view, move them to cameras
-        if (currentView === 'dashboard' || currentView === 'commandcenter') {
+        if (currentView === 'dashboard' || currentView === 'commandcenter' || currentView === 'nvr') {
             switchView('cameras');
         }
+
     } else {
         if (dashboardLink) dashboardLink.classList.remove('hidden');
         if (ccLink) ccLink.classList.remove('hidden');
+        if (nvrLink) nvrLink.classList.remove('hidden');
     }
 
     // 2. Manage Camera Restrictions (Import/Export)
