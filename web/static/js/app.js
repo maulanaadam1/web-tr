@@ -90,17 +90,19 @@ function switchView(viewName) {
 function applySubscriptionRestrictions() {
     const plan = window.CURRENT_PLAN || 'Free';
     const role = window.CURRENT_ROLE || 'user';
-    console.log("V94: Applying restrictions for plan:", plan);
+    console.log("V96: Applying robust restrictions for plan:", plan);
     
-    // Admins have no restrictions
+    // 1. Force Safety (CSS Injection + Scanner)
+    forceSubscriptionSafety(plan);
+    
     if (role === 'admin') return;
 
-    // 1. Sidemenu Restrictions
+    // 2. Navigation Restrictions
     const dashboardLink = document.querySelector('.nav-link[data-view="dashboard"]');
     const ccLink = document.querySelector('.nav-link[data-view="commandcenter"]');
+    const nvrLink = document.querySelector('.nav-link[data-view="nvr"]');
     const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
-    const nvrLink = document.querySelector('.nav-link[data-view="nvr"]'); // Added NVR Link
-    
+
     if (publicViewLink) {
         publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
     }
@@ -108,114 +110,18 @@ function applySubscriptionRestrictions() {
     if (plan === 'Free' || plan === 'Basic') {
         if (ccLink) ccLink.style.display = 'none';
         if (nvrLink) nvrLink.style.display = 'none';
-        // If they are on a hidden view, move them to cameras
-        if (currentView === 'commandcenter' || currentView === 'nvr') {
-            switchView('cameras');
-        }
+        if (currentView === 'commandcenter' || currentView === 'nvr') switchView('cameras');
 
-        // Inside Dashboard: Hide Map, show only Preview
-        const dashMapHeader = document.getElementById('dashboardMapHeader');
-        const dashMapCol = document.getElementById('dashboardMapColumn');
-        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
-        if (dashMapHeader) dashMapHeader.style.display = 'none';
-        if (dashMapCol) dashMapCol.style.display = 'none';
-        if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
-
-        // Hide Share buttons
-        let btnShare = document.getElementById('btnShareDashboard');
-        let colLinkHeader = document.getElementById('colLinkHeader');
-        let btnBulkExport = document.getElementById('btnBulkExport');
-
-        // Fallback for older HTML cache
-        if (!btnBulkExport) {
-            btnBulkExport = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Export') || b.title.includes('Export'));
-        }
-
-        if (btnShare) btnShare.style.display = 'none';
-        if (colLinkHeader) colLinkHeader.style.display = 'none';
-        if (btnBulkExport) btnBulkExport.style.display = 'none';
-
-        // ONLY Show Trial Session info for Free
-        const trialInfo = document.getElementById('trialStatusInfo');
-        if (trialInfo) {
-            if (plan === 'Free') {
-                trialInfo.style.display = 'flex';
-                startTrialCountdown(60); // 60 minutes
-            } else {
-                trialInfo.style.display = 'none';
-            }
-        } else if (plan === 'Free' && !document.getElementById('tempTrialBanner')) {
-            // Fallback: Create a temporary banner if the HTML div is missing
-            const banner = document.createElement('div');
-            banner.id = 'tempTrialBanner';
-            banner.className = 'px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-lg ml-2 animate-pulse';
-            banner.innerHTML = 'FREE TRIAL: <span id="trialCountdown">60:00</span>';
-            const breadcrumb = document.getElementById('headerBreadcrumb');
-            if (breadcrumb && breadcrumb.parentElement) {
-                breadcrumb.parentElement.appendChild(banner);
-                startTrialCountdown(60);
-            }
-        }
-
-        // Hide Public Hub buttons in header for Free/Basic
-        const hubContainer = document.getElementById('userPublicLinkContainer');
-        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
-        if (hubContainer) hubContainer.style.display = 'none';
-        if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
-    } else {
-        // Higher plans (Premium, Advance, Enterprise)
-        if (dashboardLink) dashboardLink.style.display = 'flex';
-        if (ccLink) ccLink.style.display = 'flex';
-
-        const trialInfo = document.getElementById('trialStatusInfo');
-        if (trialInfo) trialInfo.style.display = 'none';
-        
-        // NVR logic: Restricted for Premium only
-        if (plan === 'Premium') {
-            if (nvrLink) nvrLink.style.display = 'none';
-            if (currentView === 'nvr') switchView('cameras');
-        } else {
-            if (nvrLink) nvrLink.style.display = 'flex';
-        }
-
-        // Dashboard Map visibility
-        const dashMapHeader = document.getElementById('dashboardMapHeader');
-        const dashMapCol = document.getElementById('dashboardMapColumn');
-        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
-        if (dashMapHeader) dashMapHeader.style.display = 'flex';
-        if (dashMapCol) dashMapCol.style.display = 'block';
-        if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
-
-        // Share/Public Hub Logic: Restricted for Premium as well
-        let btnShare = document.getElementById('btnShareDashboard');
-        let colLinkHeader = document.getElementById('colLinkHeader');
-        let btnBulkExport = document.getElementById('btnBulkExport');
-        const hubContainer = document.getElementById('userPublicLinkContainer');
-        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
-
-        // Fallback for older HTML cache
-        if (!btnBulkExport) {
-            btnBulkExport = Array.from(document.querySelectorAll('button')).find(b => b.textContent.includes('Export') || b.title.includes('Export'));
-        }
-
-        if (plan === 'Premium') {
-            if (btnShare) btnShare.style.display = 'none';
-            if (colLinkHeader) colLinkHeader.style.display = 'none';
-            if (btnBulkExport) btnBulkExport.style.display = 'none';
-            if (hubContainer) hubContainer.style.display = 'none';
-            if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
-        } else {
-            if (btnShare) btnShare.style.display = 'flex';
-            if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
-            if (btnBulkExport) btnBulkExport.style.display = (plan === 'Enterprise') ? 'block' : 'none';
-            if (hubContainer) hubContainer.style.display = 'flex';
-            if (hubRefreshBtn) hubRefreshBtn.style.display = 'inline-flex';
-        }
+        // Dashboard Map Logic
+        const dashMap = document.getElementById('dashboardMapHeader');
+        if (dashMap) dashMap.style.display = 'none';
+        const dashCol = document.getElementById('dashboardMapColumn');
+        if (dashCol) dashCol.style.display = 'none';
+    } else if (plan === 'Premium') {
+        if (nvrLink) nvrLink.style.display = 'none';
+        if (currentView === 'nvr') switchView('cameras');
     }
-
-
-
-    // 2. Manage Camera Restrictions (Import/Export)
+    // 3. Manage Camera Restrictions (Import/Export)
     const exportBtn = document.querySelector('button[onclick*="export"]');
     const importBtn = document.querySelector('button[onclick="openCSVImportModal()"]');
     if (plan !== 'Enterprise') {
@@ -226,7 +132,7 @@ function applySubscriptionRestrictions() {
         if (importBtn) importBtn.style.display = '';
     }
 
-    // 3. Add Camera Button Visibility
+    // 4. Add Camera Button Visibility
     const addCamBtn = document.querySelector('button[onclick="openAddModal()"]');
     if (addCamBtn) {
         let limit = 2;
@@ -242,14 +148,67 @@ function applySubscriptionRestrictions() {
         }
     }
 
-    // 4. Camera Location Visibility Let people see it if they have Command Center / Dashboard
+    // 5. Camera Location Visibility
     const cameraLocationSection = document.getElementById('cameraLocationSection');
     if (cameraLocationSection) {
-        if (plan === 'Free' || plan === 'Basic') {
-            cameraLocationSection.style.display = 'none';
-        } else {
-            cameraLocationSection.style.display = 'block';
-        }
+        cameraLocationSection.style.display = (plan === 'Free' || plan === 'Basic') ? 'none' : 'block';
+    }
+}
+
+/**
+ * forceSubscriptionSafety (v96)
+ * Injects CSS and Scans DOM to hide restricted features regardless of HTML cache.
+ */
+function forceSubscriptionSafety(plan) {
+    if (window.CURRENT_ROLE === 'admin') return;
+    const isRestricted = (plan === 'Free' || plan === 'Basic' || plan === 'Premium');
+    
+    // Inject CSS Rule
+    let style = document.getElementById('safety-css');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'safety-css';
+        document.head.appendChild(style);
+    }
+    
+    if (isRestricted) {
+        style.textContent = `
+            #colLinkHeader, .col-link-header, [title*="Link"], [title*="Copy"], [title*="Export"], 
+            button:contains("Export"), th:contains("Link"), td:contains("Link") { 
+                display: none !important; 
+            }
+        `;
+        
+        // Scan elements periodicially to catch dynamic content (like tables)
+        const scanner = () => {
+            document.querySelectorAll('button, th, td, div, a').forEach(el => {
+                const text = (el.textContent || '').trim().toLowerCase();
+                const title = (el.getAttribute('title') || '').toLowerCase();
+                const onclick = (el.getAttribute('onclick') || '').toLowerCase();
+                
+                // Block 'Link' column and 'Export' buttons
+                if (text === 'link' || title.includes('copy') || title.includes('link') || title.includes('export') || text.includes('export') || onclick.includes('exportcsv') || onclick.includes('copytoclipboard')) {
+                    el.style.setProperty('display', 'none', 'important');
+                }
+            });
+
+            // Handle Free Trial Banner if missing in HTML
+            if (plan === 'Free' && !document.getElementById('trialStatusInfo') && !document.getElementById('tempTrialBanner')) {
+                const banner = document.createElement('div');
+                banner.id = 'tempTrialBanner';
+                banner.className = 'px-3 py-1 bg-amber-500 text-white text-[10px] font-bold rounded-lg ml-2 animate-pulse flex items-center gap-1';
+                banner.innerHTML = 'FREE TRIAL: <span id="trialCountdown">60:00</span>';
+                const breadcrumb = document.getElementById('headerBreadcrumb');
+                if (breadcrumb && breadcrumb.parentElement) {
+                    breadcrumb.parentElement.appendChild(banner);
+                    startTrialCountdown(60);
+                }
+            }
+        };
+        
+        scanner();
+        setTimeout(scanner, 500); 
+        setTimeout(scanner, 2000);
     }
 }
 
@@ -474,6 +433,11 @@ function renderStreamsTable() {
     const selectAllCheck = document.getElementById('selectAllCameras');
     if (selectAllCheck) selectAllCheck.checked = false;
     updateBulkActions();
+    
+    // Re-apply subscription restrictions to handle newly rendered rows/columns
+    if (typeof applySubscriptionRestrictions === 'function') {
+        applySubscriptionRestrictions();
+    }
 }
 
 function createStreamCard(name, url, displayName = name) {
