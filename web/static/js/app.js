@@ -105,19 +105,35 @@ function applySubscriptionRestrictions() {
     }
 
     if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
-        if (dashboardLink) dashboardLink.style.display = 'none';
         if (ccLink) ccLink.style.display = 'none';
         if (nvrLink) nvrLink.style.display = 'none';
-        // If they are on a hidden view, move them to cameras
-        if (currentView === 'dashboard' || currentView === 'commandcenter' || currentView === 'nvr') {
+        // If they are on a hidden view, move them to cameras (Dashboard is now allowed)
+        if (currentView === 'commandcenter' || currentView === 'nvr') {
             switchView('cameras');
         }
 
+        // Inside Dashboard: Hide Map, show only Preview
+        const dashMapHeader = document.getElementById('dashboardMapHeader');
+        const dashMapCol = document.getElementById('dashboardMapColumn');
+        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
+        if (dashMapHeader) dashMapHeader.style.display = 'none';
+        if (dashMapCol) dashMapCol.style.display = 'none';
+        if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
     } else {
         if (dashboardLink) dashboardLink.style.display = 'flex';
         if (ccLink) ccLink.style.display = 'flex';
         if (nvrLink) nvrLink.style.display = 'flex';
+        
+        // Show everything in Dashboard
+        const dashMapHeader = document.getElementById('dashboardMapHeader');
+        const dashMapCol = document.getElementById('dashboardMapColumn');
+        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
+        if (dashMapHeader) dashMapHeader.style.display = 'flex';
+        if (dashMapCol) dashMapCol.style.display = 'block';
+        if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
     }
+
+
 
     // 2. Manage Camera Restrictions (Import/Export)
     const exportBtn = document.querySelector('button[onclick*="export"]');

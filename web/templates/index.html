@@ -400,7 +400,7 @@
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between py-2 mb-2">
+                <div id="dashboardMapHeader" class="flex items-center justify-between py-2 mb-2">
                     <div class="flex flex-col">
                         <div class="flex items-center gap-3">
                             <h3 class="text-lg font-extrabold text-slate-800 dark:text-white font-inter tracking-tight">Camera Maintenance Map</h3>
@@ -419,12 +419,12 @@
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                     <!-- Map Column -->
-                    <div class="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative group">
+                    <div id="dashboardMapColumn" class="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden relative group">
                         <div id="maintenanceMap" class="w-full h-[600px] rounded-2xl z-10 transition-all"></div>
                     </div>
 
                     <!-- Preview Column -->
-                    <div class="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[616px]">
+                    <div id="dashboardPreviewColumn" class="bg-white dark:bg-slate-900 rounded-3xl p-2 shadow-xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden h-[616px]">
                         <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 flex-wrap gap-3">
                             <h3 class="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
@@ -1776,7 +1776,7 @@
         window.CURRENT_PLAN = "{{ .Session.SubscriptionPlan }}";
         window.USER_PUBLIC_TOKEN = "{{ .Session.PublicToken }}";
     </script>
-    <script src="/static/js/app.js?v=87"></script>
+    <script src="/static/js/app.js?v=88"></script>
     <script>
         // No MediaMTX, so no m3u8 intialization needed
     </script>
