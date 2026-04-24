@@ -1603,7 +1603,8 @@ func main() {
 			return
 		}
 		log.Printf("Discovery complete. Found %d streams", len(streams))
-
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(streams)
 	}))
 
 	http.HandleFunc("/api/snapshot", func(w http.ResponseWriter, r *http.Request) {

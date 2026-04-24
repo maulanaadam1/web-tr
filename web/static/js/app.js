@@ -1183,7 +1183,7 @@ async function scanLocalCameras() {
     container.classList.remove("hidden");
 
     try {
-        const response = await fetch('/api/discover');
+        const response = await fetch('/api/discover', { method: 'POST' });
         if (response.ok) {
             const data = await response.json();
             if (data && data.length > 0) {
