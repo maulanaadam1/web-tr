@@ -1,4 +1,4 @@
-// Global State - v66 (NVR: Return to stable Iframe player)
+// Global State - v67 (NVR: Clean player + Auto Zoom)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3224,15 +3224,36 @@ function renderNVRGrid() {
         };
 
         if (s) {
-            // ── Optimized Iframe Player (Stable Go2RTC) ──
+            // ── Optimized Iframe Player (Clean & Zoom) ──
             const container = document.createElement('div');
             container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black';
             
             const iframe = document.createElement('iframe');
-            // Hide the status bar by making iframe taller than the container
-            iframe.className = 'absolute inset-0 w-full h-[calc(100%+44px)] border-0';
+            iframe.className = 'absolute inset-0 w-full h-full border-0';
             iframe.src = `/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse`;
             iframe.allow = "autoplay; fullscreen";
+            
+            // Inject CSS to hide all internal UI and force "cover" mode (zoom)
+            iframe.onload = () => {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    const style = doc.createElement('style');
+                    style.textContent = `
+                        .status { display: none !important; }
+                        .controls { display: none !important; }
+                        video { 
+                            object-fit: cover !important; 
+                            width: 100% !important; 
+                            height: 100% !important; 
+                        }
+                    `;
+                    doc.head.appendChild(style);
+                } catch(e) {
+                    console.warn('Iframe CSS injection blocked (cross-origin), falling back to CSS crop');
+                    // Fallback: simple CSS crop if origin check fails
+                    iframe.style.height = 'calc(100% + 50px)';
+                }
+            };
             
             container.appendChild(iframe);
             slot.appendChild(container);
