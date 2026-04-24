@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -1902,6 +1903,160 @@ func main() {
 		}
 		tmpl.Execute(w, nil)
 	}))
+
+	// =============================================================
+	// ESP32 IoT Bridge — /api/bridge/{cam_name}
+	// Each ESP32 camera connects here. Backend auto-assigns an
+	// internal port and bridges it to go2rtc. No port config needed.
+	// =============================================================
+	http.HandleFunc("/api/bridge/", func(w http.ResponseWriter, r *http.Request) {
+		camName := strings.TrimPrefix(r.URL.Path, "/api/bridge/")
+		if camName == "" {
+			http.Error(w, "camera name required", http.StatusBadRequest)
+			return
+		}
+
+		// --- Auth: Basic Auth OR api credentials from query ---
+		username, password, hasBasic := r.BasicAuth()
+		if !hasBasic {
+			username = r.URL.Query().Get("user")
+			password = r.URL.Query().Get("pass")
+		}
+		isTrial := (username == "" && password == "")
+		var ownerUserID int
+		if !isTrial {
+			dbUser, err := globalStore.GetUserByUsername(username)
+			if err != nil || dbUser == nil || db.HashPassword(password, dbUser.Salt) != dbUser.PasswordHash || !dbUser.IsActive {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			ownerUserID = dbUser.ID
+		}
+
+		displayName := r.Header.Get("X-Display-Name")
+		if displayName == "" {
+			displayName = camName
+		}
+
+		// --- HTTP Upgrade: switch to raw TCP tunnel ---
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+			return
+		}
+		espConn, bufrw, err := hj.Hijack()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer espConn.Close()
+
+		// Send 101 Switching Protocols back to ESP32
+		bufrw.WriteString("HTTP/1.1 101 Switching Protocols\r\nUpgrade: rtsp-bridge\r\nConnection: Upgrade\r\n\r\n")
+		bufrw.Flush()
+
+		log.Printf("[ESP32 Bridge] Camera '%s' connected (UserID=%d, Trial=%v)", camName, ownerUserID, isTrial)
+
+		// --- Find a free local port for go2rtc to connect to ---
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			log.Printf("[ESP32 Bridge] Failed to allocate port: %v", err)
+			return
+		}
+		localPort := ln.Addr().(*net.TCPAddr).Port
+		log.Printf("[ESP32 Bridge] Auto-assigned port %d for camera '%s'", localPort, camName)
+
+		// --- Register stream into go2rtc ---
+		rtspURL := fmt.Sprintf("rtsp://127.0.0.1:%d", localPort)
+		if err := syncStreamToGo2RTC(camName, rtspURL, false); err != nil {
+			log.Printf("[ESP32 Bridge] go2rtc sync warning: %v", err)
+		}
+
+		// --- Register/upsert stream into DB ---
+		userIDForStream := ownerUserID
+		if userIDForStream == 0 {
+			userIDForStream = 1 // default to admin for trial
+		}
+		existingStreams, _ := streamMgr.GetStreams()
+		found := false
+		for _, s := range existingStreams {
+			if s.Name == camName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newStream := models.Stream{
+				Name:        camName,
+				DisplayName: displayName,
+				URL:         rtspURL,
+				Backend:     "go2rtc",
+				Enabled:     true,
+				IsPublic:    true,
+				UserID:      userIDForStream,
+				Lat:         0,
+				Lng:         0,
+			}
+			if err := globalStore.AddStream(newStream); err != nil {
+				log.Printf("[ESP32 Bridge] DB stream register warning: %v", err)
+			}
+		}
+
+		// --- Bridge: accept go2rtc TCP conn → relay ↔ ESP32 conn ---
+		done := make(chan struct{})
+
+		go func() {
+			defer close(done)
+			defer ln.Close()
+
+			for {
+				rtspConn, err := ln.Accept()
+				if err != nil {
+					log.Printf("[ESP32 Bridge] Listener closed for '%s': %v", camName, err)
+					return
+				}
+				log.Printf("[ESP32 Bridge] go2rtc connected to bridge port %d for '%s'", localPort, camName)
+
+				// Bidirectional relay between go2rtc TCP ↔ ESP32 raw TCP
+				relayDone := make(chan struct{}, 2)
+				go func() {
+					defer func() { relayDone <- struct{}{} }()
+					buf := make([]byte, 32*1024)
+					for {
+						n, err := rtspConn.Read(buf)
+						if n > 0 {
+							espConn.Write(buf[:n])
+						}
+						if err != nil {
+							return
+						}
+					}
+				}()
+				go func() {
+					defer func() { relayDone <- struct{}{} }()
+					buf := make([]byte, 32*1024)
+					for {
+						n, err := espConn.Read(buf)
+						if n > 0 {
+							rtspConn.Write(buf[:n])
+						}
+						if err != nil {
+							return
+						}
+					}
+				}()
+				<-relayDone
+				rtspConn.Close()
+				log.Printf("[ESP32 Bridge] go2rtc disconnected from bridge for '%s'", camName)
+			}
+		}()
+
+		<-done
+
+		// --- Cleanup on ESP32 disconnect ---
+		log.Printf("[ESP32 Bridge] Camera '%s' disconnected, cleaning up", camName)
+		syncStreamToGo2RTC(camName, "", true)
+	})
 
 	go func() {
 		if err := http.ListenAndServe(":"+port, nil); err != nil {

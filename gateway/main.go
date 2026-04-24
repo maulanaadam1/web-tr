@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
+	"crypto/tls"
 	_ "embed"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -87,19 +90,20 @@ type GatewaySettings struct {
 }
 
 type TunnelInstance struct {
-	Camera     CameraConfig
-	Running    bool
-	Status     string
-	StatusDot  *canvas.Circle
-	StatusText *widget.Label
-	ToggleBtn  *widget.Button
-	StopChan   chan bool
-	mu         sync.Mutex
-	Card       fyne.CanvasObject
-	proxyLn    net.Listener
-	proxyPort  int
-	ApiCamName string
-	PublicURL  string
+	Camera      CameraConfig
+	Running     bool
+	Status      string
+	StatusDot   *canvas.Circle
+	StatusText  *widget.Label
+	ToggleBtn   *widget.Button
+	StopChan    chan bool
+	mu          sync.Mutex
+	Card        fyne.CanvasObject
+	proxyLn     net.Listener
+	proxyPort   int
+	bridgeConn  net.Conn // used in Bridge Mode
+	ApiCamName  string
+	PublicURL   string
 	PublicLabel *widget.Entry // Use Entry for easy selection/copy
 }
 
@@ -278,9 +282,11 @@ func buildSettings() fyne.CanvasObject {
 	entryApiPass.SetPlaceHolder("Password")
 	entryApiPass.SetText(config.ApiPassword)
 
-	vpnModes := []string{"WireGuard VPN", "ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
+	vpnModes := []string{"Bridge Mode (No VPN)", "WireGuard VPN", "ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
 	vpnModeSelect := widget.NewSelect(vpnModes, nil)
-	if config.VPNMode == "none" {
+	if config.VPNMode == "bridge" {
+		vpnModeSelect.SetSelected("Bridge Mode (No VPN)")
+	} else if config.VPNMode == "none" {
 		vpnModeSelect.SetSelected("None (Direct/Tunnel Only)")
 	} else if config.VPNMode == "l2tp" {
 		vpnModeSelect.SetSelected("L2TP VPN")
@@ -346,6 +352,15 @@ func buildSettings() fyne.CanvasObject {
 		container.NewGridWrap(fyne.NewSize(450, 150), entryWG),
 	)
 
+	// === Bridge Mode Section ===
+	bridgeSection := container.NewVBox(
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("Bridge Mode (No VPN Required)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabelWithStyle("✅ The gateway connects directly to VPS via HTTP Upgrade tunnel.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("✅ No VPN installation needed. Works behind NAT without port forwarding.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+		widget.NewLabelWithStyle("✅ Use Server URL + API credentials above to authenticate.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
+	)
+
 	checkKeepCamera := widget.NewCheck("Keep camera on server when stopped (manual stop)", nil)
 	checkKeepCamera.SetChecked(config.KeepCameraOnStop)
 
@@ -355,19 +370,25 @@ func buildSettings() fyne.CanvasObject {
 		currentMode = "zerotier"
 	}
 
-	// Dynamic section that toggles between ZeroTier, WireGuard, and L2TP
+	// Dynamic section that toggles between ZeroTier, WireGuard, L2TP, and Bridge
 	dynamicSection := container.NewVBox()
-	if currentMode == "l2tp" {
+	if currentMode == "bridge" {
+		dynamicSection.Add(bridgeSection)
+	} else if currentMode == "l2tp" {
 		dynamicSection.Add(l2tpSection)
 	} else if currentMode == "wireguard" {
 		dynamicSection.Add(wgSection)
+	} else if currentMode == "none" {
+		// No section for none
 	} else {
 		dynamicSection.Add(ztSection)
 	}
 
 	vpnModeSelect.OnChanged = func(selected string) {
 		dynamicSection.Objects = nil
-		if selected == "L2TP VPN" {
+		if selected == "Bridge Mode (No VPN)" {
+			dynamicSection.Add(bridgeSection)
+		} else if selected == "L2TP VPN" {
 			dynamicSection.Add(l2tpSection)
 		} else if selected == "WireGuard VPN" {
 			dynamicSection.Add(wgSection)
@@ -383,7 +404,9 @@ func buildSettings() fyne.CanvasObject {
 		config.ApiPassword = entryApiPass.Text
 		config.KeepCameraOnStop = checkKeepCamera.Checked
 
-		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
+		if vpnModeSelect.Selected == "Bridge Mode (No VPN)" {
+			config.VPNMode = "bridge"
+		} else if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
 			config.VPNMode = "none"
 		} else if vpnModeSelect.Selected == "L2TP VPN" {
 			config.VPNMode = "l2tp"
@@ -1009,6 +1032,17 @@ func startAll() {
 		vpnMode = "zerotier"
 	}
 
+	// === Bridge Mode: Tidak butuh VPN apapun ===
+	if vpnMode == "bridge" {
+		addLog("Global: Bridge Mode — No VPN required. Starting direct HTTP tunnels...")
+		go func() {
+			for _, inst := range instances {
+				go inst.Start()
+			}
+		}()
+		return
+	}
+
 	go func() {
 		if vpnMode == "l2tp" {
 			addLog("Global: Connecting L2TP VPN...")
@@ -1033,7 +1067,6 @@ func startAll() {
 			addLog("Global: Validating ZeroTier VPN Connection...")
 		}
 
-		// Cloudflare Tunnel
 		ip := getVpnIP()
 		if ip == "" && vpnMode != "none" {
 			if vpnMode == "l2tp" {
@@ -1134,6 +1167,12 @@ func (inst *TunnelInstance) Stop() {
 	if inst.proxyLn != nil {
 		inst.proxyLn.Close()
 		inst.proxyLn = nil
+	}
+
+	// Bridge Mode: close the raw TCP connection to trigger relay goroutine exit
+	if inst.bridgeConn != nil {
+		inst.bridgeConn.Close()
+		inst.bridgeConn = nil
 	}
 
 	close(inst.StopChan)
@@ -1527,6 +1566,25 @@ func registerToBackend(inst *TunnelInstance) {
 	// Save the strict UUID used for the API so we can deregister correctly later
 	inst.ApiCamName = camName
 	
+	// === Bridge Mode: Tidak pakai VPN, konek langsung ke /api/bridge ===
+	if config.VPNMode == "bridge" {
+		err := startBridgeTunnel(inst, camName, originalRTSP)
+		if err != nil {
+			addLog(fmt.Sprintf("[%s] ❌ Bridge tunnel failed: %v", camName, err))
+			inst.updateStatus("Bridge Failed", theme.ColorNameError)
+			return
+		}
+		// Public URL tetap sama, stream sudah terdaftar otomatis oleh VPS bridge handler
+		baseURL := strings.TrimSuffix(config.ServerURL, "/")
+		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
+		inst.PublicURL = webURL
+		if inst.PublicLabel != nil {
+			inst.PublicLabel.SetText(webURL)
+		}
+		addLog(fmt.Sprintf("[%s] ✅ Bridge aktif! Stream: %s", camName, webURL))
+		return // Tidak perlu POST ke /api/streams — VPS bridge handler yang daftarkan
+	}
+
 	var rtspSource string
 	hostPort := extractHostPort(originalRTSP)
 	if isPrivateIP(hostPort) {
@@ -1829,4 +1887,143 @@ func generateUUID() string {
 	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
 	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+// =============================================================
+// startBridgeTunnel — Bridge Mode (No VPN)
+// Menghubungkan kamera lokal ke VPS melalui HTTP Upgrade tunnel.
+// VPS akan auto-assign port internal dan daftarkan ke go2rtc.
+// Tidak butuh VPN, tidak butuh IP Public, tidak butuh buka port.
+// =============================================================
+func startBridgeTunnel(inst *TunnelInstance, camName string, localRTSP string) error {
+	serverURL := strings.TrimSuffix(config.ServerURL, "/")
+	u, err := url.Parse(serverURL)
+	if err != nil {
+		return fmt.Errorf("invalid server URL: %v", err)
+	}
+
+	host := u.Hostname()
+	portStr := u.Port()
+	useSSL := u.Scheme == "https"
+	if portStr == "" {
+		if useSSL {
+			portStr = "443"
+		} else {
+			portStr = "80"
+		}
+	}
+	addr := host + ":" + portStr
+
+	addLog(fmt.Sprintf("[%s] Bridge: Menghubungkan ke VPS %s...", inst.Camera.Name, addr))
+
+	// Buat koneksi TCP (dengan TLS jika HTTPS)
+	var rawConn net.Conn
+	if useSSL {
+		// Coba dengan verifikasi penuh terlebih dahulu
+		rawConn, err = tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: false})
+		if err != nil {
+			// Fallback: skip verifikasi (untuk sertifikat self-signed/EasyPanel)
+			rawConn, err = tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+		}
+	} else {
+		rawConn, err = net.Dial("tcp", addr)
+	}
+	if err != nil {
+		return fmt.Errorf("tidak dapat konek ke VPS %s: %v", addr, err)
+	}
+
+	// Ekstrak host:port kamera lokal dari URL RTSP
+	localHostPort := extractHostPort(localRTSP)
+	if localHostPort == "" {
+		rawConn.Close()
+		return fmt.Errorf("tidak dapat parse host:port dari RTSP URL: %s", localRTSP)
+	}
+
+	// Build HTTP Upgrade request
+	authHeader := ""
+	if config.ApiUsername != "" {
+		creds := base64.StdEncoding.EncodeToString([]byte(config.ApiUsername + ":" + config.ApiPassword))
+		authHeader = "Authorization: Basic " + creds + "\r\n"
+	}
+	reqStr := "GET /api/bridge/" + camName + " HTTP/1.1\r\n" +
+		"Host: " + host + "\r\n" +
+		"Upgrade: rtsp-bridge\r\n" +
+		"Connection: Upgrade\r\n" +
+		"X-Display-Name: " + inst.Camera.Name + "\r\n" +
+		authHeader +
+		"\r\n"
+
+	if _, err := io.WriteString(rawConn, reqStr); err != nil {
+		rawConn.Close()
+		return fmt.Errorf("gagal kirim bridge request: %v", err)
+	}
+
+	// Baca respons HTTP menggunakan bufio (penting: jaga byte setelah header)
+	rawConn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	reader := bufio.NewReader(rawConn)
+	statusLine, err := reader.ReadString('\n')
+	if err != nil {
+		rawConn.Close()
+		return fmt.Errorf("VPS tidak merespons: %v", err)
+	}
+	rawConn.SetReadDeadline(time.Time{}) // Reset deadline
+
+	if !strings.HasPrefix(statusLine, "HTTP/1.1 101") {
+		rawConn.Close()
+		return fmt.Errorf("VPS menolak bridge: %s", strings.TrimSpace(statusLine))
+	}
+
+	// Drain sisa header
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil || strings.TrimSpace(line) == "" {
+			break
+		}
+	}
+
+	addLog(fmt.Sprintf("[%s] Bridge: VPS OK, konek ke kamera lokal %s...", inst.Camera.Name, localHostPort))
+
+	// Konek ke kamera lokal
+	localConn, err := net.DialTimeout("tcp", localHostPort, 5*time.Second)
+	if err != nil {
+		rawConn.Close()
+		return fmt.Errorf("kamera lokal tidak bisa dijangkau %s: %v", localHostPort, err)
+	}
+
+	// Simpan koneksi untuk cleanup saat Stop()
+	inst.mu.Lock()
+	inst.bridgeConn = rawConn
+	inst.mu.Unlock()
+
+	// Goroutine relay — berjalan sampai salah satu sisi tutup
+	go func() {
+		defer rawConn.Close()
+		defer localConn.Close()
+		defer func() {
+			inst.mu.Lock()
+			inst.bridgeConn = nil
+			inst.mu.Unlock()
+		}()
+
+		done := make(chan struct{}, 2)
+		go func() {
+			defer func() { done <- struct{}{} }()
+			// VPS → Kamera Lokal (pakai bufio reader agar byte buffer tidak terbuang)
+			io.Copy(localConn, reader)
+		}()
+		go func() {
+			defer func() { done <- struct{}{} }()
+			// Kamera Lokal → VPS
+			io.Copy(rawConn, localConn)
+		}()
+		<-done
+
+		addLog(fmt.Sprintf("[%s] Bridge tunnel terputus.", inst.Camera.Name))
+		inst.updateStatus("Disconnected (Bridge)", theme.ColorNameWarning)
+		if inst.ToggleBtn != nil {
+			inst.ToggleBtn.SetIcon(theme.MediaPlayIcon())
+		}
+	}()
+
+	return nil
 }

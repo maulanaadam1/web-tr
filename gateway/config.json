@@ -2,13 +2,20 @@
   "server_url": "https://rtsp2go.campod.my.id",
   "api_username": "",
   "api_password": "",
-  "vpn_mode": "none",
+  "vpn_mode": "bridge",
   "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",
   "l2tp_user": "20251024172230",
   "l2tp_pass": "GPCEWCEKKD",
   "l2tp_psk": "",
   "wireguard_config": "",
-  "keep_camera_on_stop": true,
-  "cameras": []
+  "keep_camera_on_stop": false,
+  "cameras": [
+    {
+      "name": "Local",
+      "local_rtsp": "rtsp://localhost/live",
+      "vps_port": 0,
+      "server_id": "d65681bb-d4cf-4bb4-b86f-4df02a75d405"
+    }
+  ]
 }
