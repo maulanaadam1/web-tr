@@ -138,6 +138,16 @@ function applySubscriptionRestrictions() {
             addCamBtn.classList.remove('hidden');
         }
     }
+
+    // 4. Camera Location Visibility Let people see it if they have Command Center / Dashboard
+    const cameraLocationSection = document.getElementById('cameraLocationSection');
+    if (cameraLocationSection) {
+        if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
+            cameraLocationSection.classList.add('hidden');
+        } else {
+            cameraLocationSection.classList.remove('hidden');
+        }
+    }
 }
 
 // Ensure correct view on initial page load based on pathname
@@ -995,6 +1005,9 @@ function openAddModal() {
     }
     const testRes = document.getElementById("testConnectionResult");
     if(testRes) testRes.textContent = "";
+
+    const disableAudioCb = document.getElementById("streamDisableAudio");
+    if (disableAudioCb) disableAudioCb.checked = true;
 
     initLocationMap(0, 0); // 0, 0 will be defaulted to Surabaya
 
