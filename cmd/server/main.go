@@ -1940,8 +1940,8 @@ func main() {
 		}
 
 		// --- Register placeholder in go2rtc for the oncoming push ---
-		// URL kosong berarti go2rtc akan menunggu kiriman ANNOUNCE ke /camName
-		if err := syncStreamToGo2RTC(camName, "", false); err != nil {
+		// Kita beritahu go2rtc untuk standby menerima push
+		if err := syncStreamToGo2RTC(camName, "!", false); err != nil {
 			log.Printf("[Bridge v2] go2rtc info: %v", err)
 		}
 
