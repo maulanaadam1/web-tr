@@ -90,18 +90,22 @@ function switchView(viewName) {
 function applySubscriptionRestrictions() {
     const plan = window.CURRENT_PLAN || 'Free';
     const role = window.CURRENT_ROLE || 'user';
-    console.log("V96: Applying robust restrictions for plan:", plan);
+    console.log("V98: Applying stable restrictions for plan:", plan);
     
     // 1. Force Safety (CSS Injection + Scanner)
     forceSubscriptionSafety(plan);
     
     if (role === 'admin') return;
 
-    // 2. Navigation Restrictions
+    // 2. Navigation Restrictions (Explicitly Show Core Menus)
     const dashboardLink = document.querySelector('.nav-link[data-view="dashboard"]');
+    const camerasLink = document.querySelector('.nav-link[data-view="cameras"]');
     const ccLink = document.querySelector('.nav-link[data-view="commandcenter"]');
     const nvrLink = document.querySelector('.nav-link[data-view="nvr"]');
     const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
+
+    if (dashboardLink) dashboardLink.style.setProperty('display', 'flex', 'important');
+    if (camerasLink) camerasLink.style.setProperty('display', 'flex', 'important');
 
     if (publicViewLink) {
         publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
@@ -112,14 +116,17 @@ function applySubscriptionRestrictions() {
         if (nvrLink) nvrLink.style.display = 'none';
         if (currentView === 'commandcenter' || currentView === 'nvr') switchView('cameras');
 
-        // Dashboard Map Logic
         const dashMap = document.getElementById('dashboardMapHeader');
         if (dashMap) dashMap.style.display = 'none';
         const dashCol = document.getElementById('dashboardMapColumn');
         if (dashCol) dashCol.style.display = 'none';
     } else if (plan === 'Premium') {
+        if (ccLink) ccLink.style.display = 'flex';
         if (nvrLink) nvrLink.style.display = 'none';
         if (currentView === 'nvr') switchView('cameras');
+    } else {
+        if (ccLink) ccLink.style.display = 'flex';
+        if (nvrLink) nvrLink.style.display = 'flex';
     }
     // 3. Manage Camera Restrictions (Import/Export)
     const exportBtn = document.querySelector('button[onclick*="export"]');
@@ -172,27 +179,36 @@ function forceSubscriptionSafety(plan) {
     }
     
     if (isRestricted) {
+        // Very specific CSS hiding
         style.textContent = `
-            #colLinkHeader, .col-link-header, [title*="Link"], [title*="Copy"], [title*="Export"], 
-            button:contains("Export"), th:contains("Link"), td:contains("Link") { 
+            #colLinkHeader, .col-link-header, 
+            [title*="Copy Processed Stream URL"],
+            [onclick*="copyToClipboard"],
+            #btnBulkExport { 
                 display: none !important; 
             }
         `;
         
-        // Scan elements periodicially to catch dynamic content (like tables)
         const scanner = () => {
             document.querySelectorAll('button, th, td, div, a').forEach(el => {
-                const text = (el.textContent || '').trim().toLowerCase();
                 const title = (el.getAttribute('title') || '').toLowerCase();
                 const onclick = (el.getAttribute('onclick') || '').toLowerCase();
+                const text = (el.textContent || '').trim().toLowerCase();
                 
-                // Block 'Link' column and 'Export' buttons
-                if (text === 'link' || title.includes('copy') || title.includes('link') || title.includes('export') || text.includes('export') || onclick.includes('exportcsv') || onclick.includes('copytoclipboard')) {
-                    el.style.setProperty('display', 'none', 'important');
+                // ONLY hide the specific table column for Link and Export buttons
+                const isLinkCol = (el.tagName === 'TH' || el.tagName === 'TD') && text === 'link';
+                const isExportBtn = title.includes('export') || text.includes('export') || onclick.includes('exportcsv');
+                const isCopyBtn = title.includes('copy processed') || onclick.includes('copytoclipboard');
+
+                if (isLinkCol || isExportBtn || isCopyBtn) {
+                    // Safety: DON'T hide if it's a sidebar nav link
+                    if (!el.classList.contains('nav-link')) {
+                        el.style.setProperty('display', 'none', 'important');
+                    }
                 }
             });
 
-            // Handle Free Trial Banner if missing in HTML
+            // Handle Free Trial Banner
             if (plan === 'Free' && !document.getElementById('trialStatusInfo') && !document.getElementById('tempTrialBanner')) {
                 const banner = document.createElement('div');
                 banner.id = 'tempTrialBanner';
@@ -209,6 +225,8 @@ function forceSubscriptionSafety(plan) {
         scanner();
         setTimeout(scanner, 500); 
         setTimeout(scanner, 2000);
+    } else {
+        style.textContent = ''; // Clear safety CSS for high plans
     }
 }
 
