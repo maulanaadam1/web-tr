@@ -1,4 +1,4 @@
-// Global State - v64 (NVR fix syntax + re-push v61 logic)
+// Global State - v65 (NVR: WebRTC for ultra-smooth streaming)
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -3047,13 +3047,46 @@ let nvrIsFullscreen  = false;  // NVR fullscreen state
 // All enabled streams for NVR (populated from allStreams)
 let nvrCameraPool  = [];   // full sorted list for the grid paging
 
-// ── MJPEG Helper Functions ────────────────────────────────────────────────
-// Stop all active MJPEG streams by clearing <img> src (releases HTTP connection)
-function _stopNVRMjpeg() {
+// ── WebRTC Helper (optimized for zero-latency NVR) ─────────────────────────
+async function _attachWebRTC(video, streamName) {
+    const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    });
+
+    pc.ontrack = (event) => {
+        video.srcObject = event.streams[0];
+    };
+
+    // Add dummy audio/video m-lines to trigger negotiation
+    pc.addTransceiver('video', { direction: 'sendrecv' });
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    try {
+        const resp = await fetch(`/rtc/api/webrtc?src=${encodeURIComponent(streamName)}`, {
+            method: 'POST',
+            body: offer.sdp
+        });
+        const answer = await resp.text();
+        await pc.setRemoteDescription({ type: 'answer', sdp: answer });
+    } catch (e) {
+        console.error('WebRTC offer failed:', e);
+    }
+    
+    video._pc = pc; // store per-element for cleanup
+}
+
+function _stopNVRWebRTC() {
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
-    area.querySelectorAll('.nvr-stream').forEach(el => {
-        el.src = ''; el.load(); // stops the stream connection
+    area.querySelectorAll('video.nvr-stream').forEach(vid => {
+        if (vid._pc) {
+            vid._pc.close();
+            vid._pc = null;
+        }
+        vid.srcObject = null;
+        vid.src = '';
     });
 }
 
@@ -3189,7 +3222,7 @@ function nvrGridNext() {
 // ── Render grid from camera pool ────────────────────────────────────────────
 function renderNVRGrid() {
     // Stop existing MJPEG streams before re-rendering
-    _stopNVRMjpeg();
+    _stopNVRWebRTC();
 
     const area = document.getElementById('nvrGridArea');
     if (!area) return;
@@ -3229,21 +3262,17 @@ function renderNVRGrid() {
         };
 
         if (s) {
-            // ── MSE (MP4) <video> — High performance, hardware decoded ──
+            // ── WebRTC <video> — Zero latency, UDP based ──
             const vid = document.createElement('video');
             vid.className = 'nvr-stream absolute inset-0 w-full h-full';
             vid.style.cssText = 'object-fit:cover;display:block;background:#000;';
             vid.muted = true;
             vid.autoplay = true;
             vid.playsInline = true;
-            // Use mp4 (MSE) stream - much lighter than HLS and MJPEG
-            vid.src = `/rtc/api/stream.mp4?src=${encodeURIComponent(s.name)}`;
             
-            // On error: show offline badge
-            vid.onerror = () => {
-                vid.style.display = 'none';
-                if (offBadge) offBadge.style.display = 'flex';
-            };
+            // Attach WebRTC stream
+            _attachWebRTC(vid, s.name);
+            
             slot.appendChild(vid);
 
             // Offline badge (hidden initially, shown on img error)
