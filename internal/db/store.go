@@ -621,7 +621,7 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -630,9 +630,13 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &u.ExpiresAt, &u.CreatedAt); err != nil {
+		var expiresAt sql.NullTime
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &expiresAt, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
+		}
+		if expiresAt.Valid {
+			u.ExpiresAt = expiresAt.Time
 		}
 		users = append(users, u)
 	}
