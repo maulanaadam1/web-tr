@@ -421,13 +421,32 @@
                                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Integrations & API</p>
                                     <div class="space-y-4">
                                         <div>
-                                            <label class="block text-xs text-slate-500 font-medium mb-1.5">Public Display Token</label>
+                                            <label class="block text-xs text-slate-500 font-medium mb-1.5">Public Display Web URL</label>
                                             <div class="flex gap-2">
-                                                <input type="text" value="{{ .Session.PublicToken }}" readonly class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-[10px] font-mono text-slate-500 focus:outline-none">
-                                                <button onclick="copyToClipboard('{{ .Session.PublicToken }}')" class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors">
+                                                <input type="text" id="profile-public-token-input" readonly class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-[10px] font-mono text-slate-500 focus:outline-none">
+                                                <button onclick="copyMyPublicURL()" class="p-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors">
                                                      <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                                                 </button>
                                             </div>
+                                            <script>
+                                                // Wait until DOM is loaded to set the full URL with Origin
+                                                document.addEventListener("DOMContentLoaded", () => {
+                                                    const initialToken = "{{ .Session.PublicToken }}";
+                                                    const inputEl = document.getElementById("profile-public-token-input");
+                                                    if (initialToken) {
+                                                        inputEl.value = window.location.origin + "/view/" + initialToken;
+                                                    } else {
+                                                        inputEl.value = "Belum Ada Token";
+                                                    }
+                                                });
+
+                                                function copyMyPublicURL() {
+                                                    const inputEl = document.getElementById("profile-public-token-input");
+                                                    if (inputEl && inputEl.value !== "Belum Ada Token") {
+                                                        copyToClipboard(inputEl.value);
+                                                    }
+                                                }
+                                            </script>
                                         </div>
                                         <div class="pt-2">
                                             <button onclick="refreshMyPublicToken()" class="w-full text-[10px] font-bold text-brand-600 dark:text-brand-400 hover:underline uppercase tracking-widest flex items-center justify-center gap-2">

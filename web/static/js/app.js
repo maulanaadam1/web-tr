@@ -3352,6 +3352,8 @@ async function refreshMyPublicToken() {
             const data = await res.json();
             window.USER_PUBLIC_TOKEN = data.public_token;
             showToast("Public Hub token re-generated", "success");
+            const inputEl = document.getElementById("profile-public-token-input");
+            if (inputEl) inputEl.value = window.location.origin + "/view/" + data.public_token;
             
             // Sync with allUsers array so Manage User view is updated instantly
             const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(window.USER_ID));
