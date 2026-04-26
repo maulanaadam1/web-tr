@@ -218,6 +218,13 @@
                 <span class="nav-text whitespace-nowrap">Manage Users</span>
             </button>
 
+            <button type="button" onclick="switchView('servers')" data-view="servers" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Manage Servers">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">Manage Servers (Nodes)</span>
+            </button>
+
             <button type="button" onclick="switchView('testlogs')" data-view="testlogs" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="RTSP Test Logs">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -612,6 +619,48 @@
                     <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
                         <span class="text-xs text-slate-500" id="userPageInfo">Showing 0 entries</span>
                         <div class="flex gap-1" id="userPagination"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SERVER (NODE) MANAGEMENT VIEW -->
+            <div id="view-servers" class="hidden space-y-6 p-4 md:p-8">
+                <div class="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-800 dark:text-white font-inter">Server Nodes</h2>
+                        <p class="text-sm text-slate-500">Manage video processing units (Edge Nodes).</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <button type="button" onclick="loadNodes()" class="flex items-center gap-2 md:px-4 px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-lg transition-colors" title="Refresh">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        </button>
+                        <button type="button" onclick="openNodeModal()" class="flex items-center gap-2 md:px-4 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-lg shadow-indigo-500/30 transition-all">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            <span class="hidden md:inline">Add Node Server</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50/80 dark:bg-slate-800/50 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+                                        <th class="px-6 py-4">#</th>
+                                        <th class="px-6 py-4">Node Name</th>
+                                        <th class="px-6 py-4">API Endpoint</th>
+                                        <th class="px-6 py-4 text-center">RTSP Port</th>
+                                        <th class="px-6 py-4">Location</th>
+                                        <th class="px-6 py-4 text-center">Status</th>
+                                        <th class="px-6 py-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="nodeTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1797,5 +1846,52 @@
             }
         }
     </script>
+    <!-- Node Server Modal -->
+    <div id="nodeModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="closeNodeModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-200 dark:border-slate-800">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-white" id="nodeModalTitle">Add Node Server</h3>
+                    <button type="button" onclick="closeNodeModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div class="px-8 py-6 space-y-4">
+                    <input type="hidden" id="nodeId">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Node Name</label>
+                        <input type="text" id="nodeName" placeholder="e.g. Jakarta-Edge-01" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">API Endpoint URL</label>
+                        <input type="text" id="nodeUrl" placeholder="http://1.2.3.4:1984" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                        <p class="text-[10px] text-slate-400 mt-1">The URL where go2rtc API is reachable.</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">RTSP Push Port</label>
+                            <input type="number" id="nodeRtspPort" value="8554" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Location</label>
+                            <input type="text" id="nodeLocation" placeholder="e.g. Jakarta" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Secret Key (Optional)</label>
+                        <input type="password" id="nodeSecret" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                    </div>
+                </div>
+
+                <div class="px-8 py-6 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeNodeModal()" class="px-6 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">Cancel</button>
+                    <button type="button" onclick="submitNodeForm()" class="px-8 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-500/20 transition-all">Save Node</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

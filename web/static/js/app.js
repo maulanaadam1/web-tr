@@ -84,6 +84,7 @@ function switchView(viewName) {
     }
     if (viewName === 'cameras') loadStreams();
     if (viewName === 'users') loadUsers();
+    if (viewName === 'servers') loadNodes();
     if (viewName === 'timelapse') initTimelapseView();
 }
 
@@ -3701,4 +3702,155 @@ async function autoPlayAllNVR() {
         btn.innerHTML = originalHtml;
         showToast(`Auto-populated ${nvrCameraPool.length} online cameras`);
     }, 600);
+}
+
+// --- Node Management ---
+let allNodes = [];
+
+async function loadNodes() {
+    const tableBody = document.getElementById('nodeTableBody');
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400 italic">Loading nodes...</td></tr>';
+    
+    try {
+        const response = await fetch('/api/admin/nodes');
+        allNodes = await response.json() || [];
+        renderNodesTable();
+    } catch (e) {
+        console.error("Failed to load nodes", e);
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-red-400">Failed to load nodes</td></tr>';
+    }
+}
+
+function renderNodesTable() {
+    const tableBody = document.getElementById('nodeTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+
+    if (allNodes.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-10 text-center"><div class="flex flex-col items-center gap-2"><svg class="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg><p class="text-slate-400 text-sm">No node servers registered yet.</p></div></td></tr>';
+        return;
+    }
+
+    allNodes.forEach((n, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800';
+        
+        const statusHtml = n.is_active 
+            ? '<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> ONLINE</span>'
+            : '<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] font-bold">OFFLINE</span>';
+
+        tr.innerHTML = `
+            <td class="px-6 py-5 text-xs text-slate-400 font-bold">#${i + 1}</td>
+            <td class="px-6 py-5">
+                <div class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">${n.name}</div>
+                <div class="text-[10px] text-slate-400 font-medium">${n.location || 'Unknown Location'}</div>
+            </td>
+            <td class="px-6 py-5">
+                <code class="text-[11px] px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-mono text-slate-500 dark:text-slate-400">${n.url}</code>
+            </td>
+            <td class="px-6 py-5 text-center">
+                <span class="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">${n.rtsp_port}</span>
+            </td>
+            <td class="px-6 py-5">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                    ${n.location || '—'}
+                </div>
+            </td>
+            <td class="px-6 py-5">
+                <div class="flex justify-center">${statusHtml}</div>
+            </td>
+            <td class="px-6 py-5 text-right">
+                <div class="flex justify-end gap-1">
+                    <button onclick='openNodeModal(${JSON.stringify(n)})' class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Edit Node">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button onclick="deleteNode(${n.id})" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete Node">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+function openNodeModal(node = null) {
+    const modal = document.getElementById('nodeModal');
+    const title = document.getElementById('nodeModalTitle');
+    if (!modal) return;
+    
+    // Reset form
+    document.getElementById('nodeId').value = node ? node.id : '';
+    document.getElementById('nodeName').value = node ? node.name : '';
+    document.getElementById('nodeUrl').value = node ? node.url : '';
+    document.getElementById('nodeRtspPort').value = node ? node.rtsp_port : '8554';
+    document.getElementById('nodeLocation').value = node ? (node.location || '') : '';
+    document.getElementById('nodeSecret').value = node ? (node.secret || '') : '';
+    
+    title.textContent = node ? 'Edit Node Server' : 'Add Node Server';
+    modal.classList.remove('hidden');
+}
+
+function closeNodeModal() {
+    const modal = document.getElementById('nodeModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitNodeForm() {
+    const idValue = document.getElementById('nodeId').value;
+    const data = {
+        id: idValue ? parseInt(idValue) : 0,
+        name: document.getElementById('nodeName').value,
+        url: document.getElementById('nodeUrl').value,
+        rtsp_port: parseInt(document.getElementById('nodeRtspPort').value),
+        location: document.getElementById('nodeLocation').value,
+        secret: document.getElementById('nodeSecret').value,
+        is_active: true
+    };
+
+    if (!data.name || !data.url) {
+        showToast("Server Name and API URL are required", "error");
+        return;
+    }
+
+    // Basic URL validation
+    if (!data.url.startsWith('http')) {
+        showToast("Endpoint URL must include protocol (e.g. http://)", "warning");
+    }
+
+    const method = idValue ? 'PUT' : 'POST';
+    try {
+        const response = await fetch('/api/admin/nodes', {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showToast(idValue ? "Node server updated" : "Node server registered successfully", "success");
+            closeNodeModal();
+            loadNodes();
+        } else {
+            const err = await response.text();
+            showToast("Failed to save node: " + err, "error");
+        }
+    } catch (e) {
+        showToast("Network error connecting to master server", "error");
+    }
+}
+
+async function deleteNode(id) {
+    if (!confirm("Are you sure you want to delete this node? Streams assigned to this node will stop working.")) return;
+    try {
+        const response = await fetch(`/api/admin/nodes?id=${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast("Node server removed", "success");
+            loadNodes();
+        } else {
+            showToast("Failed to delete node", "error");
+        }
+    } catch (e) {
+        showToast("Network error", "error");
+    }
 }
