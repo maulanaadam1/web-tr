@@ -1285,6 +1285,18 @@ async function submitStreamForm(isEdit) {
     }
 
     if (!displayName || !url) { alert("Fields required"); return; }
+    
+    // Check Subscription Limit
+    if (!isEdit && window.CURRENT_ROLE !== 'admin') {
+        const plan = window.CURRENT_PLAN || 'Free';
+        const limits = { 'Free': 2, 'Basic': 4, 'Premium': 8, 'Advance': 16, 'Enterprise': 9999 };
+        const max = limits[plan] || 2;
+        
+        if (allStreams && allStreams.length >= max) {
+            showToast(`Limit Reached: Your ${plan} plan allows only ${max} cameras. Upgrade to add more!`, 'error');
+            return;
+        }
+    }
 
     // Generate UUID if it's a new stream
     const name = isEdit ? originalName : (crypto.randomUUID ? crypto.randomUUID() : 'stream-' + Date.now() + Math.floor(Math.random()*1000));
