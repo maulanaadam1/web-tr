@@ -87,6 +87,9 @@ function switchView(viewName) {
     if (viewName === 'servers') loadNodes();
     if (viewName === 'timelapse') initTimelapseView();
     if (viewName === 'licenses') loadLicenses();
+    if (viewName === 'profile') {
+        // Just UI switch for now
+    }
 }
 
 function applySubscriptionRestrictions() {
