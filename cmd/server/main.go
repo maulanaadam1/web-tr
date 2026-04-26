@@ -170,16 +170,18 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
-func syncStreamToGo2RTC(name, streamUrl string, isDelete bool) error {
-	apiUser := "http://localhost:1984/api/streams"
+func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error {
+	if nodeAPIUrl == "" {
+		nodeAPIUrl = "http://localhost:1984/api/streams"
+	}
 	method := http.MethodPut
 	if isDelete {
 		method = http.MethodDelete
 	}
 
-	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", apiUser, url.QueryEscape(name), url.QueryEscape(streamUrl))
+	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(streamUrl))
 	if isDelete {
-		reqUrl = fmt.Sprintf("%s?src=%s", apiUser, url.QueryEscape(name))
+		reqUrl = fmt.Sprintf("%s?src=%s", nodeAPIUrl, url.QueryEscape(name))
 	}
 
 	req, err := http.NewRequest(method, reqUrl, nil)
@@ -194,10 +196,10 @@ func syncStreamToGo2RTC(name, streamUrl string, isDelete bool) error {
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	log.Printf("Sync stream %s response: %s (Status: %d)", name, string(body), resp.StatusCode)
+	log.Printf("Sync stream %s to %s response: %s (Status: %d)", name, nodeAPIUrl, string(body), resp.StatusCode)
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("go2rtc api returned status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("node api returned status %d: %s", resp.StatusCode, string(body))
 	}
 	return nil
 }
@@ -526,10 +528,16 @@ func main() {
 			for _, s := range streams {
 				// Only sync go2rtc backend streams
 				if s.Backend == "" || s.Backend == "go2rtc" {
-					if err := syncStreamToGo2RTC(s.Name, s.URL, false); err != nil {
+					nodeURL := ""
+					if s.NodeID > 0 {
+						if n, _ := globalStore.GetNodeByID(s.NodeID); n != nil {
+							nodeURL = n.URL
+						}
+					}
+					if err := syncStreamToGo2RTC(nodeURL, s.Name, s.URL, false); err != nil {
 						log.Printf("Failed to sync stream %s: %v", s.Name, err)
 					} else {
-						log.Printf("Synced stream %s", s.Name)
+						log.Printf("Synced stream %s to %s", s.Name, nodeURL)
 					}
 				}
 			}
@@ -1168,7 +1176,16 @@ func main() {
 				disableAudio = *req.DisableAudio
 			}
 
-			if err := store.AddStream(models.Stream{
+			// --- Select Target Node (Load Balancing) ---
+			targetNode, _ := globalStore.GetLeastLoadedNode()
+			targetNodeID := 1
+			nodeAPI := ""
+			if targetNode != nil {
+				targetNodeID = targetNode.ID
+				nodeAPI = targetNode.URL
+			}
+
+			if err := globalStore.AddStream(models.Stream{
 				Name: req.Name,
 				DisplayName: req.DisplayName,
 				URL: req.URL,
@@ -1177,8 +1194,9 @@ func main() {
 				Lng: req.Lng,
 				Enabled: true,
 				UserID: sess.UserID,
-				IsPublic: sess.UserID == 0, // Make test streams public so they can be viewed for testing
+				IsPublic: sess.UserID == 0,
 				DisableAudio: disableAudio,
+				NodeID: targetNodeID,
 			}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1186,7 +1204,7 @@ func main() {
 			
 			streamMgr.SyncFromDB()
 
-			// Route stream creation to the correct streaming engine
+			// Route stream creation to the correct node
 			if req.Backend == "go2rtc" || req.Backend == "ffmpeg" {
 				urlToSync := req.URL
 				if req.Backend == "ffmpeg" {
@@ -1195,12 +1213,8 @@ func main() {
 				if disableAudio && !strings.Contains(urlToSync, "#") {
 					urlToSync += "#video"
 				}
-				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
-					log.Printf("Failed to sync stream to go2rtc/ffmpeg: %v", err)
-				}
-			} else if req.Backend == "mediamtx" {
-				if err := syncStreamToMediaMTX(req.Name, req.URL, false); err != nil {
-					log.Printf("Failed to sync stream to MediaMTX: %v", err)
+				if err := syncStreamToGo2RTC(nodeAPI, req.Name, urlToSync, false); err != nil {
+					log.Printf("Failed to sync stream to go2rtc: %v", err)
 				}
 			}
 
@@ -1252,12 +1266,27 @@ func main() {
 				}
 				// If name changed, delete old
 				if req.OriginalName != "" && req.OriginalName != req.Name {
-					syncStreamToGo2RTC(req.OriginalName, "", true)
+					oldNodeURL := ""
+					if existingOld, _ := streamMgr.GetStream(req.OriginalName); existingOld != nil && existingOld.NodeID > 0 {
+						if n, _ := globalStore.GetNodeByID(existingOld.NodeID); n != nil {
+							oldNodeURL = n.URL
+						}
+					}
+					syncStreamToGo2RTC(oldNodeURL, req.OriginalName, "", true)
 				}
+
+				// Resolve target Node API for the current/new name
+				nodeURL := ""
+				if existing, _ := streamMgr.GetStream(req.Name); existing != nil && existing.NodeID > 0 {
+					if n, _ := globalStore.GetNodeByID(existing.NodeID); n != nil {
+						nodeURL = n.URL
+					}
+				}
+
 				if req.DisableAudio && !strings.Contains(urlToSync, "#") {
 					urlToSync += "#video"
 				}
-				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
+				if err := syncStreamToGo2RTC(nodeURL, req.Name, urlToSync, false); err != nil {
 					log.Printf("Failed to update stream in go2rtc: %v", err)
 				}
 			} else if req.Backend == "mediamtx" {
@@ -1304,7 +1333,13 @@ func main() {
 			}
 
 			if stream.Backend == "go2rtc" || stream.Backend == "ffmpeg" {
-				if err := syncStreamToGo2RTC(stream.Name, "", true); err != nil {
+				nodeURL := ""
+				if stream.NodeID > 0 {
+					if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
+						nodeURL = n.URL
+					}
+				}
+				if err := syncStreamToGo2RTC(nodeURL, stream.Name, "", true); err != nil {
 					log.Printf("Failed to delete stream from go2rtc: %v", err)
 				}
 			} else if stream.Backend == "mediamtx" {
@@ -1407,7 +1442,7 @@ func main() {
 			if !strings.Contains(urlToSync, "#") {
 				urlToSync += "#video"
 			}
-			if err := syncStreamToGo2RTC(name, urlToSync, false); err != nil {
+			if err := syncStreamToGo2RTC("", name, urlToSync, false); err != nil {
 				log.Printf("Failed to sync stream %s to go2rtc: %v", name, err)
 			}
 
@@ -1509,7 +1544,13 @@ func main() {
 			case "delete":
 				err = streamMgr.RemoveStream(name)
 				if err == nil {
-					syncStreamToGo2RTC(name, "", true)
+					nodeURL := ""
+					if stream, _ := streamMgr.GetStream(name); stream != nil && stream.NodeID > 0 {
+						if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
+							nodeURL = n.URL
+						}
+					}
+					syncStreamToGo2RTC(nodeURL, name, "", true)
 				}
 			case "enable":
 				err = streamMgr.SetStreamStatus(name, true)
@@ -1526,17 +1567,28 @@ func main() {
 		// Sync logic for enable/disable
 		if req.Action == "enable" || req.Action == "disable" {
 			for _, name := range req.Names {
-				if req.Action == "disable" {
-					syncStreamToGo2RTC(name, "", true) // Delete from active proxy memory
-				} else {
-					// Enable: Re-sync to Go2RTC
-					streams, _ := streamMgr.GetStreams()
-					for _, s := range streams {
-						if s.Name == name {
-							syncStreamToGo2RTC(s.Name, s.URL, false)
-							break
-						}
+				var stream *models.Stream
+				all, _ := streamMgr.GetStreams()
+				for i := range all {
+					if all[i].Name == name {
+						stream = &all[i]
+						break
 					}
+				}
+				if stream == nil { continue }
+
+				nodeURL := ""
+				if stream.NodeID > 0 {
+					if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
+						nodeURL = n.URL
+					}
+				}
+
+				if req.Action == "disable" {
+					syncStreamToGo2RTC(nodeURL, name, "", true) // Delete from node memory
+				} else {
+					// Enable: Re-sync to Node
+					syncStreamToGo2RTC(nodeURL, stream.Name, stream.URL, false)
 				}
 			}
 		}
@@ -1990,10 +2042,27 @@ func main() {
 			displayName = camName
 		}
 
-		// --- Register placeholder in go2rtc for the oncoming push ---
-		// Kita beritahu go2rtc untuk standby menerima push
-		if err := syncStreamToGo2RTC(camName, "!", false); err != nil {
-			log.Printf("[Bridge v2] go2rtc info: %v", err)
+		// --- Select Target Node (Load Balancing) ---
+		targetNode, err := globalStore.GetLeastLoadedNode()
+		targetNodeID := 1
+		nodeAPI := "http://localhost:1984/api/streams"
+		nodeIP := "localhost"
+		rtspPort := 8554
+
+		if err == nil && targetNode != nil {
+			targetNodeID = targetNode.ID
+			nodeAPI = targetNode.URL
+			rtspPort = targetNode.RtspPort
+			
+			// Extract IP from Node URL for the gateway response
+			parsedUrl, _ := url.Parse(nodeAPI)
+			nodeIP = parsedUrl.Hostname()
+			if nodeIP == "" { nodeIP = targetNode.URL } // Fallback
+		}
+
+		// --- Register placeholder in the target Node's go2rtc ---
+		if err := syncStreamToGo2RTC(nodeAPI, camName, "!", false); err != nil {
+			log.Printf("[Bridge v2] node sync error: %v", err)
 		}
 
 		// --- Register in DB ---
@@ -2002,6 +2071,11 @@ func main() {
 		for _, s := range existingStreams {
 			if s.Name == camName {
 				found = true
+				// Update node_id if it changed
+				if s.NodeID != targetNodeID {
+					s.NodeID = targetNodeID
+					globalStore.AddStream(s) // Update
+				}
 				break
 			}
 		}
@@ -2009,18 +2083,23 @@ func main() {
 			newStream := models.Stream{
 				Name:        camName,
 				DisplayName: displayName,
-				URL:         "push", // Marker for UI
+				URL:         "push",
 				Backend:     "go2rtc",
 				Enabled:     true,
 				IsPublic:    true,
 				UserID:      ownerUserID,
+				NodeID:      targetNodeID,
 			}
 			globalStore.AddStream(newStream)
 		}
 
-		log.Printf("[Bridge v2] Camera '%s' registered for Push Mode", camName)
+		log.Printf("[Bridge v2] Camera '%s' assigned to Node %d (%s)", camName, targetNodeID, nodeIP)
+		
+		// Response to Gateway: tell them which node and port to push to
+		w.Header().Set("X-Node-IP", nodeIP)
+		w.Header().Set("X-Node-Port", fmt.Sprintf("%d", rtspPort))
 		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "Registered for push mode")
+		fmt.Fprintf(w, "Registered for push mode. Target IP: %s, Port: %d", nodeIP, rtspPort)
 	})
 
 	go func() {

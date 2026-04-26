@@ -330,6 +330,25 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	return streams, nil
 }
 
+func (s *Store) GetStream(name string) (*models.Stream, error) {
+	var st models.Stream
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT name, COALESCE(display_name, name) as display_name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(node_id, 1) as node_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution, COALESCE(disable_audio, 0) as disable_audio FROM streams WHERE name = ?"
+	} else {
+		query = "SELECT name, COALESCE(display_name, name) as display_name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(node_id, 1) as node_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution, COALESCE(disable_audio, 0) as disable_audio FROM streams WHERE name = $1"
+	}
+
+	err := s.db.QueryRow(query, name).Scan(&st.Name, &st.DisplayName, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.NodeID, &st.IsPublic, &st.Resolution, &st.DisableAudio)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &st, nil
+}
+
 func (s *Store) AddStream(st models.Stream) error {
 	// Default to go2rtc if backend not specified
 	if st.Backend == "" {
@@ -715,4 +734,58 @@ func (s *Store) DeleteNode(id int) error {
 	}
 	_, err := s.db.Exec(query, id)
 	return err
+}
+
+func (s *Store) GetNodeByID(id int) (*models.Node, error) {
+	var n models.Node
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT id, name, url, rtsp_port, COALESCE(secret, ''), is_active, COALESCE(location, ''), created_at FROM nodes WHERE id = ?"
+	} else {
+		query = "SELECT id, name, url, rtsp_port, COALESCE(secret, ''), is_active, COALESCE(location, ''), created_at FROM nodes WHERE id = $1"
+	}
+
+	err := s.db.QueryRow(query, id).Scan(&n.ID, &n.Name, &n.URL, &n.RtspPort, &n.Secret, &n.IsActive, &n.Location, &n.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &n, nil
+}
+
+func (s *Store) GetLeastLoadedNode() (*models.Node, error) {
+	// Query the node with the minimum number of streams assigned
+	// We only consider active nodes
+	var query string
+	if s.dbType == "sqlite" {
+		query = `
+			SELECT n.id, n.name, n.url, n.rtsp_port, COALESCE(n.secret, ''), n.is_active, COALESCE(n.location, ''), n.created_at
+			FROM nodes n
+			LEFT JOIN streams s ON n.id = s.node_id
+			WHERE n.is_active = 1
+			GROUP BY n.id
+			ORDER BY COUNT(s.id) ASC
+			LIMIT 1`
+	} else {
+		query = `
+			SELECT n.id, n.name, n.url, n.rtsp_port, COALESCE(n.secret, ''), n.is_active, COALESCE(n.location, ''), n.created_at
+			FROM nodes n
+			LEFT JOIN streams s ON n.id = s.node_id
+			WHERE n.is_active = TRUE
+			GROUP BY n.id, n.name, n.url, n.rtsp_port, n.secret, n.is_active, n.location, n.created_at
+			ORDER BY COUNT(s.id) ASC
+			LIMIT 1`
+	}
+
+	var n models.Node
+	err := s.db.QueryRow(query).Scan(&n.ID, &n.Name, &n.URL, &n.RtspPort, &n.Secret, &n.IsActive, &n.Location, &n.CreatedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No active nodes available
+		}
+		return nil, err
+	}
+	return &n, nil
 }

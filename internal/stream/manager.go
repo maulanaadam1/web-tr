@@ -163,6 +163,13 @@ func (m *Manager) SetStreamStatus(name string, enabled bool) error {
 	return nil // Not supported in JSON Config mode
 }
 
+func (m *Manager) GetStream(name string) (*models.Stream, error) {
+	if m.Store != nil {
+		return m.Store.GetStream(name)
+	}
+	return nil, fmt.Errorf("lookup by name only supported in DB mode")
+}
+
 func (m *Manager) GetStreams() ([]models.Stream, error) {
 	if m.Store != nil {
 		return m.Store.GetStreams()
