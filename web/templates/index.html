@@ -1972,5 +1972,63 @@
             </div>
         </div>
     </div>
+
+    <!-- License Management Modal -->
+    <div id="licenseModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" aria-hidden="true" onclick="closeLicenseModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-slate-200 dark:border-slate-800">
+                <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-slate-800 dark:text-white">Generate License Keys</h3>
+                    <button type="button" onclick="closeLicenseModal()" class="text-slate-400 hover:text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </div>
+                <div class="px-8 py-6 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Subscription Plan</label>
+                        <select id="licPlan" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                            <option value="Basic">Basic (4 Cameras)</option>
+                            <option value="Premium" selected>Premium (8 Cameras)</option>
+                            <option value="Advance">Advance (16 Cameras)</option>
+                            <option value="Enterprise">Enterprise (9999 Cameras)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Duration (Days)</label>
+                        <input type="number" id="licDays" value="30" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-brand-500 outline-none transition-all">
+                    </div>
+                </div>
+                <div class="px-8 py-6 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                    <button type="button" onclick="closeLicenseModal()" class="px-6 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-600">Cancel</button>
+                    <button type="button" onclick="submitLicenseGen()" class="px-8 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold shadow-lg shadow-brand-500/30 transition-all">Generate Key</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redeem License Modal -->
+    <div id="redeemModal" class="fixed inset-0 z-[110] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-brand-900/40 backdrop-blur-md transition-opacity" aria-hidden="true" onclick="closeRedeemModal()"></div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] text-left overflow-hidden shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] transform transition-all sm:my-8 sm:align-middle sm:max-w-md w-full border border-white/20 dark:border-slate-800">
+                <div class="p-10 text-center">
+                    <div class="w-20 h-20 bg-brand-100 dark:bg-brand-500/10 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-3">
+                        <svg class="w-10 h-10 text-brand-600 dark:text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    </div>
+                    <h3 class="text-3xl font-black text-slate-800 dark:text-white mb-2 font-inter tracking-tight">Redeem Key</h3>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm mb-8">Enter your license key to activate your premium subscription plan instantly.</p>
+                    
+                    <div class="relative group mb-6">
+                        <div class="absolute -inset-1 bg-gradient-to-r from-brand-600 to-indigo-600 rounded-2xl blur opacity-25 group-focus-within:opacity-50 transition duration-1000 group-focus-within:duration-200"></div>
+                        <input type="text" id="redeemKey" placeholder="R2G-XXXX-XXXX-XXXX" class="relative w-full px-6 py-5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-lg font-mono text-center tracking-[0.2em] focus:outline-none focus:border-brand-500 dark:focus:border-brand-500 uppercase transition-all shadow-sm">
+                    </div>
+
+                    <button type="button" onclick="submitLicenseRedeem()" class="w-full py-5 rounded-2xl bg-slate-900 dark:bg-brand-600 hover:bg-black dark:hover:bg-brand-700 text-white text-lg font-black shadow-xl shadow-brand-500/20 transition-all active:scale-[0.98]">Activate Now</button>
+                    <button type="button" onclick="closeRedeemModal()" class="mt-4 text-xs font-bold text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors">Maybe Later</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

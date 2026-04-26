@@ -3893,6 +3893,8 @@ function loadLicenses() {
             if (!tbody) return;
             tbody.innerHTML = '';
             
+            if (!Array.isArray(data)) return console.error('Licenses data is not an array:', data);
+            
             data.forEach(lic => {
                 const statusClass = lic.is_used ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
                 const statusText = lic.is_used ? 'USED' : 'ACTIVE';
