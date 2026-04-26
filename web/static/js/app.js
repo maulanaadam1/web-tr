@@ -115,7 +115,10 @@ function switchView(viewName) {
     if (viewName === 'timelapse') initTimelapseView();
     if (viewName === 'licenses') loadLicenses();
     if (viewName === 'profile') {
-        // Just UI switch for now
+        loadPricingPlans();
+    }
+    if (viewName === 'pricing') {
+        loadAdminPricingSettings();
     }
 }
 
@@ -4025,4 +4028,210 @@ function submitLicenseRedeem() {
             showToast(data.error || 'Failed to redeem license', 'error');
         }
     });
+}
+
+// ====================================================================
+// PAYMENT GATEWAY — iPaymu
+// ====================================================================
+
+// Load plans for the user's "Buy Plan" section
+async function loadPricingPlans() {
+    const container = document.getElementById('pricingPlansContainer');
+    if (!container) return;
+    container.innerHTML = `<div class="flex items-center justify-center py-8"><div class="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div></div>`;
+
+    try {
+        const res = await fetch('/api/plans');
+        const plans = await res.json();
+        if (!plans || plans.length === 0) {
+            container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">No plans available.</p>';
+            return;
+        }
+
+        const current = window.CURRENT_PLAN || 'Free';
+        const planColors = {
+            'Basic': 'from-blue-500 to-cyan-500',
+            'Premium': 'from-violet-500 to-purple-600',
+            'Advance': 'from-amber-500 to-orange-600',
+        };
+
+        container.innerHTML = plans.filter(p => p.is_active).map(p => {
+            const isCurrent = p.name === current;
+            const gradient = planColors[p.name] || 'from-slate-500 to-slate-600';
+            return `
+            <div class="relative rounded-2xl border ${isCurrent ? 'border-brand-500 shadow-lg shadow-brand-500/20' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-slate-900 overflow-hidden">
+                ${isCurrent ? '<div class="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r '+gradient+'"></div>' : ''}
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">${p.label}</h3>
+                            <p class="text-xs text-slate-400 font-medium">${p.max_cameras} Cameras · ${p.duration_days} Days</p>
+                        </div>
+                        ${isCurrent ? '<span class="px-2 py-1 bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-lg text-[10px] font-black uppercase">Active</span>' : ''}
+                    </div>
+                    <div class="mb-5">
+                        <span class="text-3xl font-black text-slate-900 dark:text-white">Rp ${p.price.toLocaleString('id-ID')}</span>
+                        <span class="text-slate-400 text-sm"> / bulan</span>
+                    </div>
+                    <button onclick="purchasePlan('${p.name}')" ${isCurrent ? 'disabled' : ''}
+                        class="w-full py-2.5 rounded-xl text-sm font-bold transition-all ${isCurrent
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r '+gradient+' text-white hover:opacity-90 active:scale-95 shadow-lg'}">
+                        ${isCurrent ? 'Current Plan' : 'Buy Now'}
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Failed to load pricing plans.</p>';
+    }
+}
+
+// Initiate payment for a plan
+async function purchasePlan(planName) {
+    if (!confirm(`Lanjutkan pembelian paket ${planName}?`)) return;
+
+    try {
+        showToast('Memproses pembayaran...', 'info');
+        const res = await fetch('/api/payment/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: planName })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.payment_url) {
+            showToast('Mengarahkan ke halaman pembayaran...', 'success');
+            setTimeout(() => window.open(data.payment_url, '_blank'), 800);
+        } else {
+            showToast(data || 'Gagal membuat pembayaran. Pastikan IPAYMU_VA dan IPAYMU_API_KEY sudah dikonfigurasi.', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+}
+
+// Admin: Load pricing settings
+async function loadAdminPricingSettings() {
+    const container = document.getElementById('adminPricingContainer');
+    if (!container) return;
+    container.innerHTML = '<p class="text-slate-400 text-sm">Loading...</p>';
+
+    try {
+        const res = await fetch('/api/admin/plans');
+        const plans = await res.json();
+
+        container.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 dark:border-slate-700">
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Plan</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Label</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Harga (Rp)</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Durasi (Hari)</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Max Kamera</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Status</th>
+                        <th class="py-3 px-4"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${plans.map(p => `
+                    <tr class="border-b border-slate-100 dark:border-slate-800" id="plan-row-${p.name}">
+                        <td class="py-3 px-4 font-black text-slate-800 dark:text-white">${p.name}</td>
+                        <td class="py-3 px-4"><input id="plan-label-${p.name}" value="${p.label}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-40"></td>
+                        <td class="py-3 px-4"><input id="plan-price-${p.name}" type="number" value="${p.price}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-32"></td>
+                        <td class="py-3 px-4"><input id="plan-days-${p.name}" type="number" value="${p.duration_days}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-24"></td>
+                        <td class="py-3 px-4"><input id="plan-cams-${p.name}" type="number" value="${p.max_cameras}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-24"></td>
+                        <td class="py-3 px-4">
+                            <select id="plan-active-${p.name}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm">
+                                <option value="true" ${p.is_active ? 'selected' : ''}>Active</option>
+                                <option value="false" ${!p.is_active ? 'selected' : ''}>Hidden</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="saveAdminPlan('${p.name}')" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-lg transition-colors">Simpan</button>
+                        </td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+            <p class="text-xs font-bold text-amber-700 dark:text-amber-300">⚙️ Environment Variables untuk iPaymu</p>
+            <div class="mt-2 font-mono text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                <p>IPAYMU_VA=<span class="text-slate-500">nomor_va_anda</span></p>
+                <p>IPAYMU_API_KEY=<span class="text-slate-500">api_key_anda</span></p>
+                <p>IPAYMU_PRODUCTION=<span class="text-slate-500">false (sandbox) atau true (production)</span></p>
+                <p>APP_URL=<span class="text-slate-500">https://domain-anda.com</span></p>
+            </div>
+        </div>`;
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm">Gagal memuat pengaturan pricing.</p>';
+    }
+}
+
+async function saveAdminPlan(planName) {
+    const label = document.getElementById(`plan-label-${planName}`)?.value;
+    const price = parseInt(document.getElementById(`plan-price-${planName}`)?.value);
+    const days = parseInt(document.getElementById(`plan-days-${planName}`)?.value);
+    const cams = parseInt(document.getElementById(`plan-cams-${planName}`)?.value);
+    const active = document.getElementById(`plan-active-${planName}`)?.value === 'true';
+
+    try {
+        const res = await fetch('/api/admin/plans', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: planName, label, price, duration_days: days, max_cameras: cams, is_active: active })
+        });
+        if (res.ok) {
+            showToast(`Plan ${planName} berhasil disimpan!`, 'success');
+        } else {
+            showToast('Gagal menyimpan plan.', 'error');
+        }
+    } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+    }
+}
+
+async function loadOrderHistory() {
+    const container = document.getElementById('orderHistoryContainer');
+    if (!container) return;
+    container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">Loading...</p>';
+    try {
+        const res = await fetch('/api/admin/orders');
+        const orders = await res.json();
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">Belum ada order.</p>';
+            return;
+        }
+        const statusBadge = (s) => ({
+            'paid': '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-black">PAID</span>',
+            'pending': '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded text-[10px] font-black">PENDING</span>',
+        }[s] || `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-black">${s.toUpperCase()}</span>`);
+
+        container.innerHTML = `<div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100 dark:border-slate-800">
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Ref ID</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">User ID</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Plan</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Amount</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Status</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Tanggal</th>
+                </tr></thead>
+                <tbody>${orders.map(o => `
+                <tr class="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="py-2 px-3 font-mono text-xs text-slate-500">${o.reference_id}</td>
+                    <td class="py-2 px-3 text-slate-600 dark:text-slate-300">${o.user_id}</td>
+                    <td class="py-2 px-3 font-bold text-slate-700 dark:text-slate-200">${o.plan_name}</td>
+                    <td class="py-2 px-3 font-bold">Rp ${o.amount.toLocaleString('id-ID')}</td>
+                    <td class="py-2 px-3">${statusBadge(o.status)}</td>
+                    <td class="py-2 px-3 text-xs text-slate-400">${new Date(o.created_at).toLocaleDateString('id-ID')}</td>
+                </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Gagal memuat order.</p>';
+    }
 }

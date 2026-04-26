@@ -274,7 +274,214 @@ func (s *Store) Init() error {
 		return err
 	}
 
+	// Create plans table (pricing config)
+	plansQuery := `
+	CREATE TABLE IF NOT EXISTS plans (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,
+		label TEXT NOT NULL,
+		price INTEGER NOT NULL,
+		duration_days INTEGER NOT NULL DEFAULT 30,
+		max_cameras INTEGER NOT NULL DEFAULT 4,
+		is_active BOOLEAN DEFAULT 1,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`
+	if s.dbType != "sqlite" {
+		plansQuery = `
+		CREATE TABLE IF NOT EXISTS plans (
+			id SERIAL PRIMARY KEY,
+			name TEXT UNIQUE NOT NULL,
+			label TEXT NOT NULL,
+			price INTEGER NOT NULL,
+			duration_days INTEGER NOT NULL DEFAULT 30,
+			max_cameras INTEGER NOT NULL DEFAULT 4,
+			is_active BOOLEAN DEFAULT TRUE,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`
+	}
+	if _, err := s.db.Exec(plansQuery); err != nil {
+		return err
+	}
+
+	// Seed default plans if empty
+	s.seedDefaultPlans()
+
+	// Create orders table (payment tracking)
+	ordersQuery := `
+	CREATE TABLE IF NOT EXISTS orders (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		reference_id TEXT UNIQUE NOT NULL,
+		user_id INTEGER NOT NULL,
+		plan_name TEXT NOT NULL,
+		amount INTEGER NOT NULL,
+		status TEXT DEFAULT 'pending',
+		payment_url TEXT DEFAULT '',
+		session_id TEXT DEFAULT '',
+		paid_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`
+	if s.dbType != "sqlite" {
+		ordersQuery = `
+		CREATE TABLE IF NOT EXISTS orders (
+			id SERIAL PRIMARY KEY,
+			reference_id TEXT UNIQUE NOT NULL,
+			user_id INTEGER NOT NULL,
+			plan_name TEXT NOT NULL,
+			amount INTEGER NOT NULL,
+			status TEXT DEFAULT 'pending',
+			payment_url TEXT DEFAULT '',
+			session_id TEXT DEFAULT '',
+			paid_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`
+	}
+	if _, err := s.db.Exec(ordersQuery); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *Store) seedDefaultPlans() {
+	defaults := []struct {
+		Name     string
+		Label    string
+		Price    int
+		Days     int
+		MaxCams  int
+	}{
+		{"Basic", "Basic Plan", 15000, 30, 4},
+		{"Premium", "Premium Plan", 35000, 30, 8},
+		{"Advance", "Advance Plan", 70000, 30, 16},
+	}
+	for _, p := range defaults {
+		if s.dbType == "sqlite" {
+			s.db.Exec("INSERT OR IGNORE INTO plans (name, label, price, duration_days, max_cameras) VALUES (?, ?, ?, ?, ?)",
+				p.Name, p.Label, p.Price, p.Days, p.MaxCams)
+		} else {
+			s.db.Exec("INSERT INTO plans (name, label, price, duration_days, max_cameras) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (name) DO NOTHING",
+				p.Name, p.Label, p.Price, p.Days, p.MaxCams)
+		}
+	}
+}
+
+// --- Plan Management ---
+
+func (s *Store) GetAllPlans() ([]models.Plan, error) {
+	rows, err := s.db.Query("SELECT id, name, label, price, duration_days, max_cameras, is_active, updated_at FROM plans ORDER BY price ASC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var plans []models.Plan
+	for rows.Next() {
+		var p models.Plan
+		if err := rows.Scan(&p.ID, &p.Name, &p.Label, &p.Price, &p.DurationDays, &p.MaxCameras, &p.IsActive, &p.UpdatedAt); err != nil {
+			continue
+		}
+		plans = append(plans, p)
+	}
+	return plans, nil
+}
+
+func (s *Store) GetPlanByName(name string) (*models.Plan, error) {
+	var p models.Plan
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT id, name, label, price, duration_days, max_cameras, is_active, updated_at FROM plans WHERE name = ?"
+	} else {
+		query = "SELECT id, name, label, price, duration_days, max_cameras, is_active, updated_at FROM plans WHERE name = $1"
+	}
+	err := s.db.QueryRow(query, name).Scan(&p.ID, &p.Name, &p.Label, &p.Price, &p.DurationDays, &p.MaxCameras, &p.IsActive, &p.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func (s *Store) UpdatePlan(p models.Plan) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE plans SET label = ?, price = ?, duration_days = ?, max_cameras = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE name = ?"
+	} else {
+		query = "UPDATE plans SET label = $1, price = $2, duration_days = $3, max_cameras = $4, is_active = $5, updated_at = NOW() WHERE name = $6"
+	}
+	_, err := s.db.Exec(query, p.Label, p.Price, p.DurationDays, p.MaxCameras, p.IsActive, p.Name)
+	return err
+}
+
+// --- Order Management ---
+
+func (s *Store) CreateOrder(refID string, userID int, planName string, amount int) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO orders (reference_id, user_id, plan_name, amount) VALUES (?, ?, ?, ?)"
+	} else {
+		query = "INSERT INTO orders (reference_id, user_id, plan_name, amount) VALUES ($1, $2, $3, $4)"
+	}
+	_, err := s.db.Exec(query, refID, userID, planName, amount)
+	return err
+}
+
+func (s *Store) UpdateOrderPaymentURL(refID, paymentURL, sessionID string) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE orders SET payment_url = ?, session_id = ? WHERE reference_id = ?"
+	} else {
+		query = "UPDATE orders SET payment_url = $1, session_id = $2 WHERE reference_id = $3"
+	}
+	_, err := s.db.Exec(query, paymentURL, sessionID, refID)
+	return err
+}
+
+func (s *Store) GetOrderByRef(refID string) (*models.Order, error) {
+	var o models.Order
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT id, reference_id, user_id, plan_name, amount, status, payment_url, session_id, created_at FROM orders WHERE reference_id = ?"
+	} else {
+		query = "SELECT id, reference_id, user_id, plan_name, amount, status, payment_url, session_id, created_at FROM orders WHERE reference_id = $1"
+	}
+	err := s.db.QueryRow(query, refID).Scan(&o.ID, &o.ReferenceID, &o.UserID, &o.PlanName, &o.Amount, &o.Status, &o.PaymentURL, &o.SessionID, &o.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &o, nil
+}
+
+func (s *Store) MarkOrderPaid(refID string) (*models.Order, error) {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE orders SET status = 'paid', paid_at = CURRENT_TIMESTAMP WHERE reference_id = ? AND status = 'pending'"
+	} else {
+		query = "UPDATE orders SET status = 'paid', paid_at = NOW() WHERE reference_id = $1 AND status = 'pending'"
+	}
+	res, err := s.db.Exec(query, refID)
+	if err != nil {
+		return nil, err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return nil, fmt.Errorf("order already processed or not found")
+	}
+	return s.GetOrderByRef(refID)
+}
+
+func (s *Store) GetRecentOrders(limit int) ([]models.Order, error) {
+	rows, err := s.db.Query("SELECT id, reference_id, user_id, plan_name, amount, status, payment_url, session_id, created_at FROM orders ORDER BY created_at DESC LIMIT ?", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var orders []models.Order
+	for rows.Next() {
+		var o models.Order
+		if err := rows.Scan(&o.ID, &o.ReferenceID, &o.UserID, &o.PlanName, &o.Amount, &o.Status, &o.PaymentURL, &o.SessionID, &o.CreatedAt); err != nil {
+			continue
+		}
+		orders = append(orders, o)
+	}
+	return orders, nil
 }
 
 // GenerateLicenseKey creates a R2G-PLAN-XXXX-XXXX key

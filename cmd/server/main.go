@@ -1755,12 +1755,8 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{"plan": plan, "message": "License redeemed successfully"})
 	}))
 
-	http.HandleFunc("/api/webhooks/payment", func(w http.ResponseWriter, r *http.Request) {
-		// Mock logic: If signal is SUCCESS from Xendit/Midtrans
-		// In a real scenario, you'd parse callback body and signature here.
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Payment Webhook Received (Pending Integration)")
-	})
+	// Register all iPaymu payment gateway routes
+	registerPaymentRoutes()
 
 	http.HandleFunc("/api/probe", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
