@@ -696,8 +696,8 @@ func main() {
 			email := r.FormValue("email")
 			whatsapp := r.FormValue("whatsapp")
 
-			if username == "" || password == "" {
-				http.Redirect(w, r, "/login?error=Username+and+password+are+required&mode=register", http.StatusSeeOther)
+			if username == "" || password == "" || fullName == "" || email == "" {
+				http.Redirect(w, r, "/login?error=Username,+password,+full+name,+and+email+are+required&mode=register", http.StatusSeeOther)
 				return
 			}
 
