@@ -712,7 +712,7 @@ func main() {
 				Username:         username,
 				Role:             "user",
 				IsActive:         true,
-				SubscriptionPlan: "Free",
+				SubscriptionPlan: "Free", // Start as free until payment confirms
 				FullName:         fullName,
 				Email:            email,
 				Whatsapp:         whatsapp,
@@ -724,8 +724,73 @@ func main() {
 				return
 			}
 
-			// Success, redirect to login
-			http.Redirect(w, r, "/login?success=Registration+successful.+Please+log+in.", http.StatusSeeOther)
+			user, _ := store.GetUserByUsername(username)
+			if user == nil {
+				http.Redirect(w, r, "/login?success=Registration+successful.+Please+log+in.", http.StatusSeeOther)
+				return
+			}
+
+			// Auto Login
+			token := generateSessionToken()
+			expiry := time.Now().Add(24 * time.Hour)
+			sessionMutex.Lock()
+			activeSessions[token] = Session{
+				UserID:           user.ID,
+				Username:         user.Username,
+				Role:             user.Role,
+				SubscriptionPlan: user.SubscriptionPlan,
+				SubExpiry:        user.ExpiresAt,
+				Expiry:           expiry,
+			}
+			sessionMutex.Unlock()
+
+			cookie := http.Cookie{
+				Name:     "session_token",
+				Value:    token,
+				Expires:  expiry,
+				HttpOnly: true,
+				Path:     "/",
+				SameSite: http.SameSiteLaxMode,
+			}
+			http.SetCookie(w, &cookie)
+
+			planName := r.FormValue("plan")
+			selectedPlan, _ := store.GetPlanByName(planName)
+			if planName != "Free" && planName != "" && selectedPlan != nil && selectedPlan.IsActive {
+				ipaymuVA := os.Getenv("IPAYMU_VA")
+				ipaymuKey := os.Getenv("IPAYMU_API_KEY")
+				production := os.Getenv("IPAYMU_PRODUCTION") == "true"
+				appURL := os.Getenv("APP_URL")
+				if appURL == "" {
+					appURL = "https://localhost"
+				}
+				if ipaymuVA != "" && ipaymuKey != "" {
+					refBytes := make([]byte, 6)
+					rand.Read(refBytes)
+					refID := fmt.Sprintf("R2G-%d-%s", user.ID, hex.EncodeToString(refBytes))
+					
+					store.CreateOrder(refID, user.ID, selectedPlan.Name, selectedPlan.Price)
+					
+					payURL, sessionID, err := createIPPayment(
+						ipaymuVA, ipaymuKey, production,
+						selectedPlan.Label, int64(selectedPlan.Price), refID,
+						user.FullName, user.Email,
+						appURL+"/payment/success",
+						appURL+"/payment/cancel",
+						appURL+"/api/payment/callback",
+					)
+					if err == nil {
+						store.UpdateOrderPaymentURL(refID, payURL, sessionID)
+						http.Redirect(w, r, payURL, http.StatusSeeOther)
+						return
+					} else {
+						log.Printf("[Payment] Auto-redirect failed: %v", err)
+					}
+				}
+			}
+
+			// Normal redirect to dashboard
+			http.Redirect(w, r, "/admin", http.StatusSeeOther)
 			return
 		}
 		http.Redirect(w, r, "/login", http.StatusSeeOther)

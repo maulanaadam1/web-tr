@@ -229,6 +229,17 @@
                 <!-- Registration Form -->
                 <form id="form-register" action="/register" method="POST" class="space-y-5 hidden">
                     <div class="space-y-1.5">
+                        <label for="reg-plan" class="block text-sm font-medium text-slate-300">Pilih Paket</label>
+                        <select id="reg-plan" name="plan"
+                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50 appearance-none">
+                            <option value="Free">Free (2 Kamera, Rp 0)</option>
+                            <option value="Basic">Basic (4 Kamera, Rp 15.000)</option>
+                            <option value="Premium">Premium (8 Kamera, Rp 35.000)</option>
+                            <option value="Advance">Advance (16 Kamera, Rp 70.000)</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
                         <label for="reg-username" class="block text-sm font-medium text-slate-300">Username *</label>
                         <input type="text" id="reg-username" name="username" required
                             class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
@@ -463,6 +474,11 @@
         let requestedMode = urlParams.get('mode') || "{{.Mode}}";
         if (requestedMode === 'register') {
             switchTab('register');
+        }
+        const planParam = urlParams.get('plan');
+        if (planParam) {
+            const planSelect = document.getElementById('reg-plan');
+            if (planSelect) planSelect.value = planParam;
         }
 
         function switchTab(mode) {
