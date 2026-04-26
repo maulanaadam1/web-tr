@@ -133,7 +133,7 @@ function applySubscriptionRestrictions() {
     const nvrLink = document.querySelector('.nav-link[data-view="nvr"]'); // Added NVR Link
     
     if (publicViewLink) {
-        publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
+        publicViewLink.style.display = (plan === 'Free' || plan === 'Basic') ? 'none' : 'flex';
     }
 
     if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
