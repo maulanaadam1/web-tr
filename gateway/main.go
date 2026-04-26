@@ -1973,7 +1973,7 @@ func startPushMode(inst *TunnelInstance, camName string, localRTSP string, nodeI
 	// Sembunyikan window CMD di windows
 	hideWindow(cmd)
 
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		return fmt.Errorf("gagal menjalankan ffmpeg: %v", err)
 	}

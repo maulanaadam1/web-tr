@@ -86,6 +86,7 @@ function switchView(viewName) {
     if (viewName === 'users') loadUsers();
     if (viewName === 'servers') loadNodes();
     if (viewName === 'timelapse') initTimelapseView();
+    if (viewName === 'licenses') loadLicenses();
 }
 
 function applySubscriptionRestrictions() {
@@ -3881,4 +3882,94 @@ async function deleteNode(id) {
     } catch (e) {
         showToast("Network error", "error");
     }
+}
+
+// --- License Manager ---
+function loadLicenses() {
+    fetch('/api/admin/licenses')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('licenseTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            data.forEach(lic => {
+                const statusClass = lic.is_used ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+                const statusText = lic.is_used ? 'USED' : 'ACTIVE';
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors';
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-mono font-bold text-brand-600 dark:text-brand-400">
+                        <div class="flex items-center gap-2">
+                             ${lic.key}
+                             <button onclick="copyToClipboard('${lic.key}')" class="p-1 hover:text-brand-500 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg></button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-xs"><span class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">${lic.plan}</span></td>
+                    <td class="px-6 py-4 text-sm">${lic.duration_days} Days</td>
+                    <td class="px-6 py-4 text-[10px] font-black"><span class="px-2.5 py-1 rounded-full ${statusClass}">${statusText}</span></td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${lic.used_by_user_id || '-'}</td>
+                    <td class="px-6 py-4 text-[10px] text-slate-400 font-mono">${new Date(lic.created_at).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        });
+}
+
+function openLicenseModal() {
+    document.getElementById('licenseModal').classList.remove('hidden');
+}
+
+function closeLicenseModal() {
+    document.getElementById('licenseModal').classList.add('hidden');
+}
+
+function submitLicenseGen() {
+    const plan = document.getElementById('licPlan').value;
+    const days = parseInt(document.getElementById('licDays').value);
+
+    fetch('/api/admin/licenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, duration_days: days })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.key) {
+            showToast('License key generated: ' + data.key, 'success');
+            closeLicenseModal();
+            loadLicenses();
+        } else {
+            showToast(data.error || 'Failed to generate license', 'error');
+        }
+    });
+}
+
+function openRedeemModal() {
+    document.getElementById('redeemModal').classList.remove('hidden');
+}
+
+function closeRedeemModal() {
+    document.getElementById('redeemModal').classList.add('hidden');
+}
+
+function submitLicenseRedeem() {
+    const key = document.getElementById('redeemKey').value.trim();
+    if (!key) return showToast('Please enter a license key', 'warning');
+
+    fetch('/api/user/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (res.ok) {
+            showToast(`Success! Your plan is now ${data.plan}. Reloading...`, 'success');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showToast(data.error || 'Failed to redeem license', 'error');
+        }
+    });
 }

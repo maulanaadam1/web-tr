@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 	"web-tr/internal/models"
 
 	_ "github.com/lib/pq"
@@ -241,7 +242,63 @@ func (s *Store) Init() error {
 
 	s.MigrateOldStreamsToUUID()
 
+	// Migration: Add expires_at to users
+	s.db.Exec("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
+
+	// Create licenses table
+	licenseQuery := `
+	CREATE TABLE IF NOT EXISTS licenses (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		key TEXT UNIQUE NOT NULL,
+		plan TEXT NOT NULL,
+		duration_days INTEGER NOT NULL,
+		is_used BOOLEAN DEFAULT 0,
+		used_by_user_id INTEGER DEFAULT 0,
+		used_at TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`
+	if s.dbType != "sqlite" {
+		licenseQuery = `
+		CREATE TABLE IF NOT EXISTS licenses (
+			id SERIAL PRIMARY KEY,
+			key TEXT UNIQUE NOT NULL,
+			plan TEXT NOT NULL,
+			duration_days INTEGER NOT NULL,
+			is_used BOOLEAN DEFAULT FALSE,
+			used_by_user_id INTEGER DEFAULT 0,
+			used_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`
+	}
+	if _, err := s.db.Exec(licenseQuery); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// GenerateLicenseKey creates a R2G-PLAN-XXXX-XXXX key
+func GenerateLicenseKey(plan string) string {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" // Sans O,0,I,1 for readability
+	prefix := "R2G"
+	planCode := "FREE"
+	p := strings.ToUpper(plan)
+	if strings.Contains(p, "BASIC") { planCode = "BASE" }
+	if strings.Contains(p, "PREMIUM") { planCode = "PREM" }
+	if strings.Contains(p, "ADVANCE") { planCode = "ADVN" }
+	if strings.Contains(p, "ENTERPRISE") { planCode = "ENTP" }
+
+	b := make([]byte, 8)
+	rand.Read(b)
+	
+	part1 := ""
+	part2 := ""
+	for i := 0; i < 4; i++ {
+		part1 += string(charset[int(b[i])%len(charset)])
+		part2 += string(charset[int(b[4+i])%len(charset)])
+	}
+
+	return fmt.Sprintf("%s-%s-%s-%s", prefix, planCode, part1, part2)
 }
 
 func (s *Store) MigrateOldStreamsToUUID() {
@@ -515,13 +572,13 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE username = $1"
 	}
 
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.ExpiresAt, &user.CreatedAt)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -536,13 +593,13 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE id = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE id = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE id = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE id = $1"
 	}
 
 	err := s.db.QueryRow(query, id).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.ExpiresAt, &user.CreatedAt)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -554,7 +611,7 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +620,7 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &u.ExpiresAt, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
@@ -590,12 +647,12 @@ func (s *Store) UpdateUserPassword(id int, newPassword string) error {
 func (s *Store) UpdateUserFull(u models.User) error {
 	var query string
 	if s.dbType == "sqlite" {
-		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ?, dedicated_node_id = ? WHERE id = ?"
+		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ?, dedicated_node_id = ?, expires_at = ? WHERE id = ?"
 	} else {
-		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10, dedicated_node_id = $11 WHERE id = $12"
+		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10, dedicated_node_id = $11, expires_at = $12 WHERE id = $13"
 	}
 
-	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID, u.ID)
+	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID, u.ExpiresAt, u.ID)
 	return err
 }
 
@@ -813,4 +870,105 @@ func (s *Store) GetLeastLoadedNode() (*models.Node, error) {
 		return nil, err
 	}
 	return &n, nil
+}
+
+func (s *Store) CreateLicense(plan string, days int) (string, error) {
+	key := GenerateLicenseKey(plan)
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO licenses (key, plan, duration_days) VALUES (?, ?, ?)"
+	} else {
+		query = "INSERT INTO licenses (key, plan, duration_days) VALUES ($1, $2, $3)"
+	}
+	_, err := s.db.Exec(query, key, plan, days)
+	return key, err
+}
+
+func (s *Store) GetAllLicenses() ([]models.License, error) {
+	rows, err := s.db.Query("SELECT id, key, plan, duration_days, is_used, used_by_user_id, used_at, created_at FROM licenses ORDER BY id DESC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var licenses []models.License
+	for rows.Next() {
+		var l models.License
+		if err := rows.Scan(&l.ID, &l.Key, &l.Plan, &l.DurationDays, &l.IsUsed, &l.UsedByUserID, &l.UsedAt, &l.CreatedAt); err != nil {
+			continue
+		}
+		licenses = append(licenses, l)
+	}
+	return licenses, nil
+}
+
+func (s *Store) RedeemLicense(userID int, key string) (string, error) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback()
+
+	var plan string
+	var days int
+	var isUsed bool
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT plan, duration_days, is_used FROM licenses WHERE key = ?"
+	} else {
+		query = "SELECT plan, duration_days, is_used FROM licenses WHERE key = $1"
+	}
+
+	err = tx.QueryRow(query, key).Scan(&plan, &days, &isUsed)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("invalid license key")
+		}
+		return "", err
+	}
+
+	if isUsed {
+		return "", fmt.Errorf("license key already used")
+	}
+
+	// Calculate new expiry
+	now := time.Now()
+	var currentExpiryStr string
+	if s.dbType == "sqlite" {
+		query = "SELECT COALESCE(expires_at, '1970-01-01 00:00:00') FROM users WHERE id = ?"
+	} else {
+		query = "SELECT COALESCE(expires_at, '1970-01-01 00:00:00') FROM users WHERE id = $1"
+	}
+	tx.QueryRow(query, userID).Scan(&currentExpiryStr)
+
+	currentExpiry, _ := time.Parse("2006-01-02 15:04:05", currentExpiryStr)
+	if currentExpiry.IsZero() {
+		currentExpiry = time.Unix(0, 0)
+	}
+
+	newExpiry := now.AddDate(0, 0, days)
+	if currentExpiry.After(now) {
+		newExpiry = currentExpiry.AddDate(0, 0, days)
+	}
+
+	// Update User
+	if s.dbType == "sqlite" {
+		query = "UPDATE users SET subscription_plan = ?, expires_at = ? WHERE id = ?"
+	} else {
+		query = "UPDATE users SET subscription_plan = $1, expires_at = $2 WHERE id = $3"
+	}
+	_, err = tx.Exec(query, plan, newExpiry, userID)
+	if err != nil { return "", err }
+
+	// Mark license as used
+	if s.dbType == "sqlite" {
+		query = "UPDATE licenses SET is_used = 1, used_by_user_id = ?, used_at = ? WHERE key = ?"
+	} else {
+		query = "UPDATE licenses SET is_used = TRUE, used_by_user_id = $1, used_at = $2 WHERE key = $3"
+	}
+	_, err = tx.Exec(query, userID, now, key)
+	if err != nil { return "", err }
+
+	err = tx.Commit()
+	return plan, err
 }

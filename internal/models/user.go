@@ -18,5 +18,6 @@ type User struct {
 	EnableSupport          bool      `json:"enable_support"`
 	PublicToken            string    `json:"public_token"`
 	DedicatedNodeID        int       `json:"dedicated_node_id"`
+	ExpiresAt              time.Time `json:"expires_at"`
 	CreatedAt              time.Time `json:"created_at"`
 }

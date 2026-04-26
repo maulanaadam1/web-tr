@@ -40,6 +40,7 @@ type Session struct {
 	EnableSupport    bool
 	PublicToken      string
 	Expiry           time.Time
+	SubExpiry        time.Time
 }
 
 var (
@@ -274,6 +275,7 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 						EnableSupport:    user.EnableSupport,
 						PublicToken:      user.PublicToken,
 						Expiry:           time.Now().Add(24 * time.Hour),
+						SubExpiry:        user.ExpiresAt,
 					}
 					ctx := context.WithValue(r.Context(), sessionContextKey, session)
 					next.ServeHTTP(w, r.WithContext(ctx))
@@ -643,6 +645,7 @@ func main() {
 					EnableSupport:    dbUser.EnableSupport,
 					PublicToken:      dbUser.PublicToken,
 					Expiry:           expiry,
+					SubExpiry:        dbUser.ExpiresAt,
 				}
 				sessionMutex.Unlock()
 
@@ -1061,6 +1064,7 @@ func main() {
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams":   streams,
 			"Session":   sess,
+			"Now":       time.Now(),
 		})
 	})
 
@@ -1150,6 +1154,15 @@ func main() {
 				req.Backend = "go2rtc"
 			}
 
+			// --- Select Target Node (Dedicated OR Load Balanced) ---
+			ownerUser, _ := globalStore.GetUserByID(sess.UserID)
+
+			// Check license expiration
+			if sess.UserID != 0 && ownerUser != nil && !ownerUser.ExpiresAt.IsZero() && ownerUser.ExpiresAt.Before(time.Now()) {
+				http.Error(w, "Your subscription has expired. Please renew your license.", http.StatusPaymentRequired)
+				return
+			}
+
 			// Enforce subscription quota limits for non-admins (Skip for Test User)
 			if sess.Role != "admin" && sess.UserID != 0 {
 				limit := 2 // default Free (Trial)
@@ -1181,7 +1194,6 @@ func main() {
 			var targetNode *models.Node
 			
 			// Check if owner has dedicated node
-			ownerUser, _ := globalStore.GetUserByID(sess.UserID)
 			if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
 				targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
 			}
@@ -1660,6 +1672,80 @@ func main() {
 		}
 	}))
 
+	// --- License Manager APIs ---
+	http.HandleFunc("/api/admin/licenses", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" {
+			http.Error(w, "Unauthorized", http.StatusForbidden)
+			return
+		}
+
+		if r.Method == http.MethodGet {
+			lics, err := globalStore.GetAllLicenses()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(lics)
+			return
+		}
+
+		if r.Method == http.MethodPost {
+			var req struct {
+				Plan         string `json:"plan"`
+				DurationDays int    `json:"duration_days"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			key, err := globalStore.CreateLicense(req.Plan, req.DurationDays)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"key": key})
+			return
+		}
+	}))
+
+	http.HandleFunc("/api/user/redeem", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		var req struct {
+			Key string `json:"key"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		plan, err := globalStore.RedeemLicense(sess.UserID, req.Key)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"plan": plan})
+	}))
+
+	http.HandleFunc("/api/webhooks/payment", func(w http.ResponseWriter, r *http.Request) {
+		// Mock logic: If signal is SUCCESS from Xendit/Midtrans
+		// In a real scenario, you'd parse callback body and signature here.
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "Payment Webhook Received (Pending Integration)")
+	})
+
 	http.HandleFunc("/api/probe", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -2057,8 +2143,16 @@ func main() {
 		// --- Select Target Node (Dedicated OR Load Balanced) ---
 		var targetNode *models.Node
 		
-		// Priority 1: User's Dedicated Node
+		// Fetch Owner Info once
 		ownerUser, _ := globalStore.GetUserByID(ownerUserID)
+
+		// Check license expiration
+		if ownerUser != nil && !ownerUser.ExpiresAt.IsZero() && ownerUser.ExpiresAt.Before(time.Now()) {
+			http.Error(w, "Subscription Expired", http.StatusPaymentRequired)
+			return
+		}
+		
+		// Priority 1: User's Dedicated Node
 		if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
 			targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
 			if targetNode != nil {
