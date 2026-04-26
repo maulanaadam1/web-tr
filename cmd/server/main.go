@@ -11,6 +11,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -2121,7 +2122,58 @@ func main() {
 
 		log.Printf("[Bridge v2] Camera '%s' assigned to Node %d (%s)", camName, targetNodeID, nodeIP)
 		
-		// Response to Gateway: tell them which node and port to push to
+		// --- Handle TCP Upgrade (for ESP32 Bridge) ---
+		if strings.ToLower(r.Header.Get("Upgrade")) == "rtsp-bridge" {
+			hijacker, ok := w.(http.Hijacker)
+			if !ok {
+				http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
+				return
+			}
+			conn, bufrw, err := hijacker.Hijack()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer conn.Close()
+
+			// Write 101 Response
+			bufrw.WriteString("HTTP/1.1 101 Switching Protocols\r\n")
+			bufrw.WriteString("Upgrade: rtsp-bridge\r\n")
+			bufrw.WriteString("Connection: Upgrade\r\n")
+			bufrw.WriteString(fmt.Sprintf("X-Node-IP: %s\r\n", nodeIP))
+			bufrw.WriteString("\r\n")
+			bufrw.Flush()
+
+			// Connect to Target Node's RTSP Port (8554)
+			targetAddr := fmt.Sprintf("%s:%d", nodeIP, rtspPort)
+			if nodeIP == "localhost" {
+				targetAddr = fmt.Sprintf("127.0.0.1:%d", rtspPort)
+			}
+			
+			log.Printf("[Bridge v2] Proxying TCP Bridge for %s to %s", camName, targetAddr)
+			
+			backendConn, err := net.DialTimeout("tcp", targetAddr, 5*time.Second)
+			if err != nil {
+				log.Printf("[Bridge v2] Failed to dial node backend: %v", err)
+				return
+			}
+			defer backendConn.Close()
+
+			// Handshake for go2rtc push (ANNOUNCE etc will be handled by the client/bridge loop)
+			// For raw bridge, we just pipe.
+			
+			errc := make(chan error, 2)
+			cp := func(dst io.Writer, src io.Reader) {
+				_, err := io.Copy(dst, src)
+				errc <- err
+			}
+			go cp(backendConn, bufrw)
+			go cp(conn, backendConn)
+			<-errc
+			return
+		}
+
+		// --- Default Response (for FFmpeg/Gateway App) ---
 		w.Header().Set("X-Node-IP", nodeIP)
 		w.Header().Set("X-Node-Port", fmt.Sprintf("%d", rtspPort))
 		w.WriteHeader(http.StatusCreated)

@@ -1564,22 +1564,70 @@ func registerToBackend(inst *TunnelInstance) {
 	// Save the strict UUID used for the API so we can deregister correctly later
 	inst.ApiCamName = camName
 	
-	// === Bridge Mode v2: Push Mode via FFmpeg ===
+	// === Bridge Mode v2: Registration & Dynamic Node Discovery ===
 	if config.VPNMode == "bridge" {
-		err := startPushMode(inst, camName, originalRTSP)
+		addLog(fmt.Sprintf("[%s] Registering Bridge Mode with Master Server...", camName))
+		
+		// Use /api/bridge/ endpoint
+		baseURL := strings.TrimSuffix(config.ServerURL, "/")
+		bridgeURL := fmt.Sprintf("%s/api/bridge/%s", baseURL, camName)
+		
+		req, err := http.NewRequest(http.MethodPost, bridgeURL, nil)
+		if err != nil {
+			addLog(fmt.Sprintf("[%s] ❌ Request creation failed: %v", camName, err))
+			return
+		}
+		
+		if config.ApiUsername != "" && config.ApiPassword != "" {
+			req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
+		}
+		
+		// Add helper display name
+		req.Header.Set("X-Display-Name", inst.Camera.Name)
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			addLog(fmt.Sprintf("[%s] ❌ Cannot reach Master: %v", camName, err))
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+			body, _ := ioutil.ReadAll(resp.Body)
+			addLog(fmt.Sprintf("[%s] ❌ Registration Refused: %s", camName, string(body)))
+			return
+		}
+
+		// READ HANDOFF HEADERS
+		nodeIP := resp.Header.Get("X-Node-IP")
+		nodePortStr := resp.Header.Get("X-Node-Port")
+		nodePort := 8554
+		if nodePortStr != "" {
+			fmt.Sscanf(nodePortStr, "%d", &nodePort)
+		}
+
+		if nodeIP == "" {
+			// Fallback to Master if header missing
+			u, _ := url.Parse(config.ServerURL)
+			nodeIP = u.Hostname()
+		}
+
+		addLog(fmt.Sprintf("[%s] 🚀 Handoff Received! Target Node: %s:%d", camName, nodeIP, nodePort))
+
+		err = startPushMode(inst, camName, originalRTSP, nodeIP, nodePort)
 		if err != nil {
 			addLog(fmt.Sprintf("[%s] ❌ Push failed: %v", camName, err))
 			inst.updateStatus("Push Failed", theme.ColorNameError)
 			return
 		}
 		
-		baseURL := strings.TrimSuffix(config.ServerURL, "/")
-		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
-		inst.PublicURL = webURL
+		finalWebURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
+		inst.PublicURL = finalWebURL
 		if inst.PublicLabel != nil {
-			inst.PublicLabel.SetText(webURL)
+			inst.PublicLabel.SetText(finalWebURL)
 		}
-		addLog(fmt.Sprintf("[%s] ✅ Push Aktif! Stream: %s", camName, webURL))
+		addLog(fmt.Sprintf("[%s] ✅ Streaming Aktif! View: %s", camName, finalWebURL))
 		return 
 	}
 
@@ -1892,7 +1940,7 @@ func generateUUID() string {
 // Menggunakan FFmpeg untuk "mendorong" stream RTSP ke VPS.
 // Ini 1000% lebih stabil daripada mode tunnel TCP mentah.
 // =============================================================
-func startPushMode(inst *TunnelInstance, camName string, localRTSP string) error {
+func startPushMode(inst *TunnelInstance, camName string, localRTSP string, nodeIP string, nodePort int) error {
 	// 1. Cek apakah ffmpeg.exe ada
 	ffmpegPath := filepath.Join(filepath.Dir(os.Args[0]), "ffmpeg.exe")
 	if _, err := os.Stat(ffmpegPath); os.IsNotExist(err) {
@@ -1903,15 +1951,8 @@ func startPushMode(inst *TunnelInstance, camName string, localRTSP string) error
 		}
 	}
 
-	// 2. Siapkan URL tujuan (RTSP Push ke VPS port 8554)
-	u, err := url.Parse(config.ServerURL)
-	if err != nil {
-		return fmt.Errorf("invalid server URL: %v", err)
-	}
-	vpsHost := u.Hostname()
-	
-	// Gunakan port 8554 (standar RTSP Push go2rtc)
-	pushURL := fmt.Sprintf("rtsp://%s:8554/%s", vpsHost, camName)
+	// 2. Siapkan URL tujuan (Dynamic RTSP Push based on Master's handoff)
+	pushURL := fmt.Sprintf("rtsp://%s:%d/%s", nodeIP, nodePort, camName)
 
 	addLog(fmt.Sprintf("[%s] Push: Memulai FFmpeg push ke %s...", inst.Camera.Name, pushURL))
 
