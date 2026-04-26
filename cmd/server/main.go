@@ -1545,6 +1545,57 @@ func main() {
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": successCount})
 	}))
 
+	http.HandleFunc("/api/admin/nodes", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess, _ := r.Context().Value(sessionContextKey).(Session)
+		if sess.Role != "admin" {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			nodes, err := globalStore.GetNodes()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(nodes)
+		case http.MethodPost:
+			var n models.Node
+			if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if err := globalStore.AddNode(n); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+		case http.MethodPut:
+			var n models.Node
+			if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if err := globalStore.UpdateNode(n); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		case http.MethodDelete:
+			idStr := r.URL.Query().Get("id")
+			id, _ := strconv.Atoi(idStr)
+			if err := globalStore.DeleteNode(id); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+
 	http.HandleFunc("/api/probe", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

@@ -135,28 +135,34 @@ func (s *Store) Init() error {
 		return err
 	}
 
-	// Create test_logs table
-	var logsQuery string
+	// Create nodes table for multi-server support
+	var nodeQuery string
 	if s.dbType == "sqlite" {
-		logsQuery = `
-		CREATE TABLE IF NOT EXISTS test_logs (
+		nodeQuery = `
+		CREATE TABLE IF NOT EXISTS nodes (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
 			url TEXT NOT NULL,
-			ip_address TEXT,
-			user_agent TEXT,
+			rtsp_port INTEGER DEFAULT 8554,
+			secret TEXT,
+			is_active BOOLEAN DEFAULT 1,
+			location TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`
 	} else {
-		logsQuery = `
-		CREATE TABLE IF NOT EXISTS test_logs (
+		nodeQuery = `
+		CREATE TABLE IF NOT EXISTS nodes (
 			id SERIAL PRIMARY KEY,
+			name TEXT NOT NULL,
 			url TEXT NOT NULL,
-			ip_address TEXT,
-			user_agent TEXT,
+			rtsp_port INTEGER DEFAULT 8554,
+			secret TEXT,
+			is_active BOOLEAN DEFAULT TRUE,
+			location TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);`
 	}
-	if _, err := s.db.Exec(logsQuery); err != nil {
+	if _, err := s.db.Exec(nodeQuery); err != nil {
 		return err
 	}
 
@@ -188,6 +194,7 @@ func (s *Store) Init() error {
 			"lng REAL DEFAULT 0",
 			"is_enabled BOOLEAN DEFAULT 1",
 			"user_id INTEGER DEFAULT 1",
+			"node_id INTEGER DEFAULT 1",   // Added node_id
 			"is_public BOOLEAN DEFAULT 1",
 			"resolution TEXT DEFAULT ''",
 			"display_name TEXT DEFAULT ''",
@@ -298,7 +305,7 @@ func (s *Store) SeedDefaultAdmin() error {
 }
 
 func (s *Store) GetStreams() ([]models.Stream, error) {
-	rows, err := s.db.Query("SELECT name, COALESCE(display_name, name) as display_name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution, COALESCE(disable_audio, 0) as disable_audio FROM streams ORDER BY display_name ASC")
+	rows, err := s.db.Query("SELECT name, COALESCE(display_name, name) as display_name, url, COALESCE(backend, 'go2rtc') as backend, COALESCE(lat, 0) as lat, COALESCE(lng, 0) as lng, COALESCE(is_enabled, 1) as is_enabled, COALESCE(user_id, 1) as user_id, COALESCE(node_id, 1) as node_id, COALESCE(is_public, 1) as is_public, COALESCE(resolution, '') as resolution, COALESCE(disable_audio, 0) as disable_audio FROM streams ORDER BY display_name ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +314,7 @@ func (s *Store) GetStreams() ([]models.Stream, error) {
 	var streams []models.Stream
 	for rows.Next() {
 		var st models.Stream
-		if err := rows.Scan(&st.Name, &st.DisplayName, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.IsPublic, &st.Resolution, &st.DisableAudio); err != nil {
+		if err := rows.Scan(&st.Name, &st.DisplayName, &st.URL, &st.Backend, &st.Lat, &st.Lng, &st.Enabled, &st.UserID, &st.NodeID, &st.IsPublic, &st.Resolution, &st.DisableAudio); err != nil {
 			log.Printf("Error scanning row: %v", err)
 			continue
 		}
@@ -339,12 +346,12 @@ func (s *Store) AddStream(st models.Stream) error {
 	}
 
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, is_public, resolution, disable_audio) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET display_name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ?, is_public = ?, resolution = ?, disable_audio = ?"
-		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.Resolution, st.DisableAudio, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.Resolution, st.DisableAudio)
+		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, node_id, is_public, resolution, disable_audio) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (name) DO UPDATE SET display_name = ?, url = ?, backend = ?, lat = ?, lng = ?, is_enabled = ?, user_id = ?, node_id = ?, is_public = ?, resolution = ?, disable_audio = ?"
+		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.NodeID, st.IsPublic, st.Resolution, st.DisableAudio, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.NodeID, st.IsPublic, st.Resolution, st.DisableAudio)
 		return err
 	} else {
-		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, is_public, resolution, disable_audio) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (name) DO UPDATE SET display_name = $2, url = $3, backend = $4, lat = $5, lng = $6, is_enabled = $7, user_id = $8, is_public = $9, resolution = $10, disable_audio = $11"
-		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.IsPublic, st.Resolution, st.DisableAudio)
+		query = "INSERT INTO streams (name, display_name, url, backend, lat, lng, is_enabled, user_id, node_id, is_public, resolution, disable_audio) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) ON CONFLICT (name) DO UPDATE SET display_name = $2, url = $3, backend = $4, lat = $5, lng = $6, is_enabled = $7, user_id = $8, node_id = $9, is_public = $10, resolution = $11, disable_audio = $12"
+		_, err := s.db.Exec(query, st.Name, st.DisplayName, st.URL, st.Backend, st.Lat, st.Lng, st.Enabled, st.UserID, st.NodeID, st.IsPublic, st.Resolution, st.DisableAudio)
 		return err
 	}
 }
@@ -654,4 +661,58 @@ func (s *Store) GetInterests() ([]models.Interest, error) {
 		result = append(result, i)
 	}
 	return result, nil
+}
+
+// --- Node Management Methods ---
+
+func (s *Store) GetNodes() ([]models.Node, error) {
+	rows, err := s.db.Query("SELECT id, name, url, rtsp_port, COALESCE(secret, ''), is_active, COALESCE(location, ''), created_at FROM nodes ORDER BY id ASC")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var nodes []models.Node
+	for rows.Next() {
+		var n models.Node
+		if err := rows.Scan(&n.ID, &n.Name, &n.URL, &n.RtspPort, &n.Secret, &n.IsActive, &n.Location, &n.CreatedAt); err != nil {
+			log.Printf("Error scanning node row: %v", err)
+			continue
+		}
+		nodes = append(nodes, n)
+	}
+	return nodes, nil
+}
+
+func (s *Store) AddNode(n models.Node) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "INSERT INTO nodes (name, url, rtsp_port, secret, is_active, location) VALUES (?, ?, ?, ?, ?, ?)"
+	} else {
+		query = "INSERT INTO nodes (name, url, rtsp_port, secret, is_active, location) VALUES ($1, $2, $3, $4, $5, $6)"
+	}
+	_, err := s.db.Exec(query, n.Name, n.URL, n.RtspPort, n.Secret, n.IsActive, n.Location)
+	return err
+}
+
+func (s *Store) UpdateNode(n models.Node) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE nodes SET name = ?, url = ?, rtsp_port = ?, secret = ?, is_active = ?, location = ? WHERE id = ?"
+	} else {
+		query = "UPDATE nodes SET name = $1, url = $2, rtsp_port = $3, secret = $4, is_active = $5, location = $6 WHERE id = $7"
+	}
+	_, err := s.db.Exec(query, n.Name, n.URL, n.RtspPort, n.Secret, n.IsActive, n.Location, n.ID)
+	return err
+}
+
+func (s *Store) DeleteNode(id int) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "DELETE FROM nodes WHERE id = ?"
+	} else {
+		query = "DELETE FROM nodes WHERE id = $1"
+	}
+	_, err := s.db.Exec(query, id)
+	return err
 }

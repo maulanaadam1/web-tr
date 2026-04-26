@@ -11,6 +11,7 @@ type Stream struct {
 	Lng          float64 `json:"lng,omitempty"`
 	Enabled      bool    `json:"enabled"`
 	UserID       int     `json:"user_id"`
+	NodeID       int     `json:"node_id"`       // ID of the processing node
 	IsPublic     bool    `json:"is_public"`
 	Resolution   string  `json:"resolution,omitempty"`
 }
