@@ -54,6 +54,7 @@ func createIPPayment(va, apiKey string, production bool,
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("va", va)
 	req.Header.Set("signature", signature)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
