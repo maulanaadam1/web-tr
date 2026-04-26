@@ -30,7 +30,7 @@ func createIPPayment(va, apiKey string, production bool,
 		endpoint = "https://my.ipaymu.com/api/v2/payment"
 	}
 
-	body, _ := json.Marshal(map[string]interface{}{
+	payload := map[string]interface{}{
 		"product":     []string{productName},
 		"qty":         []int{1},
 		"price":       []int64{price},
@@ -38,9 +38,14 @@ func createIPPayment(va, apiKey string, production bool,
 		"cancelUrl":   cancelURL,
 		"notifyUrl":   notifyURL,
 		"referenceId": refID,
-		"buyerName":   buyerName,
-		"buyerEmail":  buyerEmail,
-	})
+	}
+	if buyerName != "" {
+		payload["buyerName"] = buyerName
+	}
+	if buyerEmail != "" {
+		payload["buyerEmail"] = buyerEmail
+	}
+	body, _ := json.Marshal(payload)
 
 	// Generate signature: POST:<va>:<sha256(body)>:<apiKey>  --  HMAC-SHA256
 	bodyHash := sha256.Sum256(body)
@@ -197,7 +202,9 @@ func registerPaymentRoutes() {
 		)
 		if err != nil {
 			log.Printf("[Payment] iPaymu error: %v", err)
-			http.Error(w, "Payment gateway error: "+err.Error(), http.StatusBadGateway)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadGateway)
+			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 			return
 		}
 

@@ -4104,7 +4104,7 @@ async function purchasePlan(planName) {
             showToast('Mengarahkan ke halaman pembayaran...', 'success');
             setTimeout(() => window.open(data.payment_url, '_blank'), 800);
         } else {
-            showToast(data || 'Gagal membuat pembayaran. Pastikan IPAYMU_VA dan IPAYMU_API_KEY sudah dikonfigurasi.', 'error');
+            showToast(data.error || 'Gagal membuat pembayaran. Pastikan IPAYMU_VA dan IPAYMU_API_KEY sudah dikonfigurasi.', 'error');
         }
     } catch (e) {
         showToast('Network error: ' + e.message, 'error');
