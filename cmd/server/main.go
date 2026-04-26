@@ -1176,8 +1176,19 @@ func main() {
 				disableAudio = *req.DisableAudio
 			}
 
-			// --- Select Target Node (Load Balancing) ---
-			targetNode, _ := globalStore.GetLeastLoadedNode()
+			// --- Select Target Node (Dedicated OR Load Balanced) ---
+			var targetNode *models.Node
+			
+			// Check if owner has dedicated node
+			ownerUser, _ := globalStore.GetUserByID(sess.UserID)
+			if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
+				targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
+			}
+
+			if targetNode == nil {
+				targetNode, _ = globalStore.GetLeastLoadedNode()
+			}
+
 			targetNodeID := 1
 			nodeAPI := ""
 			if targetNode != nil {
@@ -2042,14 +2053,29 @@ func main() {
 			displayName = camName
 		}
 
-		// --- Select Target Node (Load Balancing) ---
-		targetNode, err := globalStore.GetLeastLoadedNode()
+		// --- Select Target Node (Dedicated OR Load Balanced) ---
+		var targetNode *models.Node
+		
+		// Priority 1: User's Dedicated Node
+		ownerUser, _ := globalStore.GetUserByID(ownerUserID)
+		if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
+			targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
+			if targetNode != nil {
+				log.Printf("[Bridge v2] User %s has dedicated Node %d", ownerUser.Username, targetNode.ID)
+			}
+		}
+		
+		// Priority 2: Least Loaded Node
+		if targetNode == nil {
+			targetNode, _ = globalStore.GetLeastLoadedNode()
+		}
+
 		targetNodeID := 1
 		nodeAPI := "http://localhost:1984/api/streams"
 		nodeIP := "localhost"
 		rtspPort := 8554
 
-		if err == nil && targetNode != nil {
+		if targetNode != nil {
 			targetNodeID = targetNode.ID
 			nodeAPI = targetNode.URL
 			rtspPort = targetNode.RtspPort

@@ -17,5 +17,6 @@ type User struct {
 	SubscriptionPlan       string    `json:"subscription_plan"`
 	EnableSupport          bool      `json:"enable_support"`
 	PublicToken            string    `json:"public_token"`
+	DedicatedNodeID        int       `json:"dedicated_node_id"`
 	CreatedAt              time.Time `json:"created_at"`
 }

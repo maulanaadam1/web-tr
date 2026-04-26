@@ -850,8 +850,35 @@ function openUserModal(user = null) {
     
     selectRole(isEdit ? user.role : 'user');
     
+    // Populate Dedicated Node Dropdown
+    _populateDedicatedNodeDropdown(isEdit ? (user.dedicated_node_id || 0) : 0);
+    
     modal.classList.remove('hidden');
     checkModalPlanRestrictions();
+}
+
+async function _populateDedicatedNodeDropdown(selectedId = 0) {
+    const select = document.getElementById('userDedicatedNode');
+    if (!select) return;
+    
+    // Clear
+    select.innerHTML = '<option value="0">Automatic (Load Balanced)</option>';
+    
+    let nodes = allNodes;
+    if (nodes.length === 0) {
+        try {
+            const resp = await fetch('/api/admin/nodes');
+            nodes = await resp.json() || [];
+        } catch(e) {}
+    }
+    
+    nodes.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = `${n.name} (${n.location || 'Remote'})`;
+        if (n.id == selectedId) opt.selected = true;
+        select.appendChild(opt);
+    });
 }
 
 function checkModalPlanRestrictions() {
@@ -920,6 +947,7 @@ async function submitUserForm() {
         is_active: document.getElementById('userIsActive').checked,
         subscription_plan: document.getElementById('userSubscription').value,
         enable_support: document.getElementById('userEnableSupport').checked,
+        dedicated_node_id: parseInt(document.getElementById('userDedicatedNode').value) || 0,
         broadcast_notifications: false,
         notification_paid: false,
     };

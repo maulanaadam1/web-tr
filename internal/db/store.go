@@ -114,6 +114,10 @@ func (s *Store) Init() error {
 		return err
 	}
 
+	// Migration: Add dedicated_node_id to users if not exists
+	s.db.Exec("ALTER TABLE users ADD COLUMN dedicated_node_id INTEGER DEFAULT 0")
+	s.db.Exec("ALTER TABLE users ADD COLUMN public_token TEXT") // Ensure public_token also exists
+
 	// Create interests table for pre-launch
 	var interestQuery string
 	if s.dbType == "sqlite" {
@@ -493,12 +497,12 @@ func (s *Store) CreateUserFull(u models.User, password string) error {
 
 	var query string
 	if s.dbType == "sqlite" {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, public_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, public_token, dedicated_node_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	} else {
-		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, public_token) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
+		query = "INSERT INTO users (username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, subscription_plan, enable_support, public_token, dedicated_node_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)"
 	}
 
-	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken)
+	_, err := s.db.Exec(query, u.Username, hash, salt, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID)
 	return err
 }
 
@@ -511,13 +515,34 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE username = $1"
 	}
 
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.CreatedAt)
+	
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // User not found
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (s *Store) GetUserByID(id int) (*models.User, error) {
+	var user models.User
+	var query string
+	if s.dbType == "sqlite" {
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE id = ?"
+	} else {
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users WHERE id = $1"
+	}
+
+	err := s.db.QueryRow(query, id).
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.CreatedAt)
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -529,7 +554,7 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -538,7 +563,7 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	var users []models.User
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
@@ -565,12 +590,12 @@ func (s *Store) UpdateUserPassword(id int, newPassword string) error {
 func (s *Store) UpdateUserFull(u models.User) error {
 	var query string
 	if s.dbType == "sqlite" {
-		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ? WHERE id = ?"
+		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ?, dedicated_node_id = ? WHERE id = ?"
 	} else {
-		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10 WHERE id = $11"
+		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10, dedicated_node_id = $11 WHERE id = $12"
 	}
 
-	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.ID)
+	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID, u.ID)
 	return err
 }
 
