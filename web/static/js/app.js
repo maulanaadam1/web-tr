@@ -116,6 +116,7 @@ function switchView(viewName) {
     if (viewName === 'licenses') loadLicenses();
     if (viewName === 'profile') {
         loadPricingPlans();
+        loadProfileData();
     }
     if (viewName === 'pricing') {
         loadAdminPricingSettings();
@@ -4233,5 +4234,48 @@ async function loadOrderHistory() {
         </div>`;
     } catch (e) {
         container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Gagal memuat order.</p>';
+    }
+}
+
+async function loadProfileData() {
+    try {
+        const res = await fetch('/api/users/me');
+        if (res.ok) {
+            const data = await res.json();
+            const waInput = document.getElementById('profile-whatsapp');
+            if (waInput && data.whatsapp) waInput.value = data.whatsapp;
+        }
+    } catch (e) {
+        console.error('Failed to load profile data', e);
+    }
+}
+
+async function updateProfileField(event, field, inputId) {
+    event.preventDefault();
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if (!val) return;
+
+    const payload = {};
+    payload[field] = val;
+
+    try {
+        const res = await fetch('/api/users/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        let data = {};
+        try { data = await res.json(); } catch(e){}
+
+        if (res.ok) {
+            showToast('Berhasil diperbarui!', 'success');
+            if (field === 'password') input.value = ''; 
+        } else {
+            showToast(data.error || data.message || 'Gagal memperbarui', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
     }
 }

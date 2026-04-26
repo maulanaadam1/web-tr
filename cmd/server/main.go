@@ -910,6 +910,58 @@ func main() {
 		}
 	}))
 
+	http.HandleFunc("/api/users/me", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+
+		if r.Method == http.MethodGet {
+			user, err := store.GetUserByID(sess.UserID)
+			if err != nil || user == nil {
+				http.Error(w, "Not found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(user)
+			return
+		}
+
+		if r.Method == http.MethodPut {
+			var req map[string]string
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				http.Error(w, "Invalid body", http.StatusBadRequest)
+				return
+			}
+
+			user, err := store.GetUserByID(sess.UserID)
+			if err != nil || user == nil {
+				http.Error(w, "User not found", http.StatusNotFound)
+				return
+			}
+
+			if pwd, ok := req["password"]; ok {
+				if len(pwd) < 6 {
+					http.Error(w, "Password minimal 6 karakter", http.StatusBadRequest)
+					return
+				}
+				if err := store.UpdateUserPassword(user.ID, pwd); err != nil {
+					http.Error(w, "Gagal mengubah password", http.StatusInternalServerError)
+					return
+				}
+			}
+
+			if wa, ok := req["whatsapp"]; ok {
+				user.Whatsapp = wa
+				if err := store.UpdateUserFull(*user); err != nil {
+					http.Error(w, "Gagal mengupdate WhatsApp", http.StatusInternalServerError)
+					return
+				}
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
+			return
+		}
+	}))
+
 	http.HandleFunc("/api/users/token", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
