@@ -1,4 +1,31 @@
 // Global State - v71 (User Subscription column)
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-xl shadow-2xl z-[100] transform transition-all duration-300 translate-y-20 flex items-center gap-3 border ${
+        type === 'error' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/80 dark:text-red-100 dark:border-red-800' : 
+        type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/80 dark:text-emerald-100 dark:border-emerald-800' : 
+        'bg-slate-900 text-white border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'
+    }`;
+    
+    const icon = type === 'error' ? 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : 
+                 type === 'success' ? 'M5 13l4 4L19 7' : 
+                 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+
+    toast.innerHTML = `
+        <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${icon}" />
+        </svg>
+        <span class="text-sm font-bold">${message}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.replace('translate-y-20', 'translate-y-0'), 100);
+    setTimeout(() => {
+        toast.classList.replace('translate-y-0', 'translate-y-20');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -1428,14 +1455,19 @@ function toggleProbeDetail() {
 function copyToClipboard(text) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        btn.classList.replace('text-slate-400', 'text-green-400');
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.classList.replace('text-green-400', 'text-slate-400');
-        }, 2000);
+        showToast('Copied to clipboard!', 'success');
+        
+        // Try to update the button text if called from an event
+        try {
+            const btn = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+            if (btn && btn.textContent) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }
+        } catch (e) {}
     });
 }
 
