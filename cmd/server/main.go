@@ -1735,8 +1735,24 @@ func main() {
 			return
 		}
 
+		// Update Active Session to reflect new Plan immediately
+		cookie, err := r.Cookie(sessionCookieName)
+		if err == nil {
+			sessionMutex.Lock()
+			if s, ok := activeSessions[cookie.Value]; ok {
+				// Refresh user from DB to get new Plan and Expiry
+				updatedUser, _ := globalStore.GetUserByID(sess.UserID)
+				if updatedUser != nil {
+					s.SubscriptionPlan = updatedUser.SubscriptionPlan
+					s.SubExpiry = updatedUser.ExpiresAt
+					activeSessions[cookie.Value] = s
+				}
+			}
+			sessionMutex.Unlock()
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"plan": plan})
+		json.NewEncoder(w).Encode(map[string]interface{}{"plan": plan, "message": "License redeemed successfully"})
 	}))
 
 	http.HandleFunc("/api/webhooks/payment", func(w http.ResponseWriter, r *http.Request) {
