@@ -109,12 +109,16 @@ function applySubscriptionRestrictions() {
         publicViewLink.style.display = (plan === 'Free' || plan === 'Basic' || plan === 'Premium') ? 'none' : 'flex';
     }
 
+    if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
+        if (nvrLink) nvrLink.style.display = 'none';
+        if (currentView === 'nvr') switchView('dashboard');
+    }
+
     if (plan === 'Free' || plan === 'Basic') {
         if (ccLink) ccLink.style.display = 'none';
-        if (nvrLink) nvrLink.style.display = 'none';
-        // If they are on a hidden view, move them to cameras
-        if (currentView === 'commandcenter' || currentView === 'nvr') {
-            switchView('cameras');
+        // If they are on a hidden view, move them to dashboard
+        if (currentView === 'commandcenter') {
+            switchView('dashboard');
         }
 
         // Inside Dashboard: Hide Map, show only Preview

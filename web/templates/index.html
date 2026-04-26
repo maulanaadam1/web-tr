@@ -202,7 +202,30 @@
                 </svg>
                 <span class="nav-text whitespace-nowrap">Dashboard</span>
             </button>
-            
+
+            <button type="button" onclick="switchView('commandcenter')" data-view="commandcenter" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Command Center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">Command Center</span>
+            </button>
+
+            <button type="button" onclick="switchView('nvr')" data-view="nvr" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="NVR View (Multi-stream)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">NVR View</span>
+            </button>
+
+            {{ if eq .Session.Role "admin" }}
+            <button type="button" onclick="switchView('timelapse')" data-view="timelapse" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Timelapse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="nav-text whitespace-nowrap">Timelapse</span>
+            </button>
+            {{ end }}
+
             <button type="button" onclick="switchView('cameras')" data-view="cameras" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Manage Cameras">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -255,30 +278,6 @@
                 <span class="nav-text whitespace-nowrap">My Profile</span>
             </button>
 
-            <p class="menu-label px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-6 transition-all">Environment</p>
-            
-            <button type="button" onclick="switchView('commandcenter')" data-view="commandcenter" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Command Center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-                <span class="nav-text whitespace-nowrap">Command Center</span>
-            </button>
-
-            <button type="button" onclick="switchView('nvr')" data-view="nvr" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="NVR View (Multi-stream)">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-                <span class="nav-text whitespace-nowrap">NVR View</span>
-            </button>
-
-            {{ if eq .Session.Role "admin" }}
-            <button type="button" onclick="switchView('timelapse')" data-view="timelapse" class="nav-link w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-lg font-medium transition-colors text-slate-600 dark:text-slate-400" title="Timelapse">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span class="nav-text whitespace-nowrap">Timelapse</span>
-            </button>
-            {{ end }}
             
 
             
