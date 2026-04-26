@@ -572,13 +572,18 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE username = $1"
 	}
 
+	var expiresAt sql.NullTime
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.ExpiresAt, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &expiresAt, &user.CreatedAt)
+	
+	if expiresAt.Valid {
+		user.ExpiresAt = expiresAt.Time
+	}
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -593,13 +598,18 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE id = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE id = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(expires_at, '1970-01-01 00:00:00'), created_at FROM users WHERE id = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE id = $1"
 	}
 
+	var expiresAt sql.NullTime
 	err := s.db.QueryRow(query, id).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.ExpiresAt, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &expiresAt, &user.CreatedAt)
+	
+	if expiresAt.Valid {
+		user.ExpiresAt = expiresAt.Time
+	}
 	
 	if err != nil {
 		if err == sql.ErrNoRows {
