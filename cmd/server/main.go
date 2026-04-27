@@ -435,6 +435,7 @@ func main() {
 	skipLanding := os.Getenv("SKIP_LANDING") == "true" || os.Getenv("HIDE_LANDING_PAGE") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
+	log.Printf("[Config] HIDE_PAYMENT: %v", strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1")
 
 	cfgPath := filepath.Join("data", "go2rtc.yaml")
 	absCfgPath, _ := filepath.Abs(cfgPath)
@@ -615,7 +616,7 @@ func main() {
 				"Mode":        mode,
 				"HideSignup":  prelaunch || hideSignup,
 				"SkipLanding": skipLanding,
-				"HidePayment": os.Getenv("HIDE_PAYMENT") == "true",
+				"HidePayment": strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1",
 			})
 			return
 		}
@@ -756,7 +757,7 @@ func main() {
 			http.SetCookie(w, &cookie)
 
 			planName := r.FormValue("plan")
-			hidePayment := os.Getenv("HIDE_PAYMENT") == "true"
+			hidePayment := strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1"
 			selectedPlan, _ := store.GetPlanByName(planName)
 
 			if !hidePayment && planName != "Free" && planName != "" && selectedPlan != nil && selectedPlan.IsActive {
