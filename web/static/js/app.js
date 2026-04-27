@@ -4246,6 +4246,11 @@ async function loadProfileData() {
             const data = await res.json();
             const waInput = document.getElementById('profile-whatsapp');
             if (waInput && data.whatsapp) waInput.value = data.whatsapp;
+
+            const publicUrlInput = document.getElementById('profile-public-token-input');
+            if (publicUrlInput && data.public_token) {
+                publicUrlInput.value = window.location.origin + "/view/" + data.public_token;
+            }
         }
     } catch (e) {
         console.error('Failed to load profile data', e);

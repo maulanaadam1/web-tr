@@ -1178,10 +1178,22 @@ func main() {
 		streams = getUserVisibleStreams(sess, streams, store)
 
 		log.Printf("Rendering dashboard view with %d streams", len(streams))
+		
+		daysLeft := -1
+		if !sess.SubExpiry.IsZero() {
+			diff := time.Until(sess.SubExpiry)
+			daysLeft = int(diff.Hours() / 24)
+			// If it's expiring today, it might be 0.
+			if diff > 0 && daysLeft == 0 {
+				// We keep it 0 to indicate "Today/Less than 24h"
+			}
+		}
+
 		tmpl.Execute(w, map[string]interface{}{
-			"Streams":   streams,
-			"Session":   sess,
-			"Now":       time.Now(),
+			"Streams":  streams,
+			"Session":  sess,
+			"Now":      time.Now(),
+			"DaysLeft": daysLeft,
 		})
 	})
 
