@@ -2306,7 +2306,7 @@ function selectCameraOnMap(name) {
     // UI Updates
     document.getElementById('noCameraSelected').classList.add('hidden');
     document.getElementById('previewPlayerArea').classList.remove('hidden');
-    document.getElementById('previewStatus').classList.remove('hidden');
+
     document.getElementById('previewCamName').textContent = name;
 
     reloadDashboardPreview('mse');
@@ -2338,7 +2338,7 @@ function deselectCameraOnMap() {
     // UI Reset
     document.getElementById('noCameraSelected').classList.remove('hidden');
     document.getElementById('previewPlayerArea').classList.add('hidden');
-    document.getElementById('previewStatus').classList.add('hidden');
+
     const player = document.getElementById('dashboardPlayer');
     if (player) player.innerHTML = '';
 }
