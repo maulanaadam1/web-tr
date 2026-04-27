@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kebijakan Privasi - RTSP2go</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-300 antialiased selection:bg-indigo-500/30">
+    <!-- Navbar -->
+    <nav class="fixed w-full z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="/" class="flex items-center gap-2">
+                    <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                    <span class="font-extrabold text-xl text-white tracking-tight">RTSP2go</span>
+                </a>
+                <a href="/" class="text-sm font-medium hover:text-white transition-colors">Kembali ke Beranda</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-32 pb-20 px-4">
+        <div class="max-w-4xl mx-auto">
+            <div class="mb-12 text-center">
+                <h1 class="text-4xl font-extrabold text-white mb-4">Kebijakan Privasi</h1>
+                <p class="text-slate-500 text-sm">Terakhir diperbarui: 27 April 2026</p>
+            </div>
+
+            <div class="glass rounded-3xl p-8 md:p-12 space-y-8 leading-relaxed">
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">1. Pendahuluan</h2>
+                    <p>Selamat datang di RTSP2go. Kami sangat menghargai privasi Anda dan berkomitmen untuk melindungi data pribadi Anda sesuai dengan hukum Perlindungan Data Pribadi (PDP) di Indonesia. Kebijakan ini menjelaskan bagaimana kami mengumpulkan, menggunakan, dan menjaga informasi Anda.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">2. Informasi yang Kami Kumpulkan</h2>
+                    <div class="space-y-4">
+                        <p>Kami mengumpulkan informasi yang diperlukan untuk menyediakan layanan streaming yang optimal:</p>
+                        <ul class="list-disc pl-6 space-y-2">
+                            <li><span class="text-indigo-400 font-semibold">Data Akun:</span> Alamat email dan nama pengguna saat pendaftaran.</li>
+                            <li><span class="text-indigo-400 font-semibold">Data Stream:</span> URL RTSP kamera yang Anda masukkan (kami hanya meneruskan stream dan tidak merekam video tanpa izin Anda).</li>
+                            <li><span class="text-indigo-400 font-semibold">Data Teknis:</span> Alamat IP, jenis perangkat, dan log aktivitas teknis untuk pemeliharaan server.</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">3. Pengolahan Video & Transmisi</h2>
+                    <p>RTSP2go berfungsi sebagai jembatan (*relay*) antara kamera IP Anda dan browser. Data video diproses secara *real-time* melalui protokol WebRTC/HLS. Kami tidak menyimpan salinan permanen rekaman video Anda di server cloud kami kecuali jika Anda secara spesifik mengaktifkan fitur penyimpanan yang akan tersedia di masa mendatang.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">4. Keamanan Data</h2>
+                    <p>Kami menerapkan standar keamanan industri tinggi, termasuk enkripsi TLS/SSL untuk semua transmisi data. Akses ke dashboard menggunakan autentikasi yang aman untuk memastikan hanya Anda yang memiliki wewenang untuk melihat stream kamera Anda.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">5. Hak-Hak Pengguna</h2>
+                    <p>Sesuai dengan regulasi di Indonesia, Anda memiliki hak untuk mengakses, memperbarui, atau meminta penghapusan data pribadi Anda dari sistem kami. Anda dapat menghapus semua stream dan informasi akun Anda kapan saja melalui dashboard.</p>
+                </section>
+
+                <section>
+                    <h2 class="text-xl font-bold text-white mb-4">6. Kontak Kami</h2>
+                    <p>Jika Anda memiliki pertanyaan mengenai kebijakan privasi ini atau penggunaan data Anda, silakan hubungi kami melalui Email: <span class="text-indigo-400">rtsp2go@gmail.com</span>.</p>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="py-10 border-t border-slate-800 text-center">
+        <p class="text-xs text-slate-500">© 2026 RTSP2go. Hak Cipta Dilindungi Undang-Undang.</p>
+    </footer>
+</body>
+</html>

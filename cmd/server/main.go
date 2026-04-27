@@ -595,6 +595,23 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	// Legal Pages
+	http.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/privacy.html")
+		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
+		tmpl.Execute(w, nil)
+	})
+	http.HandleFunc("/terms", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/terms.html")
+		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
+		tmpl.Execute(w, nil)
+	})
+	http.HandleFunc("/refund", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/refund.html")
+		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
+		tmpl.Execute(w, nil)
+	})
+
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if (prelaunch || hideSignup) && r.URL.Query().Get("tab") == "signup" {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
