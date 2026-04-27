@@ -63,6 +63,18 @@
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300 antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden">
 
+    <!-- Floating Action Button for Trial (Desktop & Mobile) -->
+    <div class="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-3 pointer-events-none hidden md:flex">
+        <a href="/login?tab=signup" class="pointer-events-auto bg-gradient-to-r from-brand-600 to-purple-600 text-white px-6 py-3.5 rounded-2xl font-black text-sm shadow-2xl shadow-brand-500/50 hover:scale-110 hover:-rotate-2 transition-all flex items-center gap-3 group">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+            </span>
+            Klaim Advance Trial
+            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+    </div>
+
     <!-- Background Decoration -->
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-brand-400/30 dark:bg-brand-600/20 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
@@ -133,7 +145,7 @@
                     {{end}}
                     <a href="#contact" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Contact</a>
                     <a href="/login" class="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">Sign In</a>
-                    <a href="/login?tab=signup" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Start Free</a>
+                    <a href="/login?tab=signup" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Klaim Trial</a>
                 </div>
                 <div class="md:hidden flex items-center gap-4">
                     <a href="/login" class="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium text-sm">Login</a>
@@ -159,16 +171,16 @@
             </h1>
             
             <p class="mt-4 text-base sm:text-lg lg:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8 lg:mb-10 px-4 sm:px-0">
-                Ubah stream kamera RTSP/IP Anda menjadi broadcast web-ready via HLS & WebRTC secara instan. Tanpa konfigurasi rumit — masukkan URL, langsung streaming.
+                Ubah kamera IP Anda menjadi broadcast profesional via HLS & WebRTC secara instan. Nikmati fitur **16 Kamera, Command Center, & Public View** gratis hari ini.
             </p>
             
             <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
-                <a href="#try" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
-                    Coba Sekarang Gratis
+                <a href="/login?tab=signup" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
+                    Klaim Advance Trial Gratis
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </a>
-                <a href="#features" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                    Lihat Fitur
+                <a href="#try" class="bg-white dark:bg-slate-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400 px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all flex items-center justify-center gap-2">
+                    Coba Quick Stream
                 </a>
             </div>
         </div>
@@ -304,6 +316,26 @@
             </div>
         </div>
     </section>
+    
+    <!-- Trial Promotion Section -->
+    <section class="snap-slide bg-brand-600 text-white overflow-hidden py-16 w-full relative">
+        <div class="absolute inset-0 pointer-events-none opacity-20">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
+        </div>
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <h2 class="text-3xl md:text-5xl font-black mb-6">Penasaran dengan Fitur Advance?</h2>
+            <p class="text-xl text-brand-100 mb-10 max-w-2xl mx-auto">
+                Dapatkan akses penuh ke Command Center, Public View, NVR View dan dukungan hingga 16 kamera GRATIS selama 2 hari. 
+            </p>
+            <div class="flex flex-col sm:flex-row justify-center gap-4">
+                <a href="/login?tab=signup" class="bg-white text-brand-600 px-10 py-4 rounded-2xl font-black text-lg shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 uppercase tracking-tight">
+                    Klaim Advance Trial Sekarang
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </a>
+            </div>
+        </div>
+    </section>
 
 
     {{if not .HidePricing}}
@@ -366,7 +398,7 @@
                         <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tech Support Eksklusif</li>
                         <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Map Dashboard</li>
                     </ul>
-                    <a href="/login?mode=register&plan=Advance" class="w-full py-2.5 px-3 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl text-xs">Pilih Paket</a>
+                    <a href="/login?mode=register&plan=Advance" class="w-full py-2.5 px-3 bg-gradient-to-r from-brand-600 to-indigo-600 text-white hover:opacity-90 transition-all text-center font-black rounded-xl text-[10px] shadow-lg shadow-brand-500/20 uppercase tracking-wider">Klaim Advance Trial Gratis</a>
                 </div>
                 <!-- Enterprise -->
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
