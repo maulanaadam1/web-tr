@@ -81,19 +81,20 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
+func (m *Manager) AddStream(name, displayName, url, backend string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
 	if backend == "" {
 		backend = "go2rtc" // Default
 	}
 	if m.Store != nil {
 		// DB mode - use AddStream to insert/upsert
 		if err := m.Store.AddStream(models.Stream{
-			Name:    name,
-			URL:     url,
-			Backend: backend,
-			Lat:     lat,
-			Lng:     lng,
-			Enabled: enabled,
+			Name:         name,
+			DisplayName:  displayName,
+			URL:          url,
+			Backend:      backend,
+			Lat:          lat,
+			Lng:          lng,
+			Enabled:      enabled,
 			UserID:       userID,
 			DisableAudio: disableAudio,
 		}); err != nil {

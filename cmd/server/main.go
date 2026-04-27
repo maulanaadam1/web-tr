@@ -1599,7 +1599,7 @@ func main() {
 			sess, _ := r.Context().Value(sessionContextKey).(Session)
 
 			// Add stream (default to go2rtc for CSV imports, auto-mute default)
-			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
+			if err := streamMgr.AddStream(name, name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue

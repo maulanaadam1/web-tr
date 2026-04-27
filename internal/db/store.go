@@ -242,7 +242,7 @@ func (s *Store) Init() error {
 		log.Printf("Warning: Failed to seed default admin: %v", err)
 	}
 
-	s.MigrateOldStreamsToUUID()
+	// s.MigrateOldStreamsToUUID() // Disabled to allow human-readable names as identifiers
 
 	// Migration: Add expires_at to users
 	s.db.Exec("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
@@ -626,6 +626,9 @@ func (s *Store) AddStream(st models.Stream) error {
 	}
 	if st.DisplayName == "" {
 		st.DisplayName = st.Name
+	} else if st.Name == "" {
+		// If DisplayName is provided but Name is not, use DisplayName as Name
+		st.Name = st.DisplayName
 	}
 
 	var query string
