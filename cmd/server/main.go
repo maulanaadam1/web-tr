@@ -1521,6 +1521,13 @@ func main() {
 			return
 		}
 
+		sess := r.Context().Value(sessionContextKey).(Session)
+		canImport := sess.Role == "admin" || sess.SubscriptionPlan == "Premium" || sess.SubscriptionPlan == "Advance" || sess.SubscriptionPlan == "Enterprise"
+		if !canImport {
+			http.Error(w, "Import feature is only available for Premium and Advance plans", http.StatusForbidden)
+			return
+		}
+
 		// Parse multipart form (10MB max)
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			http.Error(w, "Failed to parse form", http.StatusBadRequest)
