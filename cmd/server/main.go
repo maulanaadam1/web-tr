@@ -114,6 +114,16 @@ func trimString(s string) string {
 	return result
 }
 
+func generateUUID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+func isUUID(s string) bool {
+	return strings.Count(s, "-") == 4 && len(s) >= 32
+}
+
 func startsWithString(s, prefix string) bool {
 	if len(s) < len(prefix) {
 		return false
@@ -1598,8 +1608,14 @@ func main() {
 			// Get session for user ownership
 			sess, _ := r.Context().Value(sessionContextKey).(Session)
 
+			// ID Internal harus UUID, Display Name pake nama dari CSV
+			internalName := name
+			if !isUUID(name) {
+				internalName = generateUUID()
+			}
+
 			// Add stream (default to go2rtc for CSV imports, auto-mute default)
-			if err := streamMgr.AddStream(name, name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
+			if err := streamMgr.AddStream(internalName, name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
@@ -2320,10 +2336,17 @@ func main() {
 	// We register it and tell go2rtc to wait for a push.
 	// =============================================================
 	http.HandleFunc("/api/bridge/", func(w http.ResponseWriter, r *http.Request) {
-		camName := strings.TrimPrefix(r.URL.Path, "/api/bridge/")
-		if camName == "" {
+		slug := strings.TrimPrefix(r.URL.Path, "/api/bridge/")
+		if slug == "" {
 			http.Error(w, "camera name required", http.StatusBadRequest)
 			return
+		}
+
+		// Find if this slug already exists in DB as an internal Name
+		existing, _ := globalStore.GetStream(slug)
+		camName := slug
+		if existing == nil && !isUUID(slug) {
+			camName = generateUUID()
 		}
 
 		// --- Auth ---
@@ -2351,7 +2374,7 @@ func main() {
 
 		displayName := r.Header.Get("X-Display-Name")
 		if displayName == "" {
-			displayName = camName
+			displayName = slug
 		}
 
 		// --- Select Target Node (Dedicated OR Load Balanced) ---

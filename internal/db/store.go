@@ -242,7 +242,7 @@ func (s *Store) Init() error {
 		log.Printf("Warning: Failed to seed default admin: %v", err)
 	}
 
-	// s.MigrateOldStreamsToUUID() // Disabled to allow human-readable names as identifiers
+	s.MigrateOldStreamsToUUID() // Re-enabled to ensure internal identifiers are UUIDs while UI uses DisplayName
 
 	// Migration: Add expires_at to users
 	s.db.Exec("ALTER TABLE users ADD COLUMN expires_at TIMESTAMP")
