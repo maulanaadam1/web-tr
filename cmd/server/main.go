@@ -615,6 +615,7 @@ func main() {
 				"Mode":        mode,
 				"HideSignup":  prelaunch || hideSignup,
 				"SkipLanding": skipLanding,
+				"HidePayment": os.Getenv("HIDE_PAYMENT") == "true",
 			})
 			return
 		}
@@ -755,8 +756,10 @@ func main() {
 			http.SetCookie(w, &cookie)
 
 			planName := r.FormValue("plan")
+			hidePayment := os.Getenv("HIDE_PAYMENT") == "true"
 			selectedPlan, _ := store.GetPlanByName(planName)
-			if planName != "Free" && planName != "" && selectedPlan != nil && selectedPlan.IsActive {
+
+			if !hidePayment && planName != "Free" && planName != "" && selectedPlan != nil && selectedPlan.IsActive {
 				ipaymuVA := os.Getenv("IPAYMU_VA")
 				ipaymuKey := os.Getenv("IPAYMU_API_KEY")
 				production := os.Getenv("IPAYMU_PRODUCTION") == "true"

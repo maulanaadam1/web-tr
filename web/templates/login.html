@@ -228,6 +228,9 @@
 
                 <!-- Registration Form -->
                 <form id="form-register" action="/register" method="POST" class="space-y-5 hidden">
+                    {{if .HidePayment}}
+                    <input type="hidden" name="plan" value="Free">
+                    {{else}}
                     <div class="space-y-1.5">
                         <label for="reg-plan" class="block text-sm font-medium text-slate-300">Pilih Paket</label>
                         <select id="reg-plan" name="plan"
@@ -238,6 +241,7 @@
                             <option value="Advance">Advance (16 Kamera, Rp 70.000)</option>
                         </select>
                     </div>
+                    {{end}}
 
                     <div class="space-y-1.5">
                         <label for="reg-username" class="block text-sm font-medium text-slate-300">Username *</label>
