@@ -495,7 +495,7 @@
                                         <p class="text-xs text-slate-400 font-medium">Pilih paket yang sesuai dengan kebutuhan Anda</p>
                                     </div>
                                     <button onclick="openRedeemModal()" class="px-4 py-2 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                        🔑 Redeem Key
+                                        🎫 Redeem Voucher
                                     </button>
                                 </div>
                                 <div id="pricingPlansContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -594,11 +594,11 @@
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </div>
                                 <div>
-                                    <h3 class="text-xl font-bold text-red-900 dark:text-red-100">Subscription Expired</h3>
-                                    <p class="text-red-700/80 dark:text-red-300/60 text-sm">Your access to streaming and mapping services has been restricted. Please redeem a license key to continue.</p>
+                                    <h3 class="text-xl font-bold text-red-900 dark:text-red-100">Langganan Kedaluwarsa</h3>
+                                    <p class="text-red-700/80 dark:text-red-300/60 text-sm">Akses Anda ke layanan streaming telah dibatasi. Silakan perbarui langganan untuk melanjutkan.</p>
                                 </div>
                             </div>
-                            <button onclick="openRedeemModal()" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all relative z-10 whitespace-nowrap">Redeem License Key</button>
+                            <button onclick="switchView('profile')" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-500/30 transition-all relative z-10 whitespace-nowrap">Perpanjang Sekarang</button>
                         </div>
                     {{ else if and (ge $.DaysLeft 0) (le $.DaysLeft 7) }}
                         <div class="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200/60 dark:border-amber-800/60 rounded-3xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden mb-8 group shadow-xl shadow-amber-500/5">
