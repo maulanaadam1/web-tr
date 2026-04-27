@@ -183,6 +183,7 @@ func (s *Store) Init() error {
 			"subscription_plan TEXT DEFAULT 'Free'",
 			"enable_support BOOLEAN DEFAULT 0",
 			"public_token TEXT DEFAULT ''",
+			"trial_claimed BOOLEAN DEFAULT 0",
 		}
 		for _, colDef := range cols {
 			name := strings.Split(colDef, " ")[0]
@@ -225,6 +226,7 @@ func (s *Store) Init() error {
 		ADD COLUMN IF NOT EXISTS broadcast_notifications BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS notification_paid BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS enable_support BOOLEAN DEFAULT FALSE,
+		ADD COLUMN IF NOT EXISTS trial_claimed BOOLEAN DEFAULT FALSE,
 		ADD COLUMN IF NOT EXISTS public_token TEXT DEFAULT '';
 		ALTER TABLE streams
 		ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION DEFAULT 0,
@@ -779,14 +781,14 @@ func (s *Store) GetUserByUsername(username string) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE username = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(trial_claimed, 0), expires_at, created_at FROM users WHERE username = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE username = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(trial_claimed, false), expires_at, created_at FROM users WHERE username = $1"
 	}
 
 	var expiresAt sql.NullTime
 	err := s.db.QueryRow(query, username).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &expiresAt, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.TrialClaimed, &expiresAt, &user.CreatedAt)
 	
 	if expiresAt.Valid {
 		user.ExpiresAt = expiresAt.Time
@@ -805,14 +807,14 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 	var user models.User
 	var query string
 	if s.dbType == "sqlite" {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE id = ?"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(trial_claimed, 0), expires_at, created_at FROM users WHERE id = ?"
 	} else {
-		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users WHERE id = $1"
+		query = "SELECT id, username, password_hash, salt, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, false), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(trial_claimed, false), expires_at, created_at FROM users WHERE id = $1"
 	}
 
 	var expiresAt sql.NullTime
 	err := s.db.QueryRow(query, id).
-		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &expiresAt, &user.CreatedAt)
+		Scan(&user.ID, &user.Username, &user.PasswordHash, &user.Salt, &user.Role, &user.FullName, &user.Email, &user.Whatsapp, &user.IsActive, &user.BroadcastNotifications, &user.NotificationPaid, &user.SubscriptionPlan, &user.EnableSupport, &user.PublicToken, &user.DedicatedNodeID, &user.TrialClaimed, &expiresAt, &user.CreatedAt)
 	
 	if expiresAt.Valid {
 		user.ExpiresAt = expiresAt.Time
@@ -828,7 +830,7 @@ func (s *Store) GetUserByID(id int) (*models.User, error) {
 }
 
 func (s *Store) GetAllUsers() ([]models.User, error) {
-	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), expires_at, created_at FROM users ORDER BY id ASC")
+	rows, err := s.db.Query("SELECT id, username, role, full_name, email, whatsapp, is_active, broadcast_notifications, notification_paid, COALESCE(subscription_plan, 'Free'), COALESCE(enable_support, 0), COALESCE(public_token, ''), COALESCE(dedicated_node_id, 0), COALESCE(trial_claimed, 0), expires_at, created_at FROM users ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -838,7 +840,7 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 	for rows.Next() {
 		var u models.User
 		var expiresAt sql.NullTime
-		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &expiresAt, &u.CreatedAt); err != nil {
+		if err := rows.Scan(&u.ID, &u.Username, &u.Role, &u.FullName, &u.Email, &u.Whatsapp, &u.IsActive, &u.BroadcastNotifications, &u.NotificationPaid, &u.SubscriptionPlan, &u.EnableSupport, &u.PublicToken, &u.DedicatedNodeID, &u.TrialClaimed, &expiresAt, &u.CreatedAt); err != nil {
 			log.Printf("Error scanning user row: %v", err)
 			continue
 		}
@@ -848,6 +850,17 @@ func (s *Store) GetAllUsers() ([]models.User, error) {
 		users = append(users, u)
 	}
 	return users, nil
+}
+
+func (s *Store) MarkTrialClaimed(id int) error {
+	var query string
+	if s.dbType == "sqlite" {
+		query = "UPDATE users SET trial_claimed = 1 WHERE id = ?"
+	} else {
+		query = "UPDATE users SET trial_claimed = TRUE WHERE id = $1"
+	}
+	_, err := s.db.Exec(query, id)
+	return err
 }
 
 func (s *Store) UpdateUserPassword(id int, newPassword string) error {
@@ -868,12 +881,12 @@ func (s *Store) UpdateUserPassword(id int, newPassword string) error {
 func (s *Store) UpdateUserFull(u models.User) error {
 	var query string
 	if s.dbType == "sqlite" {
-		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ?, dedicated_node_id = ?, expires_at = ? WHERE id = ?"
+		query = "UPDATE users SET role = ?, full_name = ?, email = ?, whatsapp = ?, is_active = ?, broadcast_notifications = ?, notification_paid = ?, subscription_plan = ?, enable_support = ?, public_token = ?, dedicated_node_id = ?, trial_claimed = ?, expires_at = ? WHERE id = ?"
 	} else {
-		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10, dedicated_node_id = $11, expires_at = $12 WHERE id = $13"
+		query = "UPDATE users SET role = $1, full_name = $2, email = $3, whatsapp = $4, is_active = $5, broadcast_notifications = $6, notification_paid = $7, subscription_plan = $8, enable_support = $9, public_token = $10, dedicated_node_id = $11, trial_claimed = $12, expires_at = $13 WHERE id = $14"
 	}
 
-	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID, u.ExpiresAt, u.ID)
+	_, err := s.db.Exec(query, u.Role, u.FullName, u.Email, u.Whatsapp, u.IsActive, u.BroadcastNotifications, u.NotificationPaid, u.SubscriptionPlan, u.EnableSupport, u.PublicToken, u.DedicatedNodeID, u.TrialClaimed, u.ExpiresAt, u.ID)
 	return err
 }
 
@@ -1149,7 +1162,7 @@ func (s *Store) RedeemLicense(userID int, key string) (string, error) {
 	}
 
 	if isUsed {
-		return "", fmt.Errorf("license key already used")
+		return "", fmt.Errorf("your redeem keys has been used")
 	}
 
 	// Calculate new expiry

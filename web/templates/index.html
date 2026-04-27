@@ -487,7 +487,8 @@
                                 </div>
                             </div>
 
-                            <!-- Buy Plan Section -->
+                             <!-- Buy Plan Section -->
+                            {{ if not .HidePayment }}
                             <div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
                                 <div class="flex items-center justify-between mb-5">
                                     <div>
@@ -504,6 +505,25 @@
                                     </div>
                                 </div>
                             </div>
+                            {{ else }}
+                                <!-- Self-Service Trial Claim (Locked per username) -->
+                                {{ if and (eq .Session.SubscriptionPlan "Free") (not .Session.TrialClaimed) }}
+                                <div class="mt-8 pt-8 border-t border-slate-100 dark:border-slate-800">
+                                    <div class="bg-brand-500/10 border border-brand-500/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                                        <div class="flex items-center gap-4 text-center md:text-left">
+                                            <div class="w-12 h-12 bg-brand-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-bold text-slate-800 dark:text-white">Claim Advance Trial (2 Hari)</h4>
+                                                <p class="text-xs text-slate-500 dark:text-slate-400">Dapatkan akses semua fitur Advance secara gratis selama 2 hari (Hanya sekali klik).</p>
+                                            </div>
+                                        </div>
+                                        <button onclick="claimTrialAdvance()" id="claimTrialBtn" class="px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg active:scale-95">Claim Sekarang</button>
+                                    </div>
+                                </div>
+                                {{ end }}
+                            {{ end }}
 
                             <div class="mt-10 pt-8 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-[10px] uppercase font-bold tracking-widest text-slate-400">
                                 <span>Security Check: Secure Session Active</span>
@@ -581,6 +601,22 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Trial Claim Banner for Dashboard -->
+                {{ if and (eq .Session.SubscriptionPlan "Free") (not .Session.TrialClaimed) }}
+                <div class="bg-gradient-to-r from-brand-600 to-brand-400 rounded-2xl p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-brand-500/20">
+                    <div class="flex items-center gap-5 text-center md:text-left">
+                        <div class="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black text-white">🎉 Dapatkan Advance Trial</h3>
+                            <p class="text-white/80 text-sm">Coba fitur 16 Kamera dan playback selama 2 hari. Klaim sekarang, gratis!</p>
+                        </div>
+                    </div>
+                    <button onclick="claimTrialAdvance()" id="claimTrialDashboardBtn" class="px-8 py-3 bg-white text-brand-600 font-black rounded-xl hover:bg-slate-50 transition-all shadow-lg active:scale-95">KLAIM SEKARANG</button>
+                </div>
+                {{ end }}
 
                 <!-- Expiration Alert -->
                 {{ if and (ne .Session.UserID 0) (not .Session.SubExpiry.IsZero) }}

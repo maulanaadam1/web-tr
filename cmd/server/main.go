@@ -41,6 +41,7 @@ type Session struct {
 	PublicToken      string
 	Expiry           time.Time
 	SubExpiry        time.Time
+	TrialClaimed     bool
 }
 
 var (
@@ -648,6 +649,7 @@ func main() {
 					PublicToken:      dbUser.PublicToken,
 					Expiry:           expiry,
 					SubExpiry:        dbUser.ExpiresAt,
+					TrialClaimed:     dbUser.TrialClaimed,
 				}
 				sessionMutex.Unlock()
 
@@ -742,6 +744,7 @@ func main() {
 				Role:             user.Role,
 				SubscriptionPlan: user.SubscriptionPlan,
 				SubExpiry:        user.ExpiresAt,
+				TrialClaimed:     user.TrialClaimed,
 				Expiry:           expiry,
 			}
 			sessionMutex.Unlock()
@@ -1195,9 +1198,10 @@ func main() {
 
 		tmpl.Execute(w, map[string]interface{}{
 			"Streams":  streams,
-			"Session":  sess,
-			"Now":      time.Now(),
-			"DaysLeft": daysLeft,
+			"Session":     sess,
+			"Now":         time.Now(),
+			"DaysLeft":    daysLeft,
+			"HidePayment": strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1",
 		})
 	})
 
@@ -1886,6 +1890,60 @@ func main() {
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"plan": plan, "message": "License redeemed successfully"})
+	}))
+
+	http.HandleFunc("/api/user/claim-trial", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
+		sess := r.Context().Value(sessionContextKey).(Session)
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		u, err := globalStore.GetUserByID(sess.UserID)
+		if err != nil || u == nil {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
+		if u.TrialClaimed {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "You have already claimed your trial"})
+			return
+		}
+
+		if u.SubscriptionPlan != "Free" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Trial is only for Free members"})
+			return
+		}
+
+		// Upgrade to Advance for 2 days
+		newExpiry := time.Now().AddDate(0, 0, 2)
+		u.SubscriptionPlan = "Advance"
+		u.ExpiresAt = newExpiry
+		u.TrialClaimed = true
+
+		if err := globalStore.UpdateUserFull(*u); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Update Session
+		cookie, err := r.Cookie(sessionCookieName)
+		if err == nil {
+			sessionMutex.Lock()
+			if s, ok := activeSessions[cookie.Value]; ok {
+				s.SubscriptionPlan = "Advance"
+				s.SubExpiry = newExpiry
+				activeSessions[cookie.Value] = s
+			}
+			sessionMutex.Unlock()
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Trial claimed successfully", "plan": "Advance"})
 	}))
 
 	// Register all iPaymu payment gateway routes

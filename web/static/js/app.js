@@ -4286,3 +4286,44 @@ async function updateProfileField(event, field, inputId) {
         showToast('Network error: ' + e.message, 'error');
     }
 }
+
+async function claimTrialAdvance() {
+    const btn = document.getElementById('claimTrialBtn');
+    const dashboardBtn = document.getElementById('claimTrialDashboardBtn');
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing...';
+    }
+    if (dashboardBtn) {
+        dashboardBtn.disabled = true;
+        dashboardBtn.innerHTML = 'PROCESSING...';
+    }
+
+    try {
+        const res = await fetch('/api/user/claim-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('Trial Advance 2 Hari berhasil diaktifkan!', 'success');
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.error || 'Gagal klaim trial', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Claim Sekarang';
+            }
+            if (dashboardBtn) {
+                dashboardBtn.disabled = false;
+                dashboardBtn.innerHTML = 'KLAIM SEKARANG';
+            }
+        }
+    } catch (e) {
+        showToast('Koneksi bermasalah', 'error');
+        if (btn) btn.disabled = false;
+        if (dashboardBtn) dashboardBtn.disabled = false;
+    }
+}
