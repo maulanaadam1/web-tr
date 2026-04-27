@@ -297,7 +297,6 @@
                 </div>
             </div>
 
-            {{if .SkipLanding}}
             <div class="mt-8 pt-6 border-t border-slate-800/80">
                 <div class="text-center mb-5">
                     <h3 class="text-base sm:text-lg font-bold text-white flex items-center justify-center gap-2">
@@ -468,7 +467,6 @@
                     document.getElementById('rtspGuideModal').classList.add('opacity-0', 'pointer-events-none');
                 }
             </script>
-            {{end}}
         </div>
     </div>
     </div>
@@ -505,7 +503,6 @@
         }
     </script>
     
-    {{if .SkipLanding}}
     <!-- MODALS FOR RTSP TEST -->
     <div id="streamPlayerModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="relative w-full max-w-3xl mx-4 bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
@@ -547,6 +544,6 @@
             <button onclick="closeRtspGuide()" class="mt-8 w-full py-4 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition-all">Dimengerti</button>
         </div>
     </div>
-    {{end}}
+    </div>
 </body>
 </html>

@@ -432,7 +432,7 @@ func main() {
 	hideSignup := os.Getenv("HIDE_SIGNUP") == "true"
 	hideDocs := os.Getenv("HIDE_DOCS") == "true"
 	hidePricing := os.Getenv("HIDE_PRICING") == "true"
-	skipLanding := os.Getenv("SKIP_LANDING") == "true"
+	skipLanding := os.Getenv("SKIP_LANDING") == "true" || os.Getenv("HIDE_LANDING_PAGE") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
 
