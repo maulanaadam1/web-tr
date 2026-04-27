@@ -2332,6 +2332,10 @@ func main() {
 			username = r.URL.Query().Get("user")
 			password = r.URL.Query().Get("pass")
 		}
+		if username == "" {
+			username = r.Header.Get("X-Api-User")
+			password = r.Header.Get("X-Api-Pass")
+		}
 		isTrial := (username == "" && password == "")
 		var ownerUserID int
 		if !isTrial {
