@@ -1678,7 +1678,7 @@ func main() {
 			if len(nameSet) > 0 && !nameSet[s.Name] {
 				continue
 			}
-			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.Name, s.URL, s.Lat, s.Lng)
+			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.DisplayName, s.URL, s.Lat, s.Lng)
 			w.Write([]byte(line))
 		}
 	}))
