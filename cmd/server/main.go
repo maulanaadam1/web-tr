@@ -192,7 +192,17 @@ func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error
 		method = http.MethodDelete
 	}
 
-	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(streamUrl))
+	// Clean up URL: remove output-specific params like ?mp4 or ?webrtc if they exist in source
+	cleanUrl := streamUrl
+	if strings.Contains(cleanUrl, "?") && !strings.Contains(cleanUrl, "#") {
+		// Only strip if it's a known go2rtc output param
+		if strings.HasSuffix(cleanUrl, "?mp4") || strings.HasSuffix(cleanUrl, "?webrtc") || strings.HasSuffix(cleanUrl, "?mse") {
+			cleanUrl = strings.Split(cleanUrl, "?")[0]
+			log.Printf("[Sync] Stripping output parameter from source URL: %s -> %s", streamUrl, cleanUrl)
+		}
+	}
+
+	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(cleanUrl))
 	if isDelete {
 		reqUrl = fmt.Sprintf("%s?src=%s", nodeAPIUrl, url.QueryEscape(name))
 	}
@@ -314,6 +324,20 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 		if !ok || time.Now().After(session.Expiry) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
+		}
+
+		// Refresh from DB to catch real-time plan/role upgrades
+		dbUser, _ := globalStore.GetUserByID(session.UserID)
+		if dbUser != nil {
+			session.SubscriptionPlan = dbUser.SubscriptionPlan
+			session.Role = dbUser.Role
+			session.SubExpiry = dbUser.ExpiresAt
+			session.TrialClaimed = dbUser.TrialClaimed
+			
+			// Optional: Update the memory cache too
+			sessionMutex.Lock()
+			activeSessions[cookie.Value] = session
+			sessionMutex.Unlock()
 		}
 
 		ctx := context.WithValue(r.Context(), sessionContextKey, session)
@@ -2424,7 +2448,13 @@ func main() {
 
 		targetNodeID := 1
 		nodeAPI := "http://localhost:1984/api/streams"
-		nodeIP := "localhost"
+		nodeIP := os.Getenv("PUBLIC_IP") // Try to get from Env first
+		if nodeIP == "" {
+			nodeIP = r.Host
+			if strings.Contains(nodeIP, ":") {
+				nodeIP = strings.Split(nodeIP, ":")[0]
+			}
+		}
 		rtspPort := 8554
 
 		if targetNode != nil {
@@ -2434,7 +2464,10 @@ func main() {
 			
 			// Extract IP from Node URL for the gateway response
 			parsedUrl, _ := url.Parse(nodeAPI)
-			nodeIP = parsedUrl.Hostname()
+			host := parsedUrl.Hostname()
+			if host != "" && host != "localhost" && host != "127.0.0.1" {
+				nodeIP = host
+			}
 			if nodeIP == "" { nodeIP = targetNode.URL } // Fallback
 		}
 
