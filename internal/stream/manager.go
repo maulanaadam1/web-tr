@@ -4,6 +4,7 @@ import (	"context"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -220,7 +221,39 @@ func (m *Manager) SyncFromDB() error {
 		return err
 	}
 
+	// Trigger go2rtc reload via API
+	go m.triggerGo2RTCReload()
+
 	return nil
+}
+
+func (m *Manager) triggerGo2RTCReload() {
+	// Give it a tiny moment to ensure file is flushed
+	time.Sleep(200 * time.Millisecond)
+
+	apiURL := "http://127.0.0.1:1984/api/reload"
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return
+	}
+
+	// Add Basic Auth from config if needed
+	// Based on go2rtc.yaml: admin / admin123
+	req.SetBasicAuth("admin", "admin123")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[StreamManager] Failed to trigger go2rtc reload: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("[StreamManager] go2rtc configuration reloaded successfully")
+	} else {
+		log.Printf("[StreamManager] go2rtc reload returned status: %s", resp.Status)
+	}
 }
 
 // ProbeStream runs ffprobe to check if the stream is reachable and returns its resolution and raw output.

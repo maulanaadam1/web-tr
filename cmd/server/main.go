@@ -202,6 +202,9 @@ func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error
 		return err
 	}
 
+	// Add Basic Auth – Matches go2rtc.yaml credentials
+	req.SetBasicAuth("admin", "admin123")
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -1643,8 +1646,8 @@ func main() {
 			if !strings.Contains(urlToSync, "#") {
 				urlToSync += "#video"
 			}
-			if err := syncStreamToGo2RTC("", name, urlToSync, false); err != nil {
-				log.Printf("Failed to sync stream %s to go2rtc: %v", name, err)
+			if err := syncStreamToGo2RTC("", internalName, urlToSync, false); err != nil {
+				log.Printf("Failed to sync stream %s to go2rtc: %v", internalName, err)
 			}
 
 			successCount++
