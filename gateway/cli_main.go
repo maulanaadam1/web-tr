@@ -1,5 +1,8 @@
 package main
 
+/*
+package cli_disabled
+
 import (
 	"bytes"
 	"encoding/json"
@@ -137,3 +140,4 @@ func registerToCentral(cam CameraConfig) bool {
 
 	return resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusCreated
 }
+*/

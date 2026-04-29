@@ -99,7 +99,6 @@ type TunnelInstance struct {
 	Card        fyne.CanvasObject
 	proxyLn     net.Listener
 	proxyPort   int
-	pushCmd     *exec.Cmd // used for Bridge Mode (FFmpeg Push)
 	ApiCamName  string
 	PublicURL   string
 	PublicLabel *widget.Entry // Use Entry for easy selection/copy
@@ -280,11 +279,9 @@ func buildSettings() fyne.CanvasObject {
 	entryApiPass.SetPlaceHolder("Password")
 	entryApiPass.SetText(config.ApiPassword)
 
-	vpnModes := []string{"Bridge Mode (No VPN)", "WireGuard VPN", "ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
+	vpnModes := []string{"WireGuard VPN", "ZeroTier VPN", "L2TP VPN", "None (Direct/Tunnel Only)"}
 	vpnModeSelect := widget.NewSelect(vpnModes, nil)
-	if config.VPNMode == "bridge" {
-		vpnModeSelect.SetSelected("Bridge Mode (No VPN)")
-	} else if config.VPNMode == "none" {
+	if config.VPNMode == "none" {
 		vpnModeSelect.SetSelected("None (Direct/Tunnel Only)")
 	} else if config.VPNMode == "l2tp" {
 		vpnModeSelect.SetSelected("L2TP VPN")
@@ -294,13 +291,11 @@ func buildSettings() fyne.CanvasObject {
 		vpnModeSelect.SetSelected("ZeroTier VPN")
 	}
 
-	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)", "FFmpeg (Transcode/Pro)"}
+	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)"}
 	engineSelect := widget.NewSelect(engineModes, nil)
 	switch config.StreamEngine {
 	case "mediamtx":
 		engineSelect.SetSelected("MediaMTX (Scalable)")
-	case "ffmpeg":
-		engineSelect.SetSelected("FFmpeg (Transcode/Pro)")
 	default:
 		engineSelect.SetSelected("Go2RTC (Balanced)")
 	}
@@ -350,15 +345,6 @@ func buildSettings() fyne.CanvasObject {
 		container.NewGridWrap(fyne.NewSize(450, 150), entryWG),
 	)
 
-	// === Bridge Mode Section ===
-	bridgeSection := container.NewVBox(
-		widget.NewSeparator(),
-		widget.NewLabelWithStyle("Bridge Mode (No VPN Required)", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-		widget.NewLabelWithStyle("✅ The gateway PUSHES stream directly to VPS (Mode: ffmpeg-push).", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
-		widget.NewLabelWithStyle("✅ No VPN installation needed. Most stable for high-resolution cameras.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
-		widget.NewLabelWithStyle("✅ Requirements: ffmpeg.exe must be in this folder.", fyne.TextAlignLeading, fyne.TextStyle{Italic: true}),
-	)
-
 	checkKeepCamera := widget.NewCheck("Keep camera on server when stopped (manual stop)", nil)
 	checkKeepCamera.SetChecked(config.KeepCameraOnStop)
 
@@ -368,11 +354,9 @@ func buildSettings() fyne.CanvasObject {
 		currentMode = "zerotier"
 	}
 
-	// Dynamic section that toggles between ZeroTier, WireGuard, L2TP, and Bridge
+	// Dynamic section that toggles between ZeroTier, WireGuard, and L2TP
 	dynamicSection := container.NewVBox()
-	if currentMode == "bridge" {
-		dynamicSection.Add(bridgeSection)
-	} else if currentMode == "l2tp" {
+	if currentMode == "l2tp" {
 		dynamicSection.Add(l2tpSection)
 	} else if currentMode == "wireguard" {
 		dynamicSection.Add(wgSection)
@@ -384,9 +368,7 @@ func buildSettings() fyne.CanvasObject {
 
 	vpnModeSelect.OnChanged = func(selected string) {
 		dynamicSection.Objects = nil
-		if selected == "Bridge Mode (No VPN)" {
-			dynamicSection.Add(bridgeSection)
-		} else if selected == "L2TP VPN" {
+		if selected == "L2TP VPN" {
 			dynamicSection.Add(l2tpSection)
 		} else if selected == "WireGuard VPN" {
 			dynamicSection.Add(wgSection)
@@ -402,9 +384,7 @@ func buildSettings() fyne.CanvasObject {
 		config.ApiPassword = entryApiPass.Text
 		config.KeepCameraOnStop = checkKeepCamera.Checked
 
-		if vpnModeSelect.Selected == "Bridge Mode (No VPN)" {
-			config.VPNMode = "bridge"
-		} else if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
+		if vpnModeSelect.Selected == "None (Direct/Tunnel Only)" {
 			config.VPNMode = "none"
 		} else if vpnModeSelect.Selected == "L2TP VPN" {
 			config.VPNMode = "l2tp"
@@ -417,8 +397,6 @@ func buildSettings() fyne.CanvasObject {
 		switch engineSelect.Selected {
 		case "MediaMTX (Scalable)":
 			config.StreamEngine = "mediamtx"
-		case "FFmpeg (Transcode/Pro)":
-			config.StreamEngine = "ffmpeg"
 		default:
 			config.StreamEngine = "go2rtc"
 		}
@@ -1167,12 +1145,6 @@ func (inst *TunnelInstance) Stop() {
 		inst.proxyLn = nil
 	}
 
-	// Bridge Mode v2: kill FFmpeg push process
-	if inst.pushCmd != nil && inst.pushCmd.Process != nil {
-		inst.pushCmd.Process.Kill()
-		inst.pushCmd = nil
-	}
-
 	close(inst.StopChan)
 	inst.StopChan = make(chan bool)
 
@@ -1539,7 +1511,7 @@ func registerToBackend(inst *TunnelInstance) {
 	}
 
 	// Give the tunnel a brief moment to stabilize
-	time.Sleep(2 * time.Second)
+	time.Sleep(1 * time.Second)
 
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
@@ -1564,73 +1536,6 @@ func registerToBackend(inst *TunnelInstance) {
 	// Save the strict UUID used for the API so we can deregister correctly later
 	inst.ApiCamName = camName
 	
-	// === Bridge Mode v2: Registration & Dynamic Node Discovery ===
-	if config.VPNMode == "bridge" {
-		addLog(fmt.Sprintf("[%s] Registering Bridge Mode with Master Server...", camName))
-		
-		// Use /api/bridge/ endpoint
-		baseURL := strings.TrimSuffix(config.ServerURL, "/")
-		bridgeURL := fmt.Sprintf("%s/api/bridge/%s", baseURL, camName)
-		
-		req, err := http.NewRequest(http.MethodPost, bridgeURL, nil)
-		if err != nil {
-			addLog(fmt.Sprintf("[%s] ❌ Request creation failed: %v", camName, err))
-			return
-		}
-		
-		if config.ApiUsername != "" && config.ApiPassword != "" {
-			req.SetBasicAuth(config.ApiUsername, config.ApiPassword)
-		}
-		
-		// Add helper display name
-		req.Header.Set("X-Display-Name", inst.Camera.Name)
-
-		client := &http.Client{Timeout: 10 * time.Second}
-		resp, err := client.Do(req)
-		if err != nil {
-			addLog(fmt.Sprintf("[%s] ❌ Cannot reach Master: %v", camName, err))
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-			body, _ := ioutil.ReadAll(resp.Body)
-			addLog(fmt.Sprintf("[%s] ❌ Registration Refused: %s", camName, string(body)))
-			return
-		}
-
-		// READ HANDOFF HEADERS
-		nodeIP := resp.Header.Get("X-Node-IP")
-		nodePortStr := resp.Header.Get("X-Node-Port")
-		nodePort := 8554
-		if nodePortStr != "" {
-			fmt.Sscanf(nodePortStr, "%d", &nodePort)
-		}
-
-		if nodeIP == "" {
-			// Fallback to Master if header missing
-			u, _ := url.Parse(config.ServerURL)
-			nodeIP = u.Hostname()
-		}
-
-		addLog(fmt.Sprintf("[%s] 🚀 Handoff Received! Target Node: %s:%d", camName, nodeIP, nodePort))
-
-		err = startPushMode(inst, camName, originalRTSP, nodeIP, nodePort)
-		if err != nil {
-			addLog(fmt.Sprintf("[%s] ❌ Push failed: %v", camName, err))
-			inst.updateStatus("Push Failed", theme.ColorNameError)
-			return
-		}
-		
-		finalWebURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
-		inst.PublicURL = finalWebURL
-		if inst.PublicLabel != nil {
-			inst.PublicLabel.SetText(finalWebURL)
-		}
-		addLog(fmt.Sprintf("[%s] ✅ Streaming Aktif! View: %s", camName, finalWebURL))
-		return 
-	}
-
 	var rtspSource string
 	hostPort := extractHostPort(originalRTSP)
 	if isPrivateIP(hostPort) {
@@ -1935,80 +1840,8 @@ func generateUUID() string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
 }
 
-// =============================================================
-// startPushMode — Bridge Mode v2 (Push/ANNOUNCE)
-// Menggunakan FFmpeg untuk "mendorong" stream RTSP ke VPS.
-// Ini 1000% lebih stabil daripada mode tunnel TCP mentah.
-// =============================================================
-func startPushMode(inst *TunnelInstance, camName string, localRTSP string, nodeIP string, nodePort int) error {
-	// 1. Cek apakah ffmpeg.exe ada
-	ffmpegPath := filepath.Join(filepath.Dir(os.Args[0]), "ffmpeg.exe")
-	if _, err := os.Stat(ffmpegPath); os.IsNotExist(err) {
-		// Coba cek di PATH sistem
-		ffmpegPath, err = exec.LookPath("ffmpeg")
-		if err != nil {
-			return fmt.Errorf("ffmpeg.exe tidak ditemukan di folder gateway atau PATH")
-		}
-	}
-
-	// 2. Siapkan URL tujuan (Dynamic RTSP Push based on Master's handoff)
-	pushURL := fmt.Sprintf("rtsp://%s:%d/%s", nodeIP, nodePort, camName)
-
-	addLog(fmt.Sprintf("[%s] Push: Memulai FFmpeg push ke %s...", inst.Camera.Name, pushURL))
-
-	// 3. Jalankan FFmpeg dengan parameter "copy" (0% CPU)
-	// -rtsp_transport tcp: sangat penting agar stabil di internet
-	args := []string{
-		"-hide_banner", "-loglevel", "error",
-		"-rtsp_transport", "tcp",
-		"-i", localRTSP,
-		"-c", "copy",
-		"-f", "rtsp",
-		"-rtsp_transport", "tcp",
-		pushURL,
-	}
-
-	cmd := exec.Command(ffmpegPath, args...)
-	
-	// Sembunyikan window CMD di windows
-	hideWindow(cmd)
-
-	err := cmd.Start()
-	if err != nil {
-		return fmt.Errorf("gagal menjalankan ffmpeg: %v", err)
-	}
-
-	inst.mu.Lock()
-	inst.pushCmd = cmd
-	inst.mu.Unlock()
-
-	// Monitoring goroutine
-	go func() {
-		err := cmd.Wait()
-		
-		inst.mu.Lock()
-		activeCmd := inst.pushCmd
-		inst.mu.Unlock()
-		
-		// Jika matinya bukan karena kita yang stop
-		if activeCmd != nil {
-			addLog(fmt.Sprintf("[%s] Push: Terputus atau FFmpeg error: %v", inst.Camera.Name, err))
-			inst.updateStatus("Push Disconnected", theme.ColorNameWarning)
-			
-			inst.mu.Lock()
-			inst.pushCmd = nil
-			inst.mu.Unlock()
-			
-			if inst.ToggleBtn != nil {
-				inst.ToggleBtn.SetIcon(theme.MediaPlayIcon())
-			}
-		}
-	}()
-
-	return nil
-}
-
 func hideWindow(cmd *exec.Cmd) {
 	// Khusus Windows: sembunyikan console window
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 }
+
