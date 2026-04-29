@@ -2448,12 +2448,9 @@ func main() {
 
 		targetNodeID := 1
 		nodeAPI := "http://localhost:1984/api/streams"
-		nodeIP := os.Getenv("PUBLIC_IP") // Try to get from Env first
+		nodeIP := os.Getenv("PUBLIC_IP") 
 		if nodeIP == "" {
-			nodeIP = r.Host
-			if strings.Contains(nodeIP, ":") {
-				nodeIP = strings.Split(nodeIP, ":")[0]
-			}
+			nodeIP = "43.157.204.11" // Force VPS IP as default fallback for Gateway
 		}
 		rtspPort := 8554
 
