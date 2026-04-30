@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	_ "embed"
 	"encoding/csv"
 	"encoding/json"
@@ -17,7 +16,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -61,7 +59,6 @@ type CameraConfig struct {
 	Name      string `json:"name"`
 	LocalRTSP string `json:"local_rtsp"`
 	VPSPort   int    `json:"vps_port"`
-	ServerID  string `json:"server_id,omitempty"`
 }
 
 type Config struct {
@@ -88,18 +85,17 @@ type GatewaySettings struct {
 }
 
 type TunnelInstance struct {
-	Camera      CameraConfig
-	Running     bool
-	Status      string
-	StatusDot   *canvas.Circle
-	StatusText  *widget.Label
-	ToggleBtn   *widget.Button
-	StopChan    chan bool
-	mu          sync.Mutex
-	Card        fyne.CanvasObject
+	Camera     CameraConfig
+	Running    bool
+	Status     string
+	StatusDot  *canvas.Circle
+	StatusText *widget.Label
+	ToggleBtn  *widget.Button
+	StopChan   chan bool
+	mu         sync.Mutex
+	Card       fyne.CanvasObject
 	proxyLn     net.Listener
 	proxyPort   int
-	ApiCamName  string
 	PublicURL   string
 	PublicLabel *widget.Entry // Use Entry for easy selection/copy
 }
@@ -291,11 +287,13 @@ func buildSettings() fyne.CanvasObject {
 		vpnModeSelect.SetSelected("ZeroTier VPN")
 	}
 
-	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)"}
+	engineModes := []string{"Go2RTC (Balanced)", "MediaMTX (Scalable)", "FFmpeg (Transcode/Pro)"}
 	engineSelect := widget.NewSelect(engineModes, nil)
 	switch config.StreamEngine {
 	case "mediamtx":
 		engineSelect.SetSelected("MediaMTX (Scalable)")
+	case "ffmpeg":
+		engineSelect.SetSelected("FFmpeg (Transcode/Pro)")
 	default:
 		engineSelect.SetSelected("Go2RTC (Balanced)")
 	}
@@ -360,8 +358,6 @@ func buildSettings() fyne.CanvasObject {
 		dynamicSection.Add(l2tpSection)
 	} else if currentMode == "wireguard" {
 		dynamicSection.Add(wgSection)
-	} else if currentMode == "none" {
-		// No section for none
 	} else {
 		dynamicSection.Add(ztSection)
 	}
@@ -397,6 +393,8 @@ func buildSettings() fyne.CanvasObject {
 		switch engineSelect.Selected {
 		case "MediaMTX (Scalable)":
 			config.StreamEngine = "mediamtx"
+		case "FFmpeg (Transcode/Pro)":
+			config.StreamEngine = "ffmpeg"
 		default:
 			config.StreamEngine = "go2rtc"
 		}
@@ -440,43 +438,13 @@ func buildSettings() fyne.CanvasObject {
 
 func refreshCameraList() {
 	listContainer.Objects = nil
-	
-	// Create a map of existing instances by Name to preserve their state
-	existingMap := make(map[string]*TunnelInstance)
-	for _, inst := range instances {
-		existingMap[inst.Camera.Name] = inst
-	}
-
-	var newInstances []*TunnelInstance
-
+	instances = nil
 	for _, cam := range config.Cameras {
-		var inst *TunnelInstance
-		if existing, found := existingMap[cam.Name]; found {
-			// Reuse existing instance, just update the config in case LocalRTSP changed
-			existing.Camera = cam
-			inst = existing
-			
-			// Recreate the UI card to reflect potential changes, but keep state (like button icons) intact.
-			// Actually, createCameraCard already binds to the existing inst values.
-			// We need to re-render the card.
-			inst.Card = createCameraCard(inst)
-			
-			// Since createCameraCard recreates the buttons, we must restore the UI state if it was running.
-			if inst.Running {
-				inst.ToggleBtn.SetIcon(theme.MediaStopIcon())
-				// We can't easily grab the btnCopy/Web from here without refactoring createCameraCard, 
-				// but at least the play/stop state will be correct. Let's rely on createCameraCard.
-			}
-		} else {
-			// Create brand new instance
-			inst = createTunnelInstance(cam)
-			inst.Card = createCameraCard(inst)
-		}
-		newInstances = append(newInstances, inst)
+		inst := createTunnelInstance(cam)
+		instances = append(instances, inst)
+		inst.Card = createCameraCard(inst)
 		listContainer.Add(inst.Card)
 	}
-	
-	instances = newInstances
 	listContainer.Refresh()
 }
 
@@ -624,11 +592,8 @@ func deleteCamera(inst *TunnelInstance) {
 			go func() {
 				inst.Stop()
 
-				// Auto Deregister from backend API using the exact name used for registration
-				if inst.ApiCamName == "" {
-					inst.ApiCamName = inst.Camera.Name
-				}
-				deregisterFromBackend(inst.ApiCamName)
+				// Auto Deregister from backend API
+				deregisterFromBackend(inst.Camera.Name)
 
 				// Remove from config slice
 				for i, c := range config.Cameras {
@@ -1008,17 +973,6 @@ func startAll() {
 		vpnMode = "zerotier"
 	}
 
-	// === Bridge Mode: Tidak butuh VPN apapun ===
-	if vpnMode == "bridge" {
-		addLog("Global: Bridge Mode — No VPN required. Starting direct HTTP tunnels...")
-		go func() {
-			for _, inst := range instances {
-				go inst.Start()
-			}
-		}()
-		return
-	}
-
 	go func() {
 		if vpnMode == "l2tp" {
 			addLog("Global: Connecting L2TP VPN...")
@@ -1043,6 +997,7 @@ func startAll() {
 			addLog("Global: Validating ZeroTier VPN Connection...")
 		}
 
+		// Cloudflare Tunnel
 		ip := getVpnIP()
 		if ip == "" && vpnMode != "none" {
 			if vpnMode == "l2tp" {
@@ -1152,10 +1107,7 @@ func (inst *TunnelInstance) Stop() {
 	// EXCEPTION: If in Test Mode (empty credentials), always deregister to keep server clean.
 	isTestMode := config.ApiUsername == "" && config.ApiPassword == ""
 	if !config.KeepCameraOnStop || isTestMode {
-		if inst.ApiCamName == "" {
-			inst.ApiCamName = inst.Camera.Name
-		}
-		go deregisterFromBackend(inst.ApiCamName)
+		go deregisterFromBackend(inst.Camera.Name)
 	} else {
 		addLog(fmt.Sprintf("[%s] Persistence: Camera kept on server per settings.", inst.Camera.Name))
 	}
@@ -1489,34 +1441,14 @@ func startTCPProxy(inst *TunnelInstance, targetHostPort string) error {
 }
 
 func registerToBackend(inst *TunnelInstance) {
-	var originalRTSP string
-	var camIndex int = -1
-	for i, cam := range config.Cameras {
-		if cam.Name == inst.Camera.Name {
-			originalRTSP = cam.LocalRTSP
-			camIndex = i
-			break
-		}
-	}
-
-	// Always use persistent ServerID (UUID) to prevent clashes
-	camName := inst.Camera.ServerID
-	if camName == "" {
-		camName = generateUUID()
-		inst.Camera.ServerID = camName
-		if camIndex >= 0 {
-			config.Cameras[camIndex].ServerID = camName
-			saveConfig()
-		}
-	}
-
-	// Give the tunnel more time to stabilize (especially for ZeroTier/VPN)
+	camName := inst.Camera.Name
+	// Give the tunnel a brief moment to stabilize
 	time.Sleep(2 * time.Second)
 
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
 	if apiURL == "" {
-		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", inst.Camera.Name))
+		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", camName))
 		return
 	}
 
@@ -1528,14 +1460,17 @@ func registerToBackend(inst *TunnelInstance) {
 		} else {
 			apiURL += "?test=true"
 		}
-		
-		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", inst.Camera.Name))
-		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", inst.Camera.Name), inst.Camera.LocalRTSP)
+		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
+		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
 	}
-	
-	// Save the strict UUID used for the API so we can deregister correctly later
-	inst.ApiCamName = camName
-	
+	var originalRTSP string
+	for _, cam := range config.Cameras {
+		if cam.Name == camName {
+			originalRTSP = cam.LocalRTSP
+			break
+		}
+	}
+
 	var rtspSource string
 	hostPort := extractHostPort(originalRTSP)
 	if isPrivateIP(hostPort) {
@@ -1559,18 +1494,10 @@ func registerToBackend(inst *TunnelInstance) {
 		proxyHostPort := fmt.Sprintf("%s:%d", host, inst.proxyPort)
 		rtspSource = replaceHostPortInRTSP(originalRTSP, proxyHostPort)
 
-		// Optimization: Force only video stream for better browser compatibility
-		if !strings.Contains(rtspSource, "#") {
-			rtspSource += "#video"
-		}
-
 		addLog(fmt.Sprintf("[%s] Camera is LOCAL — proxying via VPN IP: %s", camName, rtspSource))
 	} else {
 		// Camera has a public IP — go2rtc can reach it directly!
 		rtspSource = originalRTSP
-		if !strings.Contains(rtspSource, "#") {
-			rtspSource += "#video"
-		}
 		addLog(fmt.Sprintf("[%s] Camera is PUBLIC — registering direct RTSP URL", camName))
 	}
 
@@ -1578,12 +1505,11 @@ func registerToBackend(inst *TunnelInstance) {
 
 	// Use POST to ADD a new stream
 	payload := map[string]interface{}{
-		"name":         camName,
-		"display_name": inst.Camera.Name, // Visual title
-		"url":          rtspSource,
-		"backend":      config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
-		"lat":          0,
-		"lng":          0,
+		"name":    camName,
+		"url":     rtspSource,
+		"backend": config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
+		"lat":     0,
+		"lng":     0,
 	}
 
 	jsonData, err := json.Marshal(payload)
@@ -1636,13 +1562,6 @@ func deregisterFromBackend(camName string) {
 	}
 	// Append query param to the base API URL
 	fullURL := fmt.Sprintf("%s?name=%s", apiURL, url.QueryEscape(camName))
-	
-	// If in Test Mode (empty username), we MUST append test=true so backend allows the deletion
-	isTestMode := config.ApiUsername == ""
-	if isTestMode {
-		fullURL += "&test=true"
-	}
-	
 	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", camName, fullURL))
 
 	req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
@@ -1839,17 +1758,3 @@ func formatBytes(b uint64) string {
 	}
 	return fmt.Sprintf("%.1f GB/s", float64(b)/(unit*unit*unit))
 }
-
-func generateUUID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
-	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
-func hideWindow(cmd *exec.Cmd) {
-	// Khusus Windows: sembunyikan console window
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-}
-

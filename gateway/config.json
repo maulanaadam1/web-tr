@@ -1,21 +1,20 @@
 {
-  "server_url": "https://rtsp2go.com",
-  "api_username": "admin",
-  "api_password": "vivo1234!",
-  "vpn_mode": "none",
+  "server_url": "https://rtsp2go.campod.my.id",
+  "api_username": "budi",
+  "api_password": "user",
+  "vpn_mode": "zerotier",
   "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",
   "l2tp_user": "20251024172230",
   "l2tp_pass": "GPCEWCEKKD",
   "l2tp_psk": "",
   "wireguard_config": "",
-  "keep_camera_on_stop": false,
+  "keep_camera_on_stop": true,
   "cameras": [
     {
-      "name": "TesCam",
-      "local_rtsp": "rtsp://admin:vivo1234@10.85.50.50:8554/Media/Live/Normal?camera=C_1\u0026streamindex=2",
-      "vps_port": 0,
-      "server_id": "44799d7b-0f1c-42e4-8657-f076a52ff469"
+      "name": "Laptop",
+      "local_rtsp": "rtsp://root:vivo1234@10.85.50.56:554/live1s1.sdp",
+      "vps_port": 0
     }
   ]
 }
