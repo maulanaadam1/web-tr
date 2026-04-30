@@ -5,21 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RTSP2go - Stream Any RTSP Camera to Web in One Click</title>
     <meta name="description" content="RTSP2go converts your RTSP camera streams into web-ready HLS, WebRTC, and MP4 broadcasts. No complex setup. One click streaming for any IP camera.">
-
-    <!-- Open Graph / Social Sharing -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://web-tr.campod.my.id/">
-    <meta property="og:title" content="RTSP2go — Pro Surveillance Cloud Platform">
-    <meta property="og:description" content="Hubungkan kamera RTSP ke Web dalam satu klik. Solusi monitoring CCTV profesional dengan low-latency.">
-    <meta property="og:image" content="https://raw.githubusercontent.com/maulanaadam1/web-tr/main/web/static/img/og-preview.png">
-
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="RTSP2go — Pro Surveillance Cloud Platform">
-    <meta property="twitter:description" content="Streaming RTSP ke Web semudah satu klik.">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236366f1'%3E%3Cpath d='M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com?v=3.4.1"></script>
     <script>
         tailwind.config = {
@@ -62,18 +47,6 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-white transition-colors duration-300 antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden">
-
-    <!-- Floating Action Button for Trial (Desktop & Mobile) -->
-    <div class="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-3 pointer-events-none hidden md:flex">
-        <a href="/login?mode=register" class="pointer-events-auto bg-gradient-to-r from-brand-600 to-purple-600 text-white px-6 py-3.5 rounded-2xl font-black text-sm shadow-2xl shadow-brand-500/50 hover:scale-110 hover:-rotate-2 transition-all flex items-center gap-3 group">
-            <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-            </span>
-            Klaim Advance Trial
-            <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-        </a>
-    </div>
 
     <!-- Background Decoration -->
     <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
@@ -140,12 +113,10 @@
                 <div class="hidden md:flex items-center space-x-8">
                     <a href="#try" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Try Now</a>
                     <a href="#features" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Features</a>
-                    {{if not .HidePricing}}
                     <a href="#pricing" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Pricing</a>
-                    {{end}}
                     <a href="#contact" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Contact</a>
                     <a href="/login" class="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">Sign In</a>
-                    <a href="/login?mode=register" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Klaim Trial</a>
+                    <a href="https://stream.campod.my.id/login?tab=signup" class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Start Free</a>
                 </div>
                 <div class="md:hidden flex items-center gap-4">
                     <a href="/login" class="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium text-sm">Login</a>
@@ -171,16 +142,16 @@
             </h1>
             
             <p class="mt-4 text-base sm:text-lg lg:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-8 lg:mb-10 px-4 sm:px-0">
-                Ubah kamera IP Anda menjadi broadcast profesional via HLS & WebRTC secara instan. Nikmati fitur **16 Kamera, Command Center, & Public View** gratis hari ini.
+                Ubah stream kamera RTSP/IP Anda menjadi broadcast web-ready via HLS & WebRTC secara instan. Tanpa konfigurasi rumit — masukkan URL, langsung streaming.
             </p>
             
             <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
-                <a href="/login?mode=register&plan=Advance" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
-                    Klaim Advance Trial Gratis
+                <a href="#try" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
+                    Coba Sekarang Gratis
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </a>
-                <a href="#try" class="bg-white dark:bg-slate-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400 px-8 py-4 rounded-full font-bold text-lg hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-all flex items-center justify-center gap-2">
-                    Coba Quick Stream
+                <a href="#features" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
+                    Lihat Fitur
                 </a>
             </div>
         </div>
@@ -275,7 +246,7 @@
                 <!-- Sign up hint -->
                 <p class="mt-4 text-center text-xs text-slate-400 dark:text-slate-500">
                     Ingin menyimpan stream permanen? 
-                    <a href="/login?mode=register" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">Daftar gratis</a> 
+                    <a href="/login?tab=signup" class="text-brand-600 dark:text-brand-400 font-semibold hover:underline">Daftar gratis</a> 
                     dan kelola hingga 2 kamera tanpa biaya.
                 </p>
                 {{end}}
@@ -316,29 +287,8 @@
             </div>
         </div>
     </section>
-    
-    <!-- Trial Promotion Section -->
-    <section class="snap-slide bg-brand-600 text-white overflow-hidden py-16 w-full relative">
-        <div class="absolute inset-0 pointer-events-none opacity-20">
-            <div class="absolute top-0 right-0 w-96 h-96 bg-white/20 rounded-full blur-3xl"></div>
-            <div class="absolute bottom-0 left-0 w-96 h-96 bg-indigo-400/20 rounded-full blur-3xl"></div>
-        </div>
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
-            <h2 class="text-3xl md:text-5xl font-black mb-6">Penasaran dengan Fitur Advance?</h2>
-            <p class="text-xl text-brand-100 mb-10 max-w-2xl mx-auto">
-                Dapatkan akses penuh ke Command Center, Public View, NVR View dan dukungan hingga 16 kamera GRATIS selama 2 hari. 
-            </p>
-            <div class="flex flex-col sm:flex-row justify-center gap-4">
-                <a href="/login?mode=register&plan=Advance" class="bg-white text-brand-600 px-10 py-4 rounded-2xl font-black text-lg shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-2 uppercase tracking-tight">
-                    Klaim Advance Trial Sekarang
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                </a>
-            </div>
-        </div>
-    </section>
 
 
-    {{if not .HidePricing}}
     <!-- Pricing Section -->
     <section id="pricing" class="snap-slide min-h-screen flex items-center bg-slate-900 text-white z-10 overflow-hidden w-full relative">
         <div class="absolute top-[-20%] left-[-10%] w-96 h-96 bg-brand-600/30 rounded-full blur-3xl mix-blend-screen pointer-events-none"></div>
@@ -348,74 +298,66 @@
                 <h2 class="text-3xl font-extrabold sm:text-4xl text-white">Paket Langganan</h2>
                 <p class="mt-4 text-lg text-slate-400 mb-10 max-w-2xl mx-auto">Mulai gratis dan scale sesuai kebutuhan jaringan kamera Anda. Tanpa biaya bandwidth tersembunyi.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Free -->
-                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
-                    <h3 class="text-lg font-bold mb-1">Free</h3>
-                    <p class="text-slate-400 text-[11px] mb-4 h-8">Uji coba personal.</p>
-                    <div class="mb-4"><span class="text-2xl font-extrabold text-white">Rp 0</span><span class="text-slate-400 text-xs">/bln</span></div>
-                    <ul class="space-y-2 mb-6 flex-1">
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 2 Kamera</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 60 Menit Live</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-500 opacity-50"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> No Tech Support</li>
+                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
+                    <h3 class="text-xl font-bold mb-2">Free</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Ideal untuk pengujian pribadi.</p>
+                    <div class="mb-6"><span class="text-3xl font-extrabold text-white">Rp 0</span><span class="text-slate-400 text-sm">/bln</span></div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Maksimal 2 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-500 opacity-50"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Import & Export</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-500 opacity-50"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Dashboard & Command Center</li>
                     </ul>
-                    <a href="/login?mode=register&plan=Free" class="w-full py-2.5 px-3 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl text-xs">Mulai Gratis</a>
-                </div>
-                <!-- Basic -->
-                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300">
-                    <h3 class="text-lg font-bold mb-1 text-slate-100">Basic</h3>
-                    <p class="text-slate-400 text-[11px] mb-4 h-8">Rumah & Toko Kecil.</p>
-                    <div class="mb-4 text-white"><span class="text-2xl font-extrabold">Rp 15k</span><span class="text-slate-400 text-xs">/bln</span></div>
-                    <ul class="space-y-2 mb-6 flex-1">
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 4 Kamera</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 24/7 Unlimited Live</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-500 opacity-50"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> No Tech Support</li>
-                    </ul>
-                    <a href="/login?mode=register&plan=Basic" class="w-full py-2.5 px-3 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl text-xs">Pilih Paket</a>
+                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl text-sm">Mulai Sekarang</a>
                 </div>
                 <!-- Premium -->
-                <div class="bg-slate-800/50 backdrop-blur border border-brand-500 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative shadow-[0_0_30px_rgba(99,102,241,0.15)]">
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-brand-500 to-purple-500 text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">Best Value</div>
-                    <h3 class="text-lg font-bold mb-1 text-brand-400">Premium</h3>
-                    <p class="text-slate-400 text-[11px] mb-4 h-8">Bisnis & Toko Ritel.</p>
-                    <div class="mb-4">
-                        <span class="text-2xl font-extrabold text-white">Rp 35k</span><span class="text-slate-400 text-xs">/bln</span>
+                <div class="bg-slate-800/50 backdrop-blur border border-brand-500 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative shadow-[0_0_30px_rgba(99,102,241,0.15)]">
+                    <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-gradient-to-r from-brand-500 to-purple-500 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Promo</div>
+                    <h3 class="text-xl font-bold mb-2 text-brand-400">Premium</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Untuk bisnis kecil dan toko ritel.</p>
+                    <div class="mb-6">
+                        <span class="text-slate-500 line-through text-lg block">Rp 150.000</span>
+                        <span class="text-3xl font-extrabold text-white">Rp 35.000</span><span class="text-slate-400 text-sm">/bln</span>
                     </div>
-                    <ul class="space-y-2 mb-6 flex-1">
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 8 Kamera</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 24/7 Unlimited Live</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Priority Streaming</li>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Maksimal 8 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-500 opacity-50"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Import & Export</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-500 opacity-50"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Dashboard & Command Center</li>
                     </ul>
-                    <a href="/login?mode=register&plan=Premium" class="w-full py-2.5 px-3 bg-brand-600 hover:bg-brand-500 transition-colors text-center font-bold rounded-xl text-xs shadow-lg shadow-brand-500/25">Berlangganan</a>
+                    <a href="/login?tab=signup" class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-500 transition-colors text-center font-bold rounded-xl text-sm shadow-lg shadow-brand-500/25">Berlangganan Sekarang</a>
                 </div>
                 <!-- Advance -->
-                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
-                    <h3 class="text-lg font-bold mb-1 text-slate-100">Advance</h3>
-                    <p class="text-slate-400 text-[11px] mb-4 h-8">Monitoring NVR Penuh.</p>
-                    <div class="mb-4 text-white"><span class="text-2xl font-extrabold">Rp 70k</span><span class="text-slate-400 text-xs">/bln</span></div>
-                    <ul class="space-y-2 mb-6 flex-1">
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> 16 Kamera (4x4 Grid)</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Tech Support Eksklusif</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Map Dashboard</li>
+                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
+                    <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest text-slate-300">Soon</div>
+                    <h3 class="text-xl font-bold mb-2 text-slate-300">Advance</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Operasional dan pemantauan konstruksi skala besar.</p>
+                    <div class="mb-6"><span class="text-2xl font-bold text-slate-500">Coming Soon</span></div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Maksimal 16 Kamera</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Dashboard & CC Map</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Support Admin</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Public View Access</li>
                     </ul>
-                    <a href="/login?mode=register&plan=Advance" class="w-full py-2.5 px-3 bg-gradient-to-r from-brand-600 to-indigo-600 text-white hover:opacity-90 transition-all text-center font-black rounded-xl text-[10px] shadow-lg shadow-brand-500/20 uppercase tracking-wider">Klaim Advance Trial Gratis</a>
+                    <button disabled class="w-full py-3 px-4 bg-slate-700/50 text-slate-500 cursor-not-allowed font-bold rounded-xl text-sm">Segera Hadir</button>
                 </div>
                 <!-- Enterprise -->
-                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
-                    <h3 class="text-lg font-bold mb-1 text-purple-400">Enterprise</h3>
-                    <p class="text-slate-400 text-[11px] mb-4 h-8">Kawasan Industri & Kota.</p>
-                    <div class="mb-4 text-white"><span class="text-2xl font-extrabold">Custom</span></div>
-                    <ul class="space-y-2 mb-6 flex-1">
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Unlimited Kamera</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Dedicated Support</li>
-                        <li class="flex items-center gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> SLA & On-Premise</li>
+                <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-8 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
+                    <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest text-slate-300">Soon</div>
+                    <h3 class="text-xl font-bold mb-2 text-purple-400">Enterprise</h3>
+                    <p class="text-slate-400 text-sm mb-6 h-10">Deployment skala kota atau enterprise masif.</p>
+                    <div class="mb-6"><span class="text-2xl font-bold text-slate-500">Coming Soon</span></div>
+                    <ul class="space-y-3 mb-8 flex-1">
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Unlimited Cameras</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Full Feature Access</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Import & Export Bulk</li>
+                        <li class="flex items-center gap-2 text-sm text-slate-300"><svg class="w-4 h-4 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Dedicated GPU Cluster</li>
                     </ul>
-                    <a href="#contact" class="w-full py-2.5 px-3 bg-slate-700 hover:bg-slate-600 transition-colors text-center font-bold rounded-xl text-xs">Hubungi Kami</a>
+                    <button disabled class="w-full py-3 px-4 bg-slate-700/50 text-slate-500 cursor-not-allowed font-bold rounded-xl text-sm">Segera Hadir</button>
                 </div>
             </div>
         </div>
     </section>
-    {{end}}
 
     <!-- Newsletter Section -->
     <section id="newsletter" class="snap-slide min-h-[60vh] flex items-center bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 z-10 w-full">
@@ -497,28 +439,21 @@
                     <ul class="space-y-2 text-slate-500 dark:text-slate-400">
                         <li><a href="#try" class="hover:text-brand-600 dark:hover:text-brand-400">Coba Sekarang</a></li>
                         <li><a href="#features" class="hover:text-brand-600 dark:hover:text-brand-400">Fitur</a></li>
-                        {{if not .HidePricing}}
                         <li><a href="#pricing" class="hover:text-brand-600 dark:hover:text-brand-400">Harga</a></li>
-                        {{end}}
                         <li><a href="/login" class="hover:text-brand-600 dark:hover:text-brand-400">Login</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-bold mb-4 text-slate-900 dark:text-white">Kontak</h4>
                     <div class="space-y-3 text-slate-500 dark:text-slate-400">
-                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> rtsp2go@gmail.com</p>
-                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> +62 851 1103 3425</p>
-                        <a href="https://wa.me/6285111033425" target="_blank" class="flex items-center gap-3 text-green-500 hover:text-green-600 font-medium"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg> WhatsApp Support</a>
+                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> hello@rtsp2go.com</p>
+                        <p class="flex items-center gap-3"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> +62 821 1234 5678</p>
+                        <a href="https://wa.me/6282112345678" target="_blank" class="flex items-center gap-3 text-green-500 hover:text-green-600 font-medium"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg> WhatsApp Support</a>
                     </div>
                 </div>
             </div>
             <div class="border-t border-slate-200 dark:border-slate-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
                 <p class="text-sm text-slate-500 dark:text-slate-500">© 2026 RTSP2go. Streaming made simple.</p>
-                <div class="flex gap-6">
-                    <a href="/privacy" class="text-xs text-slate-400 hover:text-brand-500 transition-colors">Privacy Policy</a>
-                    <a href="/terms" class="text-xs text-slate-400 hover:text-brand-500 transition-colors">Terms of Service</a>
-                    <a href="/refund" class="text-xs text-slate-400 hover:text-brand-500 transition-colors">Refund Policy</a>
-                </div>
             </div>
         </div>
     </footer>
@@ -543,7 +478,7 @@
             <!-- Footer -->
             <div class="px-5 py-3 bg-slate-800/50 border-t border-slate-700/50 flex items-center justify-between text-xs text-slate-400">
                 <span>WebRTC / HLS / MJPEG — auto-negotiated</span>
-                <a href="/login?mode=register" class="text-brand-400 font-semibold hover:underline">Simpan stream ini →</a>
+                <a href="/login?tab=signup" class="text-brand-400 font-semibold hover:underline">Simpan stream ini →</a>
             </div>
         </div>
     </div>

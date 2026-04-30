@@ -11,7 +11,6 @@ import (
 	"html/template"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -38,10 +37,10 @@ type Session struct {
 	Role             string
 	SubscriptionPlan string
 	EnableSupport    bool
+	EnableVPN        bool
+	VPNPassword      string
 	PublicToken      string
 	Expiry           time.Time
-	SubExpiry        time.Time
-	TrialClaimed     bool
 }
 
 var (
@@ -114,16 +113,6 @@ func trimString(s string) string {
 	return result
 }
 
-func generateUUID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
-}
-
-func isUUID(s string) bool {
-	return strings.Count(s, "-") == 4 && len(s) >= 32
-}
-
 func startsWithString(s, prefix string) bool {
 	if len(s) < len(prefix) {
 		return false
@@ -132,16 +121,29 @@ func startsWithString(s, prefix string) bool {
 }
 
 func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
+	// Security: Block access to the root of the RTC proxy to hide the dashboard
+	// but allow stream-related files and necessary API endpoints.
 	path := r.URL.Path
-	// Allow /rtc/api/ and /api/ stream endpoints
-	allowed := false
-	if strings.HasPrefix(path, "/rtc/api/") || strings.HasPrefix(path, "/api/stream.") || strings.HasPrefix(path, "/rtc/stream.html") {
-		allowed = true
-	}
-	
-	// Block dashboard
 	if path == "/rtc/" || path == "/rtc" {
-		allowed = false
+		http.Error(w, "Access Denied: You do not have permission to view the dashboard.", http.StatusForbidden)
+		return
+	}
+
+	allowed := false
+	// Safe paths for public viewing and underlying WebRTC/MSE mechanics
+	safePaths := []string{
+		"/rtc/stream.html",
+		"/rtc/api/ws",      // WebSockets for signaling
+		"/rtc/api/webrtc",  // WebRTC negotiation
+		"/rtc/api/mse",     // MediaSource Extensions
+		"/rtc/api/streams", // Needed to query stream info
+	}
+
+	for _, sp := range safePaths {
+		if strings.HasPrefix(path, sp) {
+			allowed = true
+			break
+		}
 	}
 
 	if !allowed {
@@ -183,27 +185,22 @@ func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, resp.Body)
 }
 
-func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error {
-	if nodeAPIUrl == "" {
-		nodeAPIUrl = "http://localhost:1984/api/streams"
-	}
+func syncStreamToGo2RTC(name, streamUrl string, isDelete bool) error {
+	apiUser := "http://localhost:1984/api/streams"
 	method := http.MethodPut
 	if isDelete {
 		method = http.MethodDelete
 	}
 
-	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(streamUrl))
+	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", apiUser, url.QueryEscape(name), url.QueryEscape(streamUrl))
 	if isDelete {
-		reqUrl = fmt.Sprintf("%s?src=%s", nodeAPIUrl, url.QueryEscape(name))
+		reqUrl = fmt.Sprintf("%s?src=%s", apiUser, url.QueryEscape(name))
 	}
 
 	req, err := http.NewRequest(method, reqUrl, nil)
 	if err != nil {
 		return err
 	}
-
-	// Add Basic Auth – Matches go2rtc.yaml credentials
-	req.SetBasicAuth("admin", "admin123")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -212,10 +209,10 @@ func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
-	log.Printf("Sync stream %s to %s response: %s (Status: %d)", name, nodeAPIUrl, string(body), resp.StatusCode)
+	log.Printf("Sync stream %s response: %s (Status: %d)", name, string(body), resp.StatusCode)
 
 	if resp.StatusCode >= 400 {
-		return fmt.Errorf("node api returned status %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("go2rtc api returned status %d: %s", resp.StatusCode, string(body))
 	}
 	return nil
 }
@@ -281,17 +278,16 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 			if err == nil && user != nil {
 				hash := db.HashPassword(password, user.Salt)
 				if hash == user.PasswordHash && user.IsActive {
-					session := Session{
+					sess := Session{
 						UserID:           user.ID,
 						Username:         user.Username,
 						Role:             user.Role,
 						SubscriptionPlan: user.SubscriptionPlan,
 						EnableSupport:    user.EnableSupport,
-						PublicToken:      user.PublicToken,
-						Expiry:           time.Now().Add(24 * time.Hour),
-						SubExpiry:        user.ExpiresAt,
+						VPNPassword:      user.VPNPassword,
+						Expiry:           time.Now().Add(1 * time.Hour),
 					}
-					ctx := context.WithValue(r.Context(), sessionContextKey, session)
+					ctx := context.WithValue(r.Context(), sessionContextKey, sess)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
 				}
@@ -314,20 +310,6 @@ func sessionAuth(next http.HandlerFunc) http.HandlerFunc {
 		if !ok || time.Now().After(session.Expiry) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
-		}
-
-		// Refresh from DB to catch real-time plan/role upgrades
-		dbUser, _ := globalStore.GetUserByID(session.UserID)
-		if dbUser != nil {
-			session.SubscriptionPlan = dbUser.SubscriptionPlan
-			session.Role = dbUser.Role
-			session.SubExpiry = dbUser.ExpiresAt
-			session.TrialClaimed = dbUser.TrialClaimed
-			
-			// Optional: Update the memory cache too
-			sessionMutex.Lock()
-			activeSessions[cookie.Value] = session
-			sessionMutex.Unlock()
 		}
 
 		ctx := context.WithValue(r.Context(), sessionContextKey, session)
@@ -401,7 +383,7 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 		allowed = true
 	}
 
-	// Allow all static assets (.js, .css, .ico, .png, .svg, .wasm, etc.) needed by the player
+	// Allow all static assets (.js, .css, .ico, .wasm, etc.) needed by the player
 	// This avoids whack-a-mole every time go2rtc adds a new dependency
 	staticExts := []string{".js", ".css", ".ico", ".png", ".svg", ".wasm", ".map"}
 	for _, ext := range staticExts {
@@ -414,32 +396,27 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 	// Check for direct RTSP source and enforce expiration
 	src := r.URL.Query().Get("src")
 	if strings.HasPrefix(src, "rtsp://") {
-		// SECURITY FIX: The token/expires check should ONLY be enforced on the initial stream.html load.
-		// Sub-requests (like /rtc/api/webrtc?src=rtsp://...) made by Go2RTC's JS don't carry the token.
-		if strings.HasPrefix(path, "/rtc/stream.html") {
-			expiresStr := r.URL.Query().Get("expires")
-			token := r.URL.Query().Get("token")
-			
-			if expiresStr == "" || token == "" {
-				http.Error(w, "Access Denied: Public test stream requires a valid token.", http.StatusForbidden)
-				return
-			}
-			
-			expires, err := strconv.ParseInt(expiresStr, 10, 64)
-			if err != nil || time.Now().Unix() > expires {
-				http.Error(w, "Access Denied: This test stream link has expired (1 hour limit).", http.StatusForbidden)
-				return
-			}
-			
-			expected := generateTestToken(src, expiresStr)
-			if token != expected {
-				http.Error(w, "Access Denied: Invalid test token.", http.StatusForbidden)
-				return
-			}
+		expiresStr := r.URL.Query().Get("expires")
+		token := r.URL.Query().Get("token")
+		
+		if expiresStr == "" || token == "" {
+			http.Error(w, "Access Denied: Public test stream requires a valid token.", http.StatusForbidden)
+			return
 		}
 		
-		// If it's an RTSP source being requested (either player or API), we allow it
-		// because the initial entry point (stream.html) was already checked above.
+		expires, err := strconv.ParseInt(expiresStr, 10, 64)
+		if err != nil || time.Now().Unix() > expires {
+			http.Error(w, "Access Denied: This test stream link has expired (1 hour limit).", http.StatusForbidden)
+			return
+		}
+		
+		expected := generateTestToken(src, expiresStr)
+		if token != expected {
+			http.Error(w, "Access Denied: Invalid test token.", http.StatusForbidden)
+			return
+		}
+		
+		// If we are here, the direct RTSP preview is valid
 		allowed = true
 	}
 
@@ -459,11 +436,9 @@ func main() {
 	prelaunch := os.Getenv("APP_PRELAUNCH") == "true"
 	hideSignup := os.Getenv("HIDE_SIGNUP") == "true"
 	hideDocs := os.Getenv("HIDE_DOCS") == "true"
-	hidePricing := os.Getenv("HIDE_PRICING") == "true"
-	skipLanding := os.Getenv("SKIP_LANDING") == "true" || os.Getenv("HIDE_LANDING_PAGE") == "true"
+	skipLanding := os.Getenv("SKIP_LANDING_PAGE") == "true"
 	cwd, _ := os.Getwd()
 	log.Printf("Starting RTSP2go. Working Directory: %s", cwd)
-	log.Printf("[Config] HIDE_PAYMENT: %v", strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1")
 
 	cfgPath := filepath.Join("data", "go2rtc.yaml")
 	absCfgPath, _ := filepath.Abs(cfgPath)
@@ -560,16 +535,10 @@ func main() {
 			for _, s := range streams {
 				// Only sync go2rtc backend streams
 				if s.Backend == "" || s.Backend == "go2rtc" {
-					nodeURL := ""
-					if s.NodeID > 0 {
-						if n, _ := globalStore.GetNodeByID(s.NodeID); n != nil {
-							nodeURL = n.URL
-						}
-					}
-					if err := syncStreamToGo2RTC(nodeURL, s.Name, s.URL, false); err != nil {
+					if err := syncStreamToGo2RTC(s.Name, s.URL, false); err != nil {
 						log.Printf("Failed to sync stream %s: %v", s.Name, err)
 					} else {
-						log.Printf("Synced stream %s to %s", s.Name, nodeURL)
+						log.Printf("Synced stream %s", s.Name)
 					}
 				}
 			}
@@ -612,23 +581,6 @@ func main() {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	// Legal Pages
-	http.HandleFunc("/privacy", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/privacy.html")
-		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
-		tmpl.Execute(w, nil)
-	})
-	http.HandleFunc("/terms", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/terms.html")
-		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
-		tmpl.Execute(w, nil)
-	})
-	http.HandleFunc("/refund", func(w http.ResponseWriter, r *http.Request) {
-		tmpl, err := template.ParseFiles("web/templates/refund.html")
-		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
-		tmpl.Execute(w, nil)
-	})
-
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if (prelaunch || hideSignup) && r.URL.Query().Get("tab") == "signup" {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -661,7 +613,6 @@ func main() {
 				"Mode":        mode,
 				"HideSignup":  prelaunch || hideSignup,
 				"SkipLanding": skipLanding,
-				"HidePayment": strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1",
 			})
 			return
 		}
@@ -690,10 +641,9 @@ func main() {
 					Role:             dbUser.Role,
 					SubscriptionPlan: dbUser.SubscriptionPlan,
 					EnableSupport:    dbUser.EnableSupport,
+					VPNPassword:      dbUser.VPNPassword,
 					PublicToken:      dbUser.PublicToken,
 					Expiry:           expiry,
-					SubExpiry:        dbUser.ExpiresAt,
-					TrialClaimed:     dbUser.TrialClaimed,
 				}
 				sessionMutex.Unlock()
 
@@ -744,8 +694,8 @@ func main() {
 			email := r.FormValue("email")
 			whatsapp := r.FormValue("whatsapp")
 
-			if username == "" || password == "" || fullName == "" || email == "" {
-				http.Redirect(w, r, "/login?error=Username,+password,+full+name,+and+email+are+required&mode=register", http.StatusSeeOther)
+			if username == "" || password == "" {
+				http.Redirect(w, r, "/login?error=Username+and+password+are+required&mode=register", http.StatusSeeOther)
 				return
 			}
 
@@ -760,7 +710,7 @@ func main() {
 				Username:         username,
 				Role:             "user",
 				IsActive:         true,
-				SubscriptionPlan: "Free", // Start as free until payment confirms
+				SubscriptionPlan: "Free",
 				FullName:         fullName,
 				Email:            email,
 				Whatsapp:         whatsapp,
@@ -772,76 +722,8 @@ func main() {
 				return
 			}
 
-			user, _ := store.GetUserByUsername(username)
-			if user == nil {
-				http.Redirect(w, r, "/login?success=Registration+successful.+Please+log+in.", http.StatusSeeOther)
-				return
-			}
-
-			// Auto Login
-			token := generateSessionToken()
-			expiry := time.Now().Add(24 * time.Hour)
-			sessionMutex.Lock()
-			activeSessions[token] = Session{
-				UserID:           user.ID,
-				Username:         user.Username,
-				Role:             user.Role,
-				SubscriptionPlan: user.SubscriptionPlan,
-				SubExpiry:        user.ExpiresAt,
-				TrialClaimed:     user.TrialClaimed,
-				Expiry:           expiry,
-			}
-			sessionMutex.Unlock()
-
-			cookie := http.Cookie{
-				Name:     "session_token",
-				Value:    token,
-				Expires:  expiry,
-				HttpOnly: true,
-				Path:     "/",
-				SameSite: http.SameSiteLaxMode,
-			}
-			http.SetCookie(w, &cookie)
-
-			planName := r.FormValue("plan")
-			hidePayment := strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1"
-			selectedPlan, _ := store.GetPlanByName(planName)
-
-			if !hidePayment && planName != "Free" && planName != "" && selectedPlan != nil && selectedPlan.IsActive {
-				ipaymuVA := os.Getenv("IPAYMU_VA")
-				ipaymuKey := os.Getenv("IPAYMU_API_KEY")
-				production := os.Getenv("IPAYMU_PRODUCTION") == "true"
-				appURL := os.Getenv("APP_URL")
-				if appURL == "" {
-					appURL = "https://localhost"
-				}
-				if ipaymuVA != "" && ipaymuKey != "" {
-					refBytes := make([]byte, 6)
-					rand.Read(refBytes)
-					refID := fmt.Sprintf("R2G-%d-%s", user.ID, hex.EncodeToString(refBytes))
-					
-					store.CreateOrder(refID, user.ID, selectedPlan.Name, selectedPlan.Price)
-					
-					payURL, sessionID, err := createIPPayment(
-						ipaymuVA, ipaymuKey, production,
-						selectedPlan.Label, int64(selectedPlan.Price), refID,
-						user.FullName, user.Email,
-						appURL+"/payment/success",
-						appURL+"/payment/cancel",
-						appURL+"/api/payment/callback",
-					)
-					if err == nil {
-						store.UpdateOrderPaymentURL(refID, payURL, sessionID)
-						http.Redirect(w, r, payURL, http.StatusSeeOther)
-						return
-					} else {
-						log.Printf("[Payment] Auto-redirect failed: %v", err)
-					}
-				}
-			}
-
-			// Normal redirect to dashboard
-			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+			// Success, redirect to login
+			http.Redirect(w, r, "/login?success=Registration+successful.+Please+log+in.", http.StatusSeeOther)
 			return
 		}
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -961,58 +843,6 @@ func main() {
 		}
 	}))
 
-	http.HandleFunc("/api/users/me", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
-		sess := r.Context().Value(sessionContextKey).(Session)
-
-		if r.Method == http.MethodGet {
-			user, err := store.GetUserByID(sess.UserID)
-			if err != nil || user == nil {
-				http.Error(w, "Not found", http.StatusNotFound)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(user)
-			return
-		}
-
-		if r.Method == http.MethodPut {
-			var req map[string]string
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				http.Error(w, "Invalid body", http.StatusBadRequest)
-				return
-			}
-
-			user, err := store.GetUserByID(sess.UserID)
-			if err != nil || user == nil {
-				http.Error(w, "User not found", http.StatusNotFound)
-				return
-			}
-
-			if pwd, ok := req["password"]; ok {
-				if len(pwd) < 6 {
-					http.Error(w, "Password minimal 6 karakter", http.StatusBadRequest)
-					return
-				}
-				if err := store.UpdateUserPassword(user.ID, pwd); err != nil {
-					http.Error(w, "Gagal mengubah password", http.StatusInternalServerError)
-					return
-				}
-			}
-
-			if wa, ok := req["whatsapp"]; ok {
-				user.Whatsapp = wa
-				if err := store.UpdateUserFull(*user); err != nil {
-					http.Error(w, "Gagal mengupdate WhatsApp", http.StatusInternalServerError)
-					return
-				}
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"message": "Profile updated successfully"})
-			return
-		}
-	}))
-
 	http.HandleFunc("/api/users/token", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -1079,12 +909,7 @@ func main() {
 		}
 
 		if prelaunch {
-			csMode := os.Getenv("COMING_SOON_MODE")
-			templateName := "web/templates/coming_soon_full.html"
-			if csMode == "compact" {
-				templateName = "web/templates/coming_soon_compact.html"
-			}
-			tmpl, err := template.ParseFiles(templateName)
+			tmpl, err := template.ParseFiles("web/templates/coming_soon.html")
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1105,9 +930,8 @@ func main() {
 		}
 
 		tmpl.Execute(w, map[string]interface{}{
-			"HideDocs":    prelaunch || hideDocs,
-			"HideSignup":  prelaunch || hideSignup,
-			"HidePricing": hidePricing,
+			"HideDocs":   prelaunch || hideDocs,
+			"HideSignup": prelaunch || hideSignup,
 		})
 	})
 
@@ -1229,23 +1053,11 @@ func main() {
 		streams = getUserVisibleStreams(sess, streams, store)
 
 		log.Printf("Rendering dashboard view with %d streams", len(streams))
-		
-		daysLeft := -1
-		if !sess.SubExpiry.IsZero() {
-			diff := time.Until(sess.SubExpiry)
-			daysLeft = int(diff.Hours() / 24)
-			// If it's expiring today, it might be 0.
-			if diff > 0 && daysLeft == 0 {
-				// We keep it 0 to indicate "Today/Less than 24h"
-			}
-		}
-
 		tmpl.Execute(w, map[string]interface{}{
-			"Streams":  streams,
-			"Session":     sess,
-			"Now":         time.Now(),
-			"DaysLeft":    daysLeft,
-			"HidePayment": strings.ToLower(os.Getenv("HIDE_PAYMENT")) == "true" || os.Getenv("HIDE_PAYMENT") == "1",
+			"Streams":   streams,
+			"Session":   sess,
+			"GlobalPSK": "jENJUbdPT49EtNG6eWkE",
+			"VPNServIP": "43.157.204.11",
 		})
 	})
 
@@ -1317,13 +1129,12 @@ func main() {
 
 		if r.Method == http.MethodPost {
 			var req struct {
-				Name         string  `json:"name"`
-				DisplayName  string  `json:"display_name"`
-				URL          string  `json:"url"`
-				Backend      string  `json:"backend,omitempty"`
-				Lat          float64 `json:"lat"`
-				Lng          float64 `json:"lng"`
-				DisableAudio *bool   `json:"disable_audio,omitempty"`
+				Name    string  `json:"name"`
+				URL     string  `json:"url"`
+				Backend string  `json:"backend,omitempty"`
+				Lat     float64 `json:"lat"`
+				Lng     float64 `json:"lng"`
+				Enabled bool    `json:"enabled"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1333,15 +1144,6 @@ func main() {
 			// Default to go2rtc if not specified
 			if req.Backend == "" {
 				req.Backend = "go2rtc"
-			}
-
-			// --- Select Target Node (Dedicated OR Load Balanced) ---
-			ownerUser, _ := globalStore.GetUserByID(sess.UserID)
-
-			// Check license expiration
-			if sess.UserID != 0 && ownerUser != nil && !ownerUser.ExpiresAt.IsZero() && ownerUser.ExpiresAt.Before(time.Now()) {
-				http.Error(w, "Your subscription has expired. Please renew your license.", http.StatusPaymentRequired)
-				return
 			}
 
 			// Enforce subscription quota limits for non-admins (Skip for Test User)
@@ -1366,61 +1168,34 @@ func main() {
 				_ = store.RemoveStream(req.Name) 
 			}
 
-			disableAudio := true // Default to true as requested
-			if req.DisableAudio != nil {
-				disableAudio = *req.DisableAudio
-			}
-
-			// --- Select Target Node (Dedicated OR Load Balanced) ---
-			var targetNode *models.Node
-			
-			// Check if owner has dedicated node
-			if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
-				targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
-			}
-
-			if targetNode == nil {
-				targetNode, _ = globalStore.GetLeastLoadedNode()
-			}
-
-			targetNodeID := 1
-			nodeAPI := ""
-			if targetNode != nil {
-				targetNodeID = targetNode.ID
-				nodeAPI = targetNode.URL
-			}
-
-			if err := globalStore.AddStream(models.Stream{
+			if err := store.AddStream(models.Stream{
 				Name: req.Name,
-				DisplayName: req.DisplayName,
 				URL: req.URL,
 				Backend: req.Backend,
 				Lat: req.Lat,
 				Lng: req.Lng,
 				Enabled: true,
 				UserID: sess.UserID,
-				IsPublic: sess.UserID == 0,
-				DisableAudio: disableAudio,
-				NodeID: targetNodeID,
+				IsPublic: sess.UserID == 0, // Make test streams public so they can be viewed for testing
 			}); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			
 			streamMgr.SyncFromDB()
-			time.Sleep(500 * time.Millisecond)
 
-			// Route stream creation to the correct node
+			// Route stream creation to the correct streaming engine
 			if req.Backend == "go2rtc" || req.Backend == "ffmpeg" {
 				urlToSync := req.URL
 				if req.Backend == "ffmpeg" {
 					urlToSync = "ffmpeg:" + req.URL + "#video=h264#hardware"
 				}
-				if disableAudio && !strings.Contains(urlToSync, "#") {
-					urlToSync += "#video"
+				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
+					log.Printf("Failed to sync stream to go2rtc/ffmpeg: %v", err)
 				}
-				if err := syncStreamToGo2RTC(nodeAPI, req.Name, urlToSync, false); err != nil {
-					log.Printf("Failed to sync stream to go2rtc: %v", err)
+			} else if req.Backend == "mediamtx" {
+				if err := syncStreamToMediaMTX(req.Name, req.URL, false); err != nil {
+					log.Printf("Failed to sync stream to MediaMTX: %v", err)
 				}
 			}
 
@@ -1431,14 +1206,12 @@ func main() {
 		if r.Method == http.MethodPut {
 			var req struct {
 				Name         string  `json:"name"`
-				DisplayName  string  `json:"display_name"`
 				URL          string  `json:"url"`
 				Backend      string  `json:"backend,omitempty"`
 				OriginalName string  `json:"originalName"`
 				Lat          float64 `json:"lat"`
 				Lng          float64 `json:"lng"`
 				Enabled      bool    `json:"enabled"`
-				DisableAudio bool    `json:"disable_audio"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
@@ -1458,7 +1231,7 @@ func main() {
 
 			log.Printf("[API] Updating stream: OriginalName='%s', NewName='%s', Lat=%f, Lng=%f", req.OriginalName, req.Name, req.Lat, req.Lng)
 
-			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.DisplayName, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID, req.DisableAudio); err != nil {
+			if err := streamMgr.UpdateStream(req.OriginalName, req.Name, req.URL, req.Lat, req.Lng, req.Enabled, sess.UserID); err != nil {
 				log.Printf("[API] Update failed: %v", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -1472,27 +1245,9 @@ func main() {
 				}
 				// If name changed, delete old
 				if req.OriginalName != "" && req.OriginalName != req.Name {
-					oldNodeURL := ""
-					if existingOld, _ := streamMgr.GetStream(req.OriginalName); existingOld != nil && existingOld.NodeID > 0 {
-						if n, _ := globalStore.GetNodeByID(existingOld.NodeID); n != nil {
-							oldNodeURL = n.URL
-						}
-					}
-					syncStreamToGo2RTC(oldNodeURL, req.OriginalName, "", true)
+					syncStreamToGo2RTC(req.OriginalName, "", true)
 				}
-
-				// Resolve target Node API for the current/new name
-				nodeURL := ""
-				if existing, _ := streamMgr.GetStream(req.Name); existing != nil && existing.NodeID > 0 {
-					if n, _ := globalStore.GetNodeByID(existing.NodeID); n != nil {
-						nodeURL = n.URL
-					}
-				}
-
-				if req.DisableAudio && !strings.Contains(urlToSync, "#") {
-					urlToSync += "#video"
-				}
-				if err := syncStreamToGo2RTC(nodeURL, req.Name, urlToSync, false); err != nil {
+				if err := syncStreamToGo2RTC(req.Name, urlToSync, false); err != nil {
 					log.Printf("Failed to update stream in go2rtc: %v", err)
 				}
 			} else if req.Backend == "mediamtx" {
@@ -1539,13 +1294,7 @@ func main() {
 			}
 
 			if stream.Backend == "go2rtc" || stream.Backend == "ffmpeg" {
-				nodeURL := ""
-				if stream.NodeID > 0 {
-					if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
-						nodeURL = n.URL
-					}
-				}
-				if err := syncStreamToGo2RTC(nodeURL, stream.Name, "", true); err != nil {
+				if err := syncStreamToGo2RTC(stream.Name, "", true); err != nil {
 					log.Printf("Failed to delete stream from go2rtc: %v", err)
 				}
 			} else if stream.Backend == "mediamtx" {
@@ -1563,13 +1312,6 @@ func main() {
 	http.HandleFunc("/api/streams/import", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		sess := r.Context().Value(sessionContextKey).(Session)
-		canImport := sess.Role == "admin" || sess.SubscriptionPlan == "Premium" || sess.SubscriptionPlan == "Advance" || sess.SubscriptionPlan == "Enterprise"
-		if !canImport {
-			http.Error(w, "Import feature is only available for Premium and Advance plans", http.StatusForbidden)
 			return
 		}
 
@@ -1643,26 +1385,16 @@ func main() {
 			// Get session for user ownership
 			sess, _ := r.Context().Value(sessionContextKey).(Session)
 
-			// ID Internal harus UUID, Display Name pake nama dari CSV
-			internalName := name
-			if !isUUID(name) {
-				internalName = generateUUID()
-			}
-
-			// Add stream (default to go2rtc for CSV imports, auto-mute default)
-			if err := streamMgr.AddStream(internalName, name, streamURL, "go2rtc", lat, lng, true, sess.UserID, true); err != nil {
+			// Add stream (default to go2rtc for CSV imports)
+			if err := streamMgr.AddStream(name, streamURL, "go2rtc", lat, lng, true, sess.UserID); err != nil {
 				failCount++
 				errors = append(errors, fmt.Sprintf("Row %d (%s): %v", lineNum, name, err))
 				continue
 			}
 
-			// Sync with Go2RTC (forced mute for CSV)
-			urlToSync := streamURL
-			if !strings.Contains(urlToSync, "#") {
-				urlToSync += "#video"
-			}
-			if err := syncStreamToGo2RTC("", internalName, urlToSync, false); err != nil {
-				log.Printf("Failed to sync stream %s to go2rtc: %v", internalName, err)
+			// Sync with Go2RTC
+			if err := syncStreamToGo2RTC(name, streamURL, false); err != nil {
+				log.Printf("Failed to sync stream %s to go2rtc: %v", name, err)
 			}
 
 			successCount++
@@ -1736,7 +1468,7 @@ func main() {
 			if len(nameSet) > 0 && !nameSet[s.Name] {
 				continue
 			}
-			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.DisplayName, s.URL, s.Lat, s.Lng)
+			line := fmt.Sprintf("\"%s\",\"%s\",%f,%f\n", s.Name, s.URL, s.Lat, s.Lng)
 			w.Write([]byte(line))
 		}
 	}))
@@ -1763,13 +1495,7 @@ func main() {
 			case "delete":
 				err = streamMgr.RemoveStream(name)
 				if err == nil {
-					nodeURL := ""
-					if stream, _ := streamMgr.GetStream(name); stream != nil && stream.NodeID > 0 {
-						if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
-							nodeURL = n.URL
-						}
-					}
-					syncStreamToGo2RTC(nodeURL, name, "", true)
+					syncStreamToGo2RTC(name, "", true)
 				}
 			case "enable":
 				err = streamMgr.SetStreamStatus(name, true)
@@ -1786,28 +1512,17 @@ func main() {
 		// Sync logic for enable/disable
 		if req.Action == "enable" || req.Action == "disable" {
 			for _, name := range req.Names {
-				var stream *models.Stream
-				all, _ := streamMgr.GetStreams()
-				for i := range all {
-					if all[i].Name == name {
-						stream = &all[i]
-						break
-					}
-				}
-				if stream == nil { continue }
-
-				nodeURL := ""
-				if stream.NodeID > 0 {
-					if n, _ := globalStore.GetNodeByID(stream.NodeID); n != nil {
-						nodeURL = n.URL
-					}
-				}
-
 				if req.Action == "disable" {
-					syncStreamToGo2RTC(nodeURL, name, "", true) // Delete from node memory
+					syncStreamToGo2RTC(name, "", true) // Delete from active proxy memory
 				} else {
-					// Enable: Re-sync to Node
-					syncStreamToGo2RTC(nodeURL, stream.Name, stream.URL, false)
+					// Enable: Re-sync to Go2RTC
+					streams, _ := streamMgr.GetStreams()
+					for _, s := range streams {
+						if s.Name == name {
+							syncStreamToGo2RTC(s.Name, s.URL, false)
+							break
+						}
+					}
 				}
 			}
 		}
@@ -1815,197 +1530,6 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{"success": successCount})
 	}))
-
-	http.HandleFunc("/api/admin/nodes", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
-		sess, _ := r.Context().Value(sessionContextKey).(Session)
-		if sess.Role != "admin" {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-
-		switch r.Method {
-		case http.MethodGet:
-			nodes, err := globalStore.GetNodes()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(nodes)
-		case http.MethodPost:
-			var n models.Node
-			if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			if err := globalStore.AddNode(n); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusCreated)
-		case http.MethodPut:
-			var n models.Node
-			if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-			if err := globalStore.UpdateNode(n); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		case http.MethodDelete:
-			idStr := r.URL.Query().Get("id")
-			id, _ := strconv.Atoi(idStr)
-			if err := globalStore.DeleteNode(id); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
-
-	// --- License Manager APIs ---
-	http.HandleFunc("/api/admin/licenses", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
-		sess := r.Context().Value(sessionContextKey).(Session)
-		if sess.Role != "admin" {
-			http.Error(w, "Unauthorized", http.StatusForbidden)
-			return
-		}
-
-		if r.Method == http.MethodGet {
-			lics, err := globalStore.GetAllLicenses()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(lics)
-			return
-		}
-
-		if r.Method == http.MethodPost {
-			var req struct {
-				Plan         string `json:"plan"`
-				DurationDays int    `json:"duration_days"`
-			}
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			key, err := globalStore.CreateLicense(req.Plan, req.DurationDays)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(map[string]string{"key": key})
-			return
-		}
-	}))
-
-	http.HandleFunc("/api/user/redeem", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
-		sess := r.Context().Value(sessionContextKey).(Session)
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			Key string `json:"key"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		plan, err := globalStore.RedeemLicense(sess.UserID, req.Key)
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
-			return
-		}
-
-		// Update Active Session to reflect new Plan immediately
-		cookie, err := r.Cookie(sessionCookieName)
-		if err == nil {
-			sessionMutex.Lock()
-			if s, ok := activeSessions[cookie.Value]; ok {
-				// Refresh user from DB to get new Plan and Expiry
-				updatedUser, _ := globalStore.GetUserByID(sess.UserID)
-				if updatedUser != nil {
-					s.SubscriptionPlan = updatedUser.SubscriptionPlan
-					s.SubExpiry = updatedUser.ExpiresAt
-					activeSessions[cookie.Value] = s
-				}
-			}
-			sessionMutex.Unlock()
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"plan": plan, "message": "License redeemed successfully"})
-	}))
-
-	http.HandleFunc("/api/user/claim-trial", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
-		sess := r.Context().Value(sessionContextKey).(Session)
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		u, err := globalStore.GetUserByID(sess.UserID)
-		if err != nil || u == nil {
-			http.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
-
-		if u.TrialClaimed {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "You have already claimed your trial"})
-			return
-		}
-
-		if u.SubscriptionPlan != "Free" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Trial is only for Free members"})
-			return
-		}
-
-		// Upgrade to Advance for 2 days
-		newExpiry := time.Now().AddDate(0, 0, 2)
-		u.SubscriptionPlan = "Advance"
-		u.ExpiresAt = newExpiry
-		u.TrialClaimed = true
-
-		if err := globalStore.UpdateUserFull(*u); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		// Update Session
-		cookie, err := r.Cookie(sessionCookieName)
-		if err == nil {
-			sessionMutex.Lock()
-			if s, ok := activeSessions[cookie.Value]; ok {
-				s.SubscriptionPlan = "Advance"
-				s.SubExpiry = newExpiry
-				activeSessions[cookie.Value] = s
-			}
-			sessionMutex.Unlock()
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "Trial claimed successfully", "plan": "Advance"})
-	}))
-
-	// Register all iPaymu payment gateway routes
-	registerPaymentRoutes()
 
 	http.HandleFunc("/api/probe", sessionAuth(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -2065,8 +1589,7 @@ func main() {
 			return
 		}
 		log.Printf("Discovery complete. Found %d streams", len(streams))
-        w.Header().Set("Content-Type", "application/json")
-        json.NewEncoder(w).Encode(streams)
+
 	}))
 
 	http.HandleFunc("/api/snapshot", func(w http.ResponseWriter, r *http.Request) {
@@ -2140,8 +1663,7 @@ func main() {
 	})
 
 	// HLS & MSE Proxy Handlers
-	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC)    // MSE/MP4
-	http.HandleFunc("/api/stream.mjpeg", proxyToGo2RTC) // MJPEG
+	http.HandleFunc("/api/stream.mp4", proxyToGo2RTC) // MSE/MP4
 
 	// Start Server
 	port := os.Getenv("PORT")
@@ -2364,187 +1886,6 @@ func main() {
 		}
 		tmpl.Execute(w, nil)
 	}))
-
-	// =============================================================
-	// IoT Bridge v2 (Push Mode) — /api/bridge/{cam_name}
-	// Gateway tells us it wants to push a stream.
-	// We register it and tell go2rtc to wait for a push.
-	// =============================================================
-	http.HandleFunc("/api/bridge/", func(w http.ResponseWriter, r *http.Request) {
-		slug := strings.TrimPrefix(r.URL.Path, "/api/bridge/")
-		if slug == "" {
-			http.Error(w, "camera name required", http.StatusBadRequest)
-			return
-		}
-
-		// Find if this slug already exists in DB as an internal Name
-		existing, _ := globalStore.GetStream(slug)
-		camName := slug
-		if existing == nil && !isUUID(slug) {
-			camName = generateUUID()
-		}
-
-		// --- Auth ---
-		username, password, hasBasic := r.BasicAuth()
-		if !hasBasic {
-			username = r.URL.Query().Get("user")
-			password = r.URL.Query().Get("pass")
-		}
-		if username == "" {
-			username = r.Header.Get("X-Api-User")
-			password = r.Header.Get("X-Api-Pass")
-		}
-		isTrial := (username == "" && password == "")
-		var ownerUserID int
-		if !isTrial {
-			dbUser, err := globalStore.GetUserByUsername(username)
-			if err != nil || dbUser == nil || db.HashPassword(password, dbUser.Salt) != dbUser.PasswordHash || !dbUser.IsActive {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			ownerUserID = dbUser.ID
-		} else {
-			ownerUserID = 1 // default admin for trial
-		}
-
-		displayName := r.Header.Get("X-Display-Name")
-		if displayName == "" {
-			displayName = slug
-		}
-
-		// --- Select Target Node (Dedicated OR Load Balanced) ---
-		var targetNode *models.Node
-		
-		// Fetch Owner Info once
-		ownerUser, _ := globalStore.GetUserByID(ownerUserID)
-
-		// Check license expiration
-		if ownerUser != nil && !ownerUser.ExpiresAt.IsZero() && ownerUser.ExpiresAt.Before(time.Now()) {
-			http.Error(w, "Subscription Expired", http.StatusPaymentRequired)
-			return
-		}
-		
-		// Priority 1: User's Dedicated Node
-		if ownerUser != nil && ownerUser.DedicatedNodeID > 0 {
-			targetNode, _ = globalStore.GetNodeByID(ownerUser.DedicatedNodeID)
-			if targetNode != nil {
-				log.Printf("[Bridge v2] User %s has dedicated Node %d", ownerUser.Username, targetNode.ID)
-			}
-		}
-		
-		// Priority 2: Least Loaded Node
-		if targetNode == nil {
-			targetNode, _ = globalStore.GetLeastLoadedNode()
-		}
-
-		targetNodeID := 1
-		nodeAPI := "http://localhost:1984/api/streams"
-		nodeIP := "localhost"
-		rtspPort := 8554
-
-		if targetNode != nil {
-			targetNodeID = targetNode.ID
-			nodeAPI = targetNode.URL
-			rtspPort = targetNode.RtspPort
-			
-			// Extract IP from Node URL for the gateway response
-			parsedUrl, _ := url.Parse(nodeAPI)
-			nodeIP = parsedUrl.Hostname()
-			if nodeIP == "" { nodeIP = targetNode.URL } // Fallback
-		}
-
-		// --- Register placeholder in the target Node's go2rtc ---
-		if err := syncStreamToGo2RTC(nodeAPI, camName, "!", false); err != nil {
-			log.Printf("[Bridge v2] node sync error: %v", err)
-		}
-
-		// --- Register in DB ---
-		existingStreams, _ := streamMgr.GetStreams()
-		found := false
-		for _, s := range existingStreams {
-			if s.Name == camName {
-				found = true
-				// Update node_id if it changed
-				if s.NodeID != targetNodeID {
-					s.NodeID = targetNodeID
-					globalStore.AddStream(s) // Update
-				}
-				break
-			}
-		}
-		if !found {
-			newStream := models.Stream{
-				Name:        camName,
-				DisplayName: displayName,
-				URL:         "push",
-				Backend:     "go2rtc",
-				Enabled:     true,
-				IsPublic:    true,
-				UserID:      ownerUserID,
-				NodeID:      targetNodeID,
-			}
-			globalStore.AddStream(newStream)
-		}
-
-		log.Printf("[Bridge v2] Camera '%s' assigned to Node %d (%s)", camName, targetNodeID, nodeIP)
-		
-		// --- Handle TCP Upgrade (for ESP32 Bridge) ---
-		if strings.ToLower(r.Header.Get("Upgrade")) == "rtsp-bridge" {
-			hijacker, ok := w.(http.Hijacker)
-			if !ok {
-				http.Error(w, "webserver doesn't support hijacking", http.StatusInternalServerError)
-				return
-			}
-			conn, bufrw, err := hijacker.Hijack()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer conn.Close()
-
-			// Write 101 Response
-			bufrw.WriteString("HTTP/1.1 101 Switching Protocols\r\n")
-			bufrw.WriteString("Upgrade: rtsp-bridge\r\n")
-			bufrw.WriteString("Connection: Upgrade\r\n")
-			bufrw.WriteString(fmt.Sprintf("X-Node-IP: %s\r\n", nodeIP))
-			bufrw.WriteString("\r\n")
-			bufrw.Flush()
-
-			// Connect to Target Node's RTSP Port (8554)
-			targetAddr := fmt.Sprintf("%s:%d", nodeIP, rtspPort)
-			if nodeIP == "localhost" {
-				targetAddr = fmt.Sprintf("127.0.0.1:%d", rtspPort)
-			}
-			
-			log.Printf("[Bridge v2] Proxying TCP Bridge for %s to %s", camName, targetAddr)
-			
-			backendConn, err := net.DialTimeout("tcp", targetAddr, 5*time.Second)
-			if err != nil {
-				log.Printf("[Bridge v2] Failed to dial node backend: %v", err)
-				return
-			}
-			defer backendConn.Close()
-
-			// Handshake for go2rtc push (ANNOUNCE etc will be handled by the client/bridge loop)
-			// For raw bridge, we just pipe.
-			
-			errc := make(chan error, 2)
-			cp := func(dst io.Writer, src io.Reader) {
-				_, err := io.Copy(dst, src)
-				errc <- err
-			}
-			go cp(backendConn, bufrw)
-			go cp(conn, backendConn)
-			<-errc
-			return
-		}
-
-		// --- Default Response (for FFmpeg/Gateway App) ---
-		w.Header().Set("X-Node-IP", nodeIP)
-		w.Header().Set("X-Node-Port", fmt.Sprintf("%d", rtspPort))
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintf(w, "Registered for push mode. Target IP: %s, Port: %d", nodeIP, rtspPort)
-	})
 
 	go func() {
 		if err := http.ListenAndServe(":"+port, nil); err != nil {

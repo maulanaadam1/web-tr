@@ -138,12 +138,7 @@
         </div>
 
         <div class="relative z-10">
-            <p class="text-xs text-slate-500 font-medium tracking-widest uppercase mb-2">&copy; 2026 RTSP2go. Streaming made simple.</p>
-            <div class="flex gap-4">
-                <a href="/privacy" class="text-[10px] text-slate-600 hover:text-brand-400 uppercase tracking-widest transition-colors font-bold">Privacy Policy</a>
-                <a href="/terms" class="text-[10px] text-slate-600 hover:text-brand-400 uppercase tracking-widest transition-colors font-bold">Terms of Service</a>
-                <a href="/refund" class="text-[10px] text-slate-600 hover:text-brand-400 uppercase tracking-widest transition-colors font-bold">Refund Policy</a>
-            </div>
+            <p class="text-xs text-slate-500 font-medium tracking-widest uppercase">&copy; 2026 RTSP2go. Streaming made simple.</p>
         </div>
     </div>
 
@@ -233,21 +228,6 @@
 
                 <!-- Registration Form -->
                 <form id="form-register" action="/register" method="POST" class="space-y-5 hidden">
-                    {{if .HidePayment}}
-                    <input type="hidden" name="plan" value="Free">
-                    {{else}}
-                    <div class="space-y-1.5">
-                        <label for="reg-plan" class="block text-sm font-medium text-slate-300">Pilih Paket</label>
-                        <select id="reg-plan" name="plan"
-                            class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50 appearance-none">
-                            <option value="Free">Free (2 Kamera, Rp 0)</option>
-                            <option value="Basic">Basic (4 Kamera, Rp 15.000)</option>
-                            <option value="Premium">Premium (8 Kamera, Rp 35.000)</option>
-                            <option value="Advance">Advance (16 Kamera, Rp 70.000)</option>
-                        </select>
-                    </div>
-                    {{end}}
-
                     <div class="space-y-1.5">
                         <label for="reg-username" class="block text-sm font-medium text-slate-300">Username *</label>
                         <input type="text" id="reg-username" name="username" required
@@ -263,16 +243,16 @@
                     </div>
 
                     <div class="space-y-1.5">
-                        <label for="reg-fullname" class="block text-sm font-medium text-slate-300">Full Name *</label>
-                        <input type="text" id="reg-fullname" name="full_name" required
+                        <label for="reg-fullname" class="block text-sm font-medium text-slate-300">Full Name</label>
+                        <input type="text" id="reg-fullname" name="full_name"
                             class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                             placeholder="John Doe">
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div class="space-y-1.5">
-                            <label for="reg-email" class="block text-sm font-medium text-slate-300">Email *</label>
-                            <input type="email" id="reg-email" name="email" required
+                            <label for="reg-email" class="block text-sm font-medium text-slate-300">Email</label>
+                            <input type="email" id="reg-email" name="email"
                                 class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                                 placeholder="john@example.com">
                         </div>
@@ -302,6 +282,7 @@
                 </div>
             </div>
 
+            {{if .SkipLanding}}
             <div class="mt-8 pt-6 border-t border-slate-800/80">
                 <div class="text-center mb-5">
                     <h3 class="text-base sm:text-lg font-bold text-white flex items-center justify-center gap-2">
@@ -472,6 +453,7 @@
                     document.getElementById('rtspGuideModal').classList.add('opacity-0', 'pointer-events-none');
                 }
             </script>
+            {{end}}
         </div>
     </div>
     </div>
@@ -481,11 +463,6 @@
         let requestedMode = urlParams.get('mode') || "{{.Mode}}";
         if (requestedMode === 'register') {
             switchTab('register');
-        }
-        const planParam = urlParams.get('plan');
-        if (planParam) {
-            const planSelect = document.getElementById('reg-plan');
-            if (planSelect) planSelect.value = planParam;
         }
 
         function switchTab(mode) {
@@ -508,6 +485,7 @@
         }
     </script>
     
+    {{if .SkipLanding}}
     <!-- MODALS FOR RTSP TEST -->
     <div id="streamPlayerModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-300">
         <div class="relative w-full max-w-3xl mx-4 bg-slate-900 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
@@ -549,6 +527,6 @@
             <button onclick="closeRtspGuide()" class="mt-8 w-full py-4 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-xl transition-all">Dimengerti</button>
         </div>
     </div>
-    </div>
+    {{end}}
 </body>
 </html>

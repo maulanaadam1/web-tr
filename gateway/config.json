@@ -1,7 +1,7 @@
 {
-  "server_url": "https://rtsp2go.campod.my.id",
-  "api_username": "budi",
-  "api_password": "user",
+  "server_url": "https://rtsp2go.com",
+  "api_username": "admin",
+  "api_password": "vivo1234!",
   "vpn_mode": "zerotier",
   "stream_engine": "go2rtc",
   "l2tp_server": "31.56.78.5",

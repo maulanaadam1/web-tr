@@ -269,12 +269,7 @@
             </div>
             
             <div class="flex items-center gap-2 md:gap-3">
-                <!-- Snapshot Button -->
-                <button id="publicSnapshotBtn" class="bg-white/10 hover:bg-blue-500 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 border border-white/10 shadow-xl pointer-events-auto" title="Take Snapshot">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 md:h-6 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                </button>
-
-                <!-- Exit Button -->
+                <!-- Close Button -->
                 <button onclick="closePublicPlayerModal()" class="bg-black/40 hover:bg-red-600 text-white p-2 md:p-3 rounded-full backdrop-blur-md transition-all duration-200 group shadow-2xl pointer-events-auto border border-white/5" title="Exit Fullscreen">
                     <svg class="w-5 h-5 md:h-6 md:w-6 transform group-hover:rotate-90 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
@@ -293,7 +288,7 @@
     <script>
         const publicStreams = [
             {{ range .Streams }}
-            { name: "{{ .Name }}", display_name: "{{ .DisplayName }}", lat: {{ .Lat }}, lng: {{ .Lng }}, enabled: {{ .Enabled }} },
+            { name: "{{ .Name }}", lat: {{ .Lat }}, lng: {{ .Lng }}, enabled: {{ .Enabled }} },
             {{ end }}
         ];
 
@@ -401,7 +396,7 @@
                     card.onclick = () => openPublicPlayerModal(stream.name);
                     card.innerHTML = `
                         <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
-                            <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white group-hover:text-brand-600 transition-colors" title="${stream.display_name || stream.name}">${stream.display_name || stream.name}</h3>
+                            <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white group-hover:text-brand-600 transition-colors" title="${stream.name}">${stream.name}</h3>
                             <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
                                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </button>
@@ -474,16 +469,7 @@
         const titleEl = document.getElementById('publicPlayerTitle');
 
         function openPublicPlayerModal(name) {
-            const stream = publicStreams.find(s => s.name === name);
-            const displayName = stream ? (stream.display_name || stream.name) : name;
-            titleEl.textContent = displayName;
-
-            // Update snapshot button
-            const snapBtn = document.getElementById('publicSnapshotBtn');
-            if (snapBtn) {
-                snapBtn.onclick = () => takeSnapshot(name, displayName);
-            }
-
+            titleEl.textContent = name;
             // Use standard rtc mode for primary public viewing
             const iframeSrc = `${window.location.protocol}//${window.location.host}/rtc/stream.html?src=${encodeURIComponent(name)}&mode=mse,webrtc,hls,mp4,mjpeg`;
 
@@ -530,22 +516,6 @@
         });
 
         // New Toolbar & Side Panel Logic
-        async function takeSnapshot(name, displayName = "") {
-            try {
-                const response = await fetch(`/api/snapshot?stream=${encodeURIComponent(name)}`);
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                const filename = displayName ? `${displayName}-snapshot.jpg` : `${name}-snapshot.jpg`;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-            } catch (error) { alert(`Failed to take snapshot: ${error.message}`); }
-        }
-
         function toggleSidePanel() {
             const panel = document.getElementById('sidePanel');
             if (panel) panel.classList.toggle('open');
@@ -569,17 +539,14 @@
             if(!window.allMarkers) return;
             
             const q = query.toLowerCase();
-            const matches = window.allMarkers.filter(item => 
-                item.name.toLowerCase().includes(q) || 
-                item.displayName.toLowerCase().includes(q)
-            );
+            const matches = window.allMarkers.filter(item => item.name.toLowerCase().includes(q));
 
             // Populate results dropdown
             if (resultsList) {
                 resultsList.innerHTML = matches.slice(0, 10).map(match => `
                     <button onclick="selectSearchResult('${match.name.replace(/'/g, "\\'")}')" class="w-full flex items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-none text-left">
                         <i data-lucide="map-pin" class="w-4 h-4 text-brand-500 mr-3 shrink-0"></i>
-                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${match.displayName || match.name}</span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${match.name}</span>
                     </button>
                 `).join('');
                 
@@ -720,7 +687,7 @@
                                  onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJncmF5Ij48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTZsNC41ODYtNC41ODZhMiAyIDAgMDEyLjgyODAwTDE2IDE2bS0yLTJsMS41ODYtMS41ODZhMiAyIDAgMDEyLjgyODAwTDIwIDE0bS02LTZoLjAxTTYgMjBoMTJhMiAyIDAgMDAyLTJWNmEyIDIgMCAwMC0yLTJINmEyIDIgMCAwMC0yIDJ2MTJhMiAyIDAgMDAyIDJ6Ii8+PC9zdmc+'">
                             
                             <div class="absolute bottom-0 left-0 right-0 p-2 pt-6 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-                                <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${stream.display_name || stream.name}">${stream.display_name || stream.name}</h4>
+                                <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${stream.name}">${stream.name}</h4>
                             </div>
                             ${isEnabled ? `
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -741,7 +708,7 @@
                     marker.__popup = popup; 
 
                     // Store for search
-                    window.allMarkers.push({ marker, name: stream.name, displayName: stream.display_name || stream.name });
+                    window.allMarkers.push({ marker, name: stream.name });
 
                     bounds.push([stream.lat, stream.lng]);
                 });
@@ -790,9 +757,9 @@
                         ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
                     </div>
                     <div class="p-3">
-                        <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-1">${s.display_name || s.name}</div>
+                        <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-1">${s.name}</div>
                         <div class="flex items-center justify-between">
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.substring(0,8)}...</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
                             <div class="flex gap-1.5">
                                 <i data-lucide="map-pin" class="w-3 h-3 text-brand-500"></i>
                                 <i data-lucide="external-link" class="w-3 h-3 text-slate-400 group-hover/item:text-brand-500"></i>
