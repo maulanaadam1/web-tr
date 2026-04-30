@@ -13,7 +13,7 @@ RUN go mod download
 
 # Copy source code and build
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o web-tr ./cmd/server/...
+RUN CGO_ENABLED=0 GOOS=linux go build -o web-tr ./cmd/server
 
 # ============================================================
 # Runtime Stage
