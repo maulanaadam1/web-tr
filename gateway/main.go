@@ -59,7 +59,6 @@ type CameraConfig struct {
 	Name      string `json:"name"`
 	LocalRTSP string `json:"local_rtsp"`
 	VPSPort   int    `json:"vps_port"`
-	ServerID  string `json:"server_id"`
 }
 
 type Config struct {
@@ -772,10 +771,9 @@ func showEditCameraDialog(inst *TunnelInstance) {
 				return
 			}
 			payload := map[string]string{
-				"name":         inst.Camera.ServerID,
-				"display_name": entryName.Text,
+				"name":         entryName.Text,
 				"url":          entryRTSP.Text,
-				"originalName": inst.Camera.ServerID,
+				"originalName": oldName,
 				"backend":      "go2rtc",
 			}
 			jsonData, _ := json.Marshal(payload)
@@ -1111,9 +1109,7 @@ func (inst *TunnelInstance) Stop() {
 	// EXCEPTION: If in Test Mode (empty credentials), always deregister to keep server clean.
 	isTestMode := config.ApiUsername == "" && config.ApiPassword == ""
 	if !config.KeepCameraOnStop || isTestMode {
-		camID := inst.Camera.ServerID
-		if camID == "" { camID = inst.Camera.Name }
-		go deregisterFromBackend(inst.Camera.Name, camID)
+		go deregisterFromBackend(inst.Camera.Name)
 	} else {
 		addLog(fmt.Sprintf("[%s] Persistence: Camera kept on server per settings.", inst.Camera.Name))
 	}
@@ -1447,18 +1443,14 @@ func startTCPProxy(inst *TunnelInstance, targetHostPort string) error {
 }
 
 func registerToBackend(inst *TunnelInstance) {
-	displayName := inst.Camera.Name
-	camName := inst.Camera.ServerID // Use UUID for the actual stream identity
-	if camName == "" {
-		camName = displayName // Fallback if no UUID exists
-	}
+	camName := inst.Camera.Name
 	// Give the tunnel a brief moment to stabilize
 	time.Sleep(2 * time.Second)
 
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
 	if apiURL == "" {
-		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", displayName))
+		addLog(fmt.Sprintf("[%s] Skip Auto-Register: Server URL not set.", camName))
 		return
 	}
 
@@ -1470,8 +1462,8 @@ func registerToBackend(inst *TunnelInstance) {
 		} else {
 			apiURL += "?test=true"
 		}
-		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", displayName))
-		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", displayName), inst.Camera.LocalRTSP)
+		addLog(fmt.Sprintf("[%s] Registering in TEST MODE (No Credentials)...", camName))
+		go sendTestLogToWeb(fmt.Sprintf("Gateway Test Broadcast [%s]", camName), inst.Camera.LocalRTSP)
 	}
 	var originalRTSP string
 	for _, cam := range config.Cameras {
@@ -1486,39 +1478,38 @@ func registerToBackend(inst *TunnelInstance) {
 	if isPrivateIP(hostPort) {
 		vpnIP := getVpnIP()
 		if vpnIP == "" {
-			addLog(fmt.Sprintf("[%s] ❌ Cannot register: VPN IP not found. Is the VPN connected?", displayName))
+			addLog(fmt.Sprintf("[%s] ❌ Cannot register: VPN IP not found. Is the VPN connected?", camName))
 			return
 		}
 
 		// Start the TCP proxy for this specific camera
 		err := startTCPProxy(inst, hostPort)
 		if err != nil {
-			addLog(fmt.Sprintf("[%s] ❌ Failed to start local proxy: %v", displayName, err))
+			addLog(fmt.Sprintf("[%s] ❌ Failed to start local proxy: %v", camName, err))
 			return
 		}
 
-		addLog(fmt.Sprintf("[%s] Local proxy started on port %d -> %s", displayName, inst.proxyPort, hostPort))
+		addLog(fmt.Sprintf("[%s] Local proxy started on port %d -> %s", camName, inst.proxyPort, hostPort))
 
 		// Replace the RTSP URL so it connects to our local proxy via VPN interface
 		host := vpnIP
 		proxyHostPort := fmt.Sprintf("%s:%d", host, inst.proxyPort)
 		rtspSource = replaceHostPortInRTSP(originalRTSP, proxyHostPort)
 
-		addLog(fmt.Sprintf("[%s] Camera is LOCAL — proxying via VPN IP: %s", displayName, rtspSource))
+		addLog(fmt.Sprintf("[%s] Camera is LOCAL — proxying via VPN IP: %s", camName, rtspSource))
 	} else {
 		// Camera has a public IP — go2rtc can reach it directly!
 		rtspSource = originalRTSP
-		addLog(fmt.Sprintf("[%s] Camera is PUBLIC — registering direct RTSP URL", displayName))
+		addLog(fmt.Sprintf("[%s] Camera is PUBLIC — registering direct RTSP URL", camName))
 	}
 
-	addLog(fmt.Sprintf("[%s] Auto-Registering on VPS backend: %s", displayName, apiURL))
+	addLog(fmt.Sprintf("[%s] Auto-Registering on VPS backend: %s", camName, apiURL))
 
 	// Use POST to ADD a new stream
 	payload := map[string]interface{}{
-		"name":         camName,
-		"display_name": displayName,
-		"url":          rtspSource,
-		"backend":      config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
+		"name":    camName,
+		"url":     rtspSource,
+		"backend": config.StreamEngine, // go2rtc, mediamtx, or ffmpeg
 		"lat":     0,
 		"lng":     0,
 	}
@@ -1551,9 +1542,9 @@ func registerToBackend(inst *TunnelInstance) {
 		baseURL := strings.TrimSuffix(config.ServerURL, "/")
 		webURL := fmt.Sprintf("%s/rtc/stream.html?src=%s", baseURL, url.QueryEscape(camName))
 
-		addLog(fmt.Sprintf("[%s] Successfully registered!", displayName))
-		addLog(fmt.Sprintf("[%s] RTSP: %s", displayName, rtspSource))
-		addLog(fmt.Sprintf("[%s] WEB: %s", displayName, webURL))
+		addLog(fmt.Sprintf("[%s] Successfully registered!", camName))
+		addLog(fmt.Sprintf("[%s] RTSP: %s", camName, rtspSource))
+		addLog(fmt.Sprintf("[%s] WEB: %s", camName, webURL))
 
 		inst.PublicURL = rtspSource
 		inst.PublicLabel.SetText(webURL) // Show Web Link by default as it is more useful for user
@@ -1566,18 +1557,18 @@ func registerToBackend(inst *TunnelInstance) {
 	}
 }
 
-func deregisterFromBackend(displayName, camName string) {
+func deregisterFromBackend(camName string) {
 	apiURL := getServerAPIURL()
 	if apiURL == "" {
 		return
 	}
 	// Append query param to the base API URL
 	fullURL := fmt.Sprintf("%s?name=%s", apiURL, url.QueryEscape(camName))
-	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", displayName, fullURL))
+	addLog(fmt.Sprintf("[%s] Sending DELETE to VPS: %s", camName, fullURL))
 
 	req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
 	if err != nil {
-		addLog(fmt.Sprintf("[%s] Auto-Deregister Error: %v", displayName, err))
+		addLog(fmt.Sprintf("[%s] Auto-Deregister Error: %v", camName, err))
 		return
 	}
 	if config.ApiUsername != "" && config.ApiPassword != "" {
@@ -1594,9 +1585,9 @@ func deregisterFromBackend(displayName, camName string) {
 
 	bodyBytes, _ := ioutil.ReadAll(resp.Body)
 	if resp.StatusCode == http.StatusOK {
-		addLog(fmt.Sprintf("[%s] ✅ Successfully deregistered from VPS backend.", displayName))
+		addLog(fmt.Sprintf("[%s] ✅ Successfully deregistered from VPS backend.", camName))
 	} else {
-		addLog(fmt.Sprintf("[%s] ❌ Deregister failed — Status: %d, Body: %s", displayName, resp.StatusCode, string(bodyBytes)))
+		addLog(fmt.Sprintf("[%s] ❌ Deregister failed — Status: %d, Body: %s", camName, resp.StatusCode, string(bodyBytes)))
 	}
 }
 

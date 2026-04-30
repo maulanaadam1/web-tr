@@ -4,6 +4,7 @@ import (	"context"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -81,20 +82,22 @@ func (m *Manager) Start() error {
 	return nil
 }
 
-func (m *Manager) AddStream(name, url, backend string, lat, lng float64, enabled bool, userID int) error {
+func (m *Manager) AddStream(name, displayName, url, backend string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
 	if backend == "" {
 		backend = "go2rtc" // Default
 	}
 	if m.Store != nil {
 		// DB mode - use AddStream to insert/upsert
 		if err := m.Store.AddStream(models.Stream{
-			Name:    name,
-			URL:     url,
-			Backend: backend,
-			Lat:     lat,
-			Lng:     lng,
-			Enabled: enabled,
-			UserID:  userID,
+			Name:         name,
+			DisplayName:  displayName,
+			URL:          url,
+			Backend:      backend,
+			Lat:          lat,
+			Lng:          lng,
+			Enabled:      enabled,
+			UserID:       userID,
+			DisableAudio: disableAudio,
 		}); err != nil {
 			return err
 		}
@@ -132,11 +135,11 @@ func (m *Manager) ClearAllStreams() error {
 	return m.ConfigManager.Save(cfg)
 }
 
-func (m *Manager) UpdateStream(oldName, name, url string, lat, lng float64, enabled bool, userID int) error {
+func (m *Manager) UpdateStream(oldName, name, displayName, url string, lat, lng float64, enabled bool, userID int, disableAudio bool) error {
 
 	backend := "go2rtc" // Forced backend
 	if m.Store != nil {
-		if err := m.Store.UpdateStream(oldName, name, url, backend, lat, lng, enabled, userID); err != nil {
+		if err := m.Store.UpdateStream(oldName, name, displayName, url, backend, lat, lng, enabled, userID, disableAudio); err != nil {
 			return err
 		}
 		return m.SyncFromDB()
@@ -160,6 +163,13 @@ func (m *Manager) SetStreamStatus(name string, enabled bool) error {
 		return m.SyncFromDB()
 	}
 	return nil // Not supported in JSON Config mode
+}
+
+func (m *Manager) GetStream(name string) (*models.Stream, error) {
+	if m.Store != nil {
+		return m.Store.GetStream(name)
+	}
+	return nil, fmt.Errorf("lookup by name only supported in DB mode")
 }
 
 func (m *Manager) GetStreams() ([]models.Stream, error) {
@@ -195,7 +205,14 @@ func (m *Manager) SyncFromDB() error {
 	for _, s := range streams {
 		// Only add to go2rtc config if enabled
 		if s.Enabled {
-			cfg.Streams[s.Name] = s.URL
+			sourceURL := s.URL
+			if s.DisableAudio {
+				// go2rtc filter to only take video stream
+				if !strings.Contains(sourceURL, "#") {
+					sourceURL += "#video"
+				}
+			}
+			cfg.Streams[s.Name] = sourceURL
 		}
 	}
 
@@ -204,7 +221,39 @@ func (m *Manager) SyncFromDB() error {
 		return err
 	}
 
+	// Trigger go2rtc reload via API
+	go m.triggerGo2RTCReload()
+
 	return nil
+}
+
+func (m *Manager) triggerGo2RTCReload() {
+	// Give it a tiny moment to ensure file is flushed
+	time.Sleep(200 * time.Millisecond)
+
+	apiURL := "http://127.0.0.1:1984/api/reload"
+	req, err := http.NewRequest("GET", apiURL, nil)
+	if err != nil {
+		return
+	}
+
+	// Add Basic Auth from config if needed
+	// Based on go2rtc.yaml: admin / admin123
+	req.SetBasicAuth("admin", "admin123")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[StreamManager] Failed to trigger go2rtc reload: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode == http.StatusOK {
+		log.Printf("[StreamManager] go2rtc configuration reloaded successfully")
+	} else {
+		log.Printf("[StreamManager] go2rtc reload returned status: %s", resp.Status)
+	}
 }
 
 // ProbeStream runs ffprobe to check if the stream is reachable and returns its resolution and raw output.

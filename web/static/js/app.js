@@ -1,4 +1,31 @@
-// Global State
+// Global State - v71 (User Subscription column)
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-xl shadow-2xl z-[100] transform transition-all duration-300 translate-y-20 flex items-center gap-3 border ${
+        type === 'error' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/80 dark:text-red-100 dark:border-red-800' : 
+        type === 'success' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/80 dark:text-emerald-100 dark:border-emerald-800' : 
+        'bg-slate-900 text-white border-slate-800 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-700'
+    }`;
+    
+    const icon = type === 'error' ? 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' : 
+                 type === 'success' ? 'M5 13l4 4L19 7' : 
+                 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z';
+
+    toast.innerHTML = `
+        <svg class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${icon}" />
+        </svg>
+        <span class="text-sm font-bold">${message}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.replace('translate-y-20', 'translate-y-0'), 100);
+    setTimeout(() => {
+        toast.classList.replace('translate-y-0', 'translate-y-20');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
 let currentView = 'dashboard';
 let maintenanceMap = null;
 let maintenanceMarkers = {};
@@ -73,6 +100,10 @@ function switchView(viewName) {
         loadWaitingList();
     }
 
+    if (viewName === 'nvr') {
+        initNVRView();
+    }
+
     // Refresh Data for specific views
     if (viewName === 'dashboard') {
         fetchSysInfo();
@@ -80,7 +111,16 @@ function switchView(viewName) {
     }
     if (viewName === 'cameras') loadStreams();
     if (viewName === 'users') loadUsers();
+    if (viewName === 'servers') loadNodes();
     if (viewName === 'timelapse') initTimelapseView();
+    if (viewName === 'licenses') loadLicenses();
+    if (viewName === 'profile') {
+        loadPricingPlans();
+        loadProfileData();
+    }
+    if (viewName === 'pricing') {
+        loadAdminPricingSettings();
+    }
 }
 
 function applySubscriptionRestrictions() {
@@ -94,29 +134,114 @@ function applySubscriptionRestrictions() {
     const dashboardLink = document.querySelector('.nav-link[data-view="dashboard"]');
     const ccLink = document.querySelector('.nav-link[data-view="commandcenter"]');
     const publicViewLink = document.querySelector('.nav-link[data-view="publicview"]');
+    const nvrLink = document.querySelector('.nav-link[data-view="nvr"]'); // Added NVR Link
     
     if (publicViewLink) {
-        publicViewLink.classList.toggle('hidden', plan === 'Free' || plan === 'Basic' || plan === 'Premium');
+        publicViewLink.style.display = (plan === 'Free' || plan === 'Basic') ? 'none' : 'flex';
     }
 
     if (plan === 'Free' || plan === 'Basic' || plan === 'Premium') {
-        if (dashboardLink) dashboardLink.classList.add('hidden');
-        if (ccLink) ccLink.classList.add('hidden');
-        // If they are on a hidden view, move them to cameras
-        if (currentView === 'dashboard' || currentView === 'commandcenter') {
-            switchView('cameras');
-        }
-    } else {
-        if (dashboardLink) dashboardLink.classList.remove('hidden');
-        if (ccLink) ccLink.classList.remove('hidden');
+        if (nvrLink) nvrLink.style.display = 'none';
+        if (currentView === 'nvr') switchView('dashboard');
     }
+
+    if (plan === 'Free' || plan === 'Basic') {
+        if (ccLink) ccLink.style.display = 'none';
+        // If they are on a hidden view, move them to dashboard
+        if (currentView === 'commandcenter') {
+            switchView('dashboard');
+        }
+
+        // Inside Dashboard: Hide Map, show only Preview
+        const dashMapHeader = document.getElementById('dashboardMapHeader');
+        const dashMapCol = document.getElementById('dashboardMapColumn');
+        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
+        if (dashMapHeader) dashMapHeader.style.display = 'none';
+        if (dashMapCol) dashMapCol.style.display = 'none';
+        if (dashPrevCol) dashPrevCol.classList.add('xl:col-span-2');
+
+        // Hide Share buttons
+        const btnShare = document.getElementById('btnShareDashboard');
+        const colLinkHeader = document.getElementById('colLinkHeader');
+        const btnBulkExport = document.getElementById('btnBulkExport');
+
+        if (btnShare) btnShare.style.display = 'none';
+        if (colLinkHeader) colLinkHeader.style.display = 'none';
+        if (btnBulkExport) btnBulkExport.style.display = 'none';
+
+        // ONLY Show Trial Session info for Free
+        const trialInfo = document.getElementById('trialStatusInfo');
+        if (trialInfo) {
+            if (plan === 'Free') {
+                trialInfo.style.display = 'flex';
+                startTrialCountdown(60); // 60 minutes
+            } else {
+                trialInfo.style.display = 'none';
+            }
+        }
+
+        // Hide Public Hub buttons in header for Free/Basic
+        const hubContainer = document.getElementById('userPublicLinkContainer');
+        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
+        if (hubContainer) hubContainer.style.display = 'none';
+        if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
+    } else {
+        // Higher plans (Premium, Advance, Enterprise)
+        if (dashboardLink) dashboardLink.style.display = 'flex';
+        if (ccLink) ccLink.style.display = 'flex';
+
+        const trialInfo = document.getElementById('trialStatusInfo');
+        if (trialInfo) trialInfo.style.display = 'none';
+        
+        // NVR logic: Restricted for Premium only
+        if (plan === 'Premium') {
+            if (nvrLink) nvrLink.style.display = 'none';
+            if (currentView === 'nvr') switchView('cameras');
+        } else {
+            if (nvrLink) nvrLink.style.display = 'flex';
+        }
+
+        // Dashboard Map visibility
+        const dashMapHeader = document.getElementById('dashboardMapHeader');
+        const dashMapCol = document.getElementById('dashboardMapColumn');
+        const dashPrevCol = document.getElementById('dashboardPreviewColumn');
+        if (dashMapHeader) dashMapHeader.style.display = 'flex';
+        if (dashMapCol) dashMapCol.style.display = 'block';
+        if (dashPrevCol) dashPrevCol.classList.remove('xl:col-span-2');
+
+        // Share/Public Hub Logic: Restricted for Premium as well
+        const btnShare = document.getElementById('btnShareDashboard');
+        const colLinkHeader = document.getElementById('colLinkHeader');
+        const btnBulkExport = document.getElementById('btnBulkExport');
+        const hubContainer = document.getElementById('userPublicLinkContainer');
+        const hubRefreshBtn = document.querySelector('button[title*="Public Hub Token"]');
+
+        if (plan === 'Premium') {
+            if (btnShare) btnShare.style.display = 'none';
+            if (colLinkHeader) colLinkHeader.style.display = 'none';
+            if (btnBulkExport) btnBulkExport.style.display = 'none';
+            if (hubContainer) hubContainer.style.display = 'none';
+            if (hubRefreshBtn) hubRefreshBtn.style.display = 'none';
+        } else {
+            if (btnShare) btnShare.style.display = 'flex';
+            if (colLinkHeader) colLinkHeader.style.display = 'table-cell';
+            if (btnBulkExport) btnBulkExport.style.display = (plan === 'Enterprise') ? 'block' : 'none';
+            if (hubContainer) hubContainer.style.display = 'flex';
+            if (hubRefreshBtn) hubRefreshBtn.style.display = 'inline-flex';
+        }
+    }
+
+
 
     // 2. Manage Camera Restrictions (Import/Export)
     const exportBtn = document.querySelector('button[onclick*="export"]');
     const importBtn = document.querySelector('button[onclick="openCSVImportModal()"]');
     if (plan !== 'Enterprise') {
-        if (exportBtn) exportBtn.classList.add('hidden');
-        if (importBtn) importBtn.classList.add('hidden');
+        if (exportBtn) exportBtn.style.display = 'none';
+        if (importBtn) importBtn.style.display = 'none';
+    } else {
+        if (exportBtn) exportBtn.style.display = '';
+        if (importBtn) importBtn.style.display = '';
     }
 
     // 3. Add Camera Button Visibility
@@ -129,9 +254,19 @@ function applySubscriptionRestrictions() {
         if (plan === 'Enterprise') limit = 9999;
         
         if (allStreams.length >= limit) {
-            addCamBtn.classList.add('hidden');
+            addCamBtn.style.display = 'none';
         } else {
-            addCamBtn.classList.remove('hidden');
+            addCamBtn.style.display = 'inline-flex';
+        }
+    }
+
+    // 4. Camera Location Visibility Let people see it if they have Command Center / Dashboard
+    const cameraLocationSection = document.getElementById('cameraLocationSection');
+    if (cameraLocationSection) {
+        if (plan === 'Free' || plan === 'Basic') {
+            cameraLocationSection.style.display = 'none';
+        } else {
+            cameraLocationSection.style.display = 'block';
         }
     }
 }
@@ -165,6 +300,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// --- Trial Countdown ---
+let trialInterval = null;
+function startTrialCountdown(minutes) {
+    if (trialInterval) return; // Already running
+    
+    let seconds = minutes * 60;
+    const display = document.getElementById('trialCountdown');
+    if (!display) return;
+    
+    trialInterval = setInterval(() => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        
+        display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        
+        if (seconds <= 0) {
+            clearInterval(trialInterval);
+            trialInterval = null;
+            showToast("Trial Session Expired. Please reload.", "warning");
+            // Optionally force reload or stop streams
+        } else {
+            seconds--;
+        }
+    }, 1000);
+}
 
 // Global theme toggle — called directly via onclick="toggleTheme()" from the button
 function toggleTheme() {
@@ -206,7 +367,7 @@ function renderStreamsTable() {
         gridContainer.innerHTML = '';
         allStreams.forEach(s => {
             if (s.enabled !== false) {
-                gridContainer.appendChild(createStreamCard(s.name, s.url));
+                gridContainer.appendChild(createStreamCard(s.name, s.url, s.display_name || s.name));
             }
         });
     }
@@ -248,16 +409,17 @@ function renderStreamsTable() {
                         ${s.enabled === false ? '<span class="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 uppercase">Disabled</span>' : ''}
                     </div>
                     <!-- REPLACED LIGHTNING WITH COPY LINK -->
+                    ${(window.CURRENT_PLAN === 'Enterprise' || window.CURRENT_PLAN === 'Advance') ? `
                     <button onclick="copyToClipboard('${window.location.origin}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg')" class="p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-500 rounded-lg hover:bg-emerald-100 transition-colors shadow-sm" title="Copy Processed Stream URL">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-                    </button>
+                    </button>` : ''}
                 </div>
             </td>
 
             <td class="block md:table-cell md:px-6 py-2 md:py-4">
-                <div class="text-base md:text-sm font-bold text-slate-900 dark:text-white uppercase mb-1 md:mb-0">${s.name}</div>
+                <div class="text-base md:text-sm font-bold text-slate-900 dark:text-white uppercase mb-1 md:mb-0">${s.display_name || s.name}</div>
                 <div class="text-[11px] md:text-[10px] text-slate-500 font-mono flex items-center gap-1 mb-4 md:mb-0 truncate max-w-full">
-                    <span class="text-slate-400">ID:</span> ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name} <span class="text-slate-400">(${s.backend || 'HLS'})</span>
+                    <span class="text-slate-400">ID:</span> ${s.name.replace(/[^a-zA-Z0-9-]/g,'').substring(0,8) || s.name} <span class="text-slate-400">(${s.backend || 'HLS'})</span>
                     ${s.resolution ? `<span class="ml-2 font-bold text-indigo-500 dark:text-indigo-400 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded">${s.resolution}</span>` : ''}
                 </div>
                 
@@ -281,11 +443,11 @@ function renderStreamsTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase tracking-tighter">${s.type === 'ffmpeg' ? 'FFmpeg' : 'Direct'}</span>
             </td>
-            <td class="hidden md:table-cell px-6 py-4 max-w-[200px]">
+            <td class="hidden md:table-cell px-6 py-4 max-w-[200px] col-source-url">
                 <div class="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded inline-block w-full" title="${s.url}">${s.url}</div>
             </td>
             
-            <td class="hidden md:table-cell px-6 py-4 text-center">
+            <td class="hidden md:table-cell px-6 py-4 text-center" style="display: ${(window.CURRENT_PLAN === 'Free' || window.CURRENT_PLAN === 'Basic' || window.CURRENT_PLAN === 'Premium') ? 'none' : ''}">
                 <button onclick="copyToClipboard('${window.location.origin}/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=mse,webrtc,hls,mp4,mjpeg')" class="p-1.5 text-slate-400 hover:text-emerald-500 transition-colors" title="Copy Processed Stream URL">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                 </button>
@@ -293,11 +455,11 @@ function renderStreamsTable() {
 
             <td class="block md:table-cell md:px-6 py-3 mt-4 pt-4 md:mt-0 md:pt-3 border-t md:border-none border-slate-100 dark:border-slate-800">
                 <div class="flex justify-end gap-2 md:gap-1 w-full flex-wrap">
-                    <button onclick="openCameraPreviewModal('${escapeJS(s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-blue-50 dark:bg-slate-800 md:bg-transparent text-blue-600 md:text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="Live Preview">
+                    <button onclick="openCameraPreviewModal('${escapeJS(s.name)}', '${escapeJS(s.display_name || s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-blue-50 dark:bg-slate-800 md:bg-transparent text-blue-600 md:text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="Live Preview">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <span class="md:hidden text-[10px] font-bold uppercase">Preview</span>
                     </button>
-                    <button onclick="openEditModal('${escapeJS(s.name)}', '${escapeJS(s.url)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-indigo-50 dark:bg-slate-800 md:bg-transparent text-indigo-600 md:text-slate-400 hover:text-indigo-600 rounded-lg transition-colors" title="Edit">
+                    <button onclick="openEditModal('${escapeJS(s.name)}', '${escapeJS(s.url)}', '${escapeJS(s.display_name || s.name)}')" class="flex-1 md:flex-none justify-center flex items-center gap-1 md:p-1.5 p-2 bg-indigo-50 dark:bg-slate-800 md:bg-transparent text-indigo-600 md:text-slate-400 hover:text-indigo-600 rounded-lg transition-colors" title="Edit">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                         <span class="md:hidden text-[10px] font-bold uppercase">Edit</span>
                     </button>
@@ -332,7 +494,7 @@ function renderStreamsTable() {
     updateBulkActions();
 }
 
-function createStreamCard(name, url) {
+function createStreamCard(name, url, displayName = name) {
     const card = document.createElement('div');
     card.className = 'card bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-xl border border-slate-100 dark:border-slate-800 group';
     card.dataset.name = name;
@@ -340,8 +502,8 @@ function createStreamCard(name, url) {
 
     card.innerHTML = `
         <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
-            <h3 class="font-bold text-sm truncate text-slate-800 dark:text-white">${name}</h3>
-            <button onclick="takeSnapshot('${name}')" class="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors">
+            <h3 class="font-bold text-sm truncate text-slate-800 dark:text-white" title="${displayName}">${displayName}</h3>
+            <button onclick="takeSnapshot('${name}', '${escapeJS(displayName)}')" class="p-1 rounded text-slate-400 hover:text-brand-600 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" /></svg>
             </button>
         </div>
@@ -483,7 +645,7 @@ function renderUsersTable() {
     let filtered = allUsers.filter(u => {
         if (!query) return true;
         const statusStr = u.is_active ? 'active' : 'disabled';
-        const searchStr = `${u.full_name||''} ${u.username||''} ${u.email||''} ${u.whatsapp||''} ${u.role||''} ${statusStr}`.toLowerCase();
+        const searchStr = `${u.full_name||''} ${u.username||''} ${u.email||''} ${u.whatsapp||''} ${u.role||''} ${u.subscription_plan||''} ${statusStr}`.toLowerCase();
         return searchStr.includes(query);
     });
 
@@ -535,6 +697,16 @@ function renderUsersTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${roleBadgeClass}">${u.role}</span>
             </td>
+
+            <td class="hidden md:table-cell px-6 py-4">
+                <span class="text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                    u.subscription_plan === 'Enterprise' ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800' :
+                    u.subscription_plan === 'Advance' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400' :
+                    u.subscription_plan === 'Premium' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' :
+                    u.subscription_plan === 'Basic' ? 'bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400' :
+                    'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }">${u.subscription_plan || 'Free'}</span>
+            </td>
             
             <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex items-center gap-1.5 whitespace-nowrap">
@@ -549,12 +721,12 @@ function renderUsersTable() {
             <td class="hidden md:table-cell px-6 py-4">
                 <div class="flex items-center gap-2">
                     ${hasToken ? `
-                        <button onclick="copyToClipboard('${window.location.origin}/view/${u.public_token}')" class="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
+                        <button onclick="copyUserTokenLink(${u.id})" class="p-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg hover:bg-emerald-100 transition-all border border-emerald-100/50 dark:border-emerald-800/50" title="Copy Public Link">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
                         </button>
-                        <a href="/view/${u.public_token}" target="_blank" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
+                        <button onclick="openUserHub(${u.id})" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" title="Open Public Link">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                        </a>
+                        </button>
                         <button onclick="generatePublicLink(${u.id})" class="p-1.5 text-slate-300 hover:text-amber-500 transition-colors" title="Regenerate Link">
                              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
                         </button>
@@ -653,7 +825,24 @@ async function generatePublicLink(userId) {
         const response = await fetch(`/api/users/token?id=${userId}`, { method: 'POST' });
         if (response.ok) {
             showToast("Public link generated successfully!", "success");
-            loadUsers(); // Refresh table
+            const data = await response.json();
+            if (parseInt(userId) === parseInt(window.USER_ID)) {
+                window.USER_PUBLIC_TOKEN = data.public_token;
+            }
+            
+            // Update local allUsers cache so UI updates instantly
+            console.log(`Regenerating token for user ${userId}...`);
+            const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(userId));
+            if (userIdx !== -1) {
+                console.log(`Old token: ${allUsers[userIdx].public_token}`);
+                console.log(`New token: ${data.public_token}`);
+                allUsers[userIdx].public_token = data.public_token;
+            } else {
+                console.warn(`User ${userId} not found in allUsers array`);
+            }
+            
+            renderUsersTable(); // Re-render immediately
+            console.log("UI Re-rendered with new token data.");
         } else {
             const err = await response.text();
             showToast(`Failed: ${err}`, "error");
@@ -700,8 +889,35 @@ function openUserModal(user = null) {
     
     selectRole(isEdit ? user.role : 'user');
     
+    // Populate Dedicated Node Dropdown
+    _populateDedicatedNodeDropdown(isEdit ? (user.dedicated_node_id || 0) : 0);
+    
     modal.classList.remove('hidden');
     checkModalPlanRestrictions();
+}
+
+async function _populateDedicatedNodeDropdown(selectedId = 0) {
+    const select = document.getElementById('userDedicatedNode');
+    if (!select) return;
+    
+    // Clear
+    select.innerHTML = '<option value="0">Automatic (Load Balanced)</option>';
+    
+    let nodes = allNodes;
+    if (nodes.length === 0) {
+        try {
+            const resp = await fetch('/api/admin/nodes');
+            nodes = await resp.json() || [];
+        } catch(e) {}
+    }
+    
+    nodes.forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.id;
+        opt.textContent = `${n.name} (${n.location || 'Remote'})`;
+        if (n.id == selectedId) opt.selected = true;
+        select.appendChild(opt);
+    });
 }
 
 function checkModalPlanRestrictions() {
@@ -770,6 +986,7 @@ async function submitUserForm() {
         is_active: document.getElementById('userIsActive').checked,
         subscription_plan: document.getElementById('userSubscription').value,
         enable_support: document.getElementById('userEnableSupport').checked,
+        dedicated_node_id: parseInt(document.getElementById('userDedicatedNode').value) || 0,
         broadcast_notifications: false,
         notification_paid: false,
     };
@@ -803,7 +1020,8 @@ async function submitUserForm() {
 
         if (response.ok) {
             closeUserModal();
-            loadUsers();
+            showToast(isEdit ? "User updated" : "User created", "success");
+            setTimeout(() => location.reload(), 500);
         } else {
             const err = await response.text();
             alert("Error: " + err);
@@ -818,7 +1036,8 @@ async function deleteUser(id) {
     try {
         const response = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
         if (response.ok) {
-            loadUsers();
+            showToast("User deleted", "success");
+            setTimeout(() => location.reload(), 500);
         } else {
             const err = await response.text();
             alert("Error: " + err);
@@ -866,14 +1085,15 @@ async function submitChangePw() {
 }
 
 // --- Snapshot & Shared Functions ---
-async function takeSnapshot(name) {
+async function takeSnapshot(name, displayName = "") {
     try {
         const response = await fetch(`/api/snapshot?stream=${encodeURIComponent(name)}`);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${name}-snapshot.jpg`;
+        const filename = displayName ? `${displayName}-snapshot.jpg` : `${name}-snapshot.jpg`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -964,6 +1184,9 @@ function openAddModal() {
     const testRes = document.getElementById("testConnectionResult");
     if(testRes) testRes.textContent = "";
 
+    const disableAudioCb = document.getElementById("streamDisableAudio");
+    if (disableAudioCb) disableAudioCb.checked = true;
+
     initLocationMap(0, 0); // 0, 0 will be defaulted to Surabaya
 
     document.getElementById("streamModal").classList.remove("hidden");
@@ -972,15 +1195,16 @@ function openAddModal() {
     submitBtn.onclick = async function () { await submitStreamForm(false); };
 }
 
-async function openEditModal(name, url) {
+async function openEditModal(name, url, displayName = "") {
     resetAdvancedOptions();
     document.getElementById("modalTitle").textContent = "Edit Stream";
     document.getElementById("editOriginalName").value = name;
-    document.getElementById("streamName").value = name;
+    document.getElementById("streamName").value = displayName || name;
     document.getElementById("streamUrl").value = url;
     
     const streamInfo = allStreams.find(s => s.name === name);
     document.getElementById("streamEnabled").checked = streamInfo ? streamInfo.enabled !== false : true;
+    document.getElementById("streamDisableAudio").checked = streamInfo ? streamInfo.disable_audio === true : false;
     initLocationMap(streamInfo?.lat || 0, streamInfo?.lng || 0);
 
     const testRes = document.getElementById("testConnectionResult");
@@ -993,22 +1217,131 @@ async function openEditModal(name, url) {
 }
 
 function closeModal() { document.getElementById("streamModal").classList.add("hidden"); }
-function resetAdvancedOptions() { document.getElementById("advancedOptions")?.classList.add("hidden"); }
+function resetAdvancedOptions() { 
+    document.getElementById("advancedOptions")?.classList.add("hidden"); 
+    document.querySelectorAll('.opt-card').forEach(el => {
+        el.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+    });
+}
+
+function updateBackendHelperText() {
+    const backend = document.getElementById("streamBackend").value;
+    const helper = document.getElementById("backendHelperText");
+    if(backend === 'go2rtc') {
+        helper.innerHTML = '<span class="font-semibold text-blue-500">Default:</span> Fastest real-time streaming directly to web browsers.';
+    } else if (backend === 'ffmpeg') {
+        helper.innerHTML = '<span class="font-semibold text-purple-500">FFmpeg:</span> Enables deep transcoding for incompatible cameras.';
+    } else {
+        helper.innerHTML = '<span class="font-semibold text-emerald-500">MediaMTX:</span> Enterprise-grade scalable media server routing.';
+    }
+}
+
+function toggleAdvancedSettings() {
+    const opts = document.getElementById("advancedOptions");
+    if (opts) opts.classList.toggle("hidden");
+}
+
+function toggleFFmpegOptions() {
+    const type = document.getElementById('streamType')?.value;
+    const fOpts = document.getElementById('ffmpegOptions');
+    if(type === 'ffmpeg') {
+        fOpts?.classList.remove('hidden');
+    } else {
+        fOpts?.classList.add('hidden');
+    }
+}
+
+function selectOptimization(type, element) {
+    // Reset borders
+    document.querySelectorAll('.opt-card').forEach(el => {
+        el.classList.remove('ring-2', 'ring-blue-500', 'border-blue-500');
+    });
+    
+    // Highlight
+    if(element) {
+        element.classList.add('ring-2', 'ring-blue-500', 'border-blue-500');
+    }
+
+    const opts = document.getElementById("advancedOptions");
+    if (opts) opts.classList.remove("hidden"); // Auto expand
+
+    const typeSel = document.getElementById('streamType');
+    const vC = document.getElementById('videoCodec');
+    const aC = document.getElementById('audioCodec');
+    const hw = document.getElementById('hwAccel');
+
+    if(!typeSel || !vC) return;
+
+    if(type === 'h264_native') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h264';
+        aC.value = '';
+        hw.value = '';
+    } else if (type === 'h265_native') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h265';
+        aC.value = '';
+        hw.value = '';
+    } else if (type === 'ultra_low') {
+        typeSel.value = 'ffmpeg';
+        vC.value = 'h264';
+        hw.value = 'auto'; // Suggest hw decoding
+    } else {
+        // manual
+        typeSel.value = 'direct';
+    }
+    toggleFFmpegOptions();
+}
 
 async function submitStreamForm(isEdit) {
-    const name = document.getElementById("streamName").value.trim();
+    const displayName = document.getElementById("streamName").value.trim();
     let url = document.getElementById("streamUrl").value.trim();
-    const originalName = document.getElementById("editOriginalName").value.trim();
+    const originalName = document.getElementById("editOriginalName").value.trim(); // This is the UUID
     const lat = parseFloat(document.getElementById("streamLat").value) || 0;
     const lng = parseFloat(document.getElementById("streamLng").value) || 0;
     const enabled = document.getElementById("streamEnabled").checked;
+    const disable_audio = document.getElementById("streamDisableAudio").checked;
+    const backend = document.getElementById("streamBackend")?.value || "go2rtc";
 
-    if (!name || !url) { alert("Fields required"); return; }
+    // Build URL if using Advanced tuning
+    const streamType = document.getElementById("streamType")?.value;
+    if (streamType === "ffmpeg") {
+        const vc = document.getElementById("videoCodec")?.value || "";
+        const ac = document.getElementById("audioCodec")?.value || "";
+        const hw = document.getElementById("hwAccel")?.value || "";
+        
+        let ffmpegArgs = [];
+        if (vc) ffmpegArgs.push("video=" + vc);
+        if (ac) ffmpegArgs.push("audio=" + ac);
+        if (hw) ffmpegArgs.push("hardware=" + hw);
+        
+        if (ffmpegArgs.length > 0 && !url.includes("ffmpeg:")) {
+            // Append the custom args to URL so Go2RTC parses it correctly
+            url = "ffmpeg:" + url + "#" + ffmpegArgs.join("#");
+        }
+    }
+
+    if (!displayName || !url) { alert("Fields required"); return; }
+    
+    // Check Subscription Limit
+    if (!isEdit && window.CURRENT_ROLE !== 'admin') {
+        const plan = window.CURRENT_PLAN || 'Free';
+        const limits = { 'Free': 2, 'Basic': 4, 'Premium': 8, 'Advance': 16, 'Enterprise': 9999 };
+        const max = limits[plan] || 2;
+        
+        if (allStreams && allStreams.length >= max) {
+            showToast(`Limit Reached: Your ${plan} plan allows only ${max} cameras. Upgrade to add more!`, 'error');
+            return;
+        }
+    }
+
+    // Generate UUID if it's a new stream
+    const name = isEdit ? originalName : (crypto.randomUUID ? crypto.randomUUID() : 'stream-' + Date.now() + Math.floor(Math.random()*1000));
 
     const method = isEdit ? 'PUT' : 'POST';
     const body = isEdit 
-        ? JSON.stringify({ name, url, originalName, lat, lng, enabled }) 
-        : JSON.stringify({ name, url, lat, lng, enabled });
+        ? JSON.stringify({ name, display_name: displayName, url, originalName, lat, lng, enabled, disable_audio, backend }) 
+        : JSON.stringify({ name, display_name: displayName, url, lat, lng, enabled, disable_audio, backend });
 
     try {
         const response = await fetch('/api/streams', {
@@ -1022,6 +1355,45 @@ async function submitStreamForm(isEdit) {
         }
         else { alert(await response.text()); }
     } catch (e) { alert(e.message); }
+}
+
+async function scanLocalCameras() {
+    const listDiv = document.getElementById("scanList");
+    const container = document.getElementById("scanResults");
+    if(!listDiv || !container) return;
+
+    listDiv.innerHTML = '<p class="text-xs text-blue-500 animate-pulse">Scanning network (Port 554)... This may take a few seconds.</p>';
+    container.classList.remove("hidden");
+
+    try {
+        const response = await fetch('/api/discover', { method: 'POST' });
+        if (response.ok) {
+            const data = await response.json();
+            if (data && data.length > 0) {
+                listDiv.innerHTML = '';
+                data.forEach(cam => {
+                    const btn = document.createElement("button");
+                    btn.className = "w-full text-left text-xs bg-white dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700 hover:border-blue-500 transition-colors";
+                    btn.type = "button";
+                    btn.innerHTML = `<span class="font-bold text-blue-600 dark:text-blue-400">${cam.address}</span><br><span class="text-[10px] text-gray-500 font-mono">${cam.url}</span>`;
+                    btn.onclick = () => {
+                        document.getElementById("streamUrl").value = cam.url;
+                        if(document.getElementById("streamName") && !document.getElementById("streamName").value) {
+                            document.getElementById("streamName").value = "Cam-" + cam.address.replace(/\./g, "-");
+                        }
+                        container.classList.add("hidden"); // Auto hide after selection
+                    };
+                    listDiv.appendChild(btn);
+                });
+            } else {
+                listDiv.innerHTML = '<p class="text-xs text-orange-500">No cameras found on local network.</p>';
+            }
+        } else {
+            listDiv.innerHTML = '<p class="text-xs text-red-500">Scan failed. Try again.</p>';
+        }
+    } catch (err) {
+        listDiv.innerHTML = `<p class="text-xs text-red-500">Error: ${err.message}</p>`;
+    }
 }
 
 async function testStreamConnection() {
@@ -1089,14 +1461,19 @@ function toggleProbeDetail() {
 function copyToClipboard(text) {
     if (!text) return;
     navigator.clipboard.writeText(text).then(() => {
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = 'Copied!';
-        btn.classList.replace('text-slate-400', 'text-green-400');
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.classList.replace('text-green-400', 'text-slate-400');
-        }, 2000);
+        showToast('Copied to clipboard!', 'success');
+        
+        // Try to update the button text if called from an event
+        try {
+            const btn = (typeof event !== 'undefined' && event && event.target) ? event.target : null;
+            if (btn && btn.textContent) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }
+        } catch (e) {}
     });
 }
 
@@ -1771,7 +2148,7 @@ async function initMaintenanceMap() {
                     const updatePopup = (lat, lng) => {
                         marker.bindPopup(`
                             <div class="p-1">
-                                <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${name}</div>
+                                <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${stream ? (stream.display_name || stream.name) : name}</div>
                                 <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
                                     <span class="text-indigo-600 dark:text-indigo-400 font-bold">LAT:</span> ${lat.toFixed(6)}<br>
                                     <span class="text-indigo-600 dark:text-indigo-400 font-bold">LNG:</span> ${lng.toFixed(6)}
@@ -1790,7 +2167,7 @@ async function initMaintenanceMap() {
                     
                     // Refresh the select dropdown text (remove "No Marker" status)
                     const opt = dashSelect.querySelector(`option[value="${name}"]`);
-                    if (opt) opt.textContent = name;
+                    if (opt) opt.textContent = stream ? (stream.display_name || stream.name) : name;
 
                     setTimeout(() => selectDashboardCamera(name), 100);
                 }
@@ -1831,7 +2208,7 @@ async function initMaintenanceMap() {
 
             const marker = L.marker([s.lat, s.lng], {
                 draggable: !markersLocked,
-                title: s.name,
+                title: s.display_name || s.name,
                 icon: roundIcon
             }).addTo(maintenanceMap);
 
@@ -1839,7 +2216,7 @@ async function initMaintenanceMap() {
                 const statusHtml = !isEnabled ? '<div class="text-[9px] font-black bg-yellow-100 text-yellow-600 dark:bg-yellow-900/40 dark:text-yellow-400 px-1.5 py-0.5 rounded uppercase tracking-tighter mb-1 inline-block">Disabled</div>' : '';
                 marker.bindPopup(`
                     <div class="p-1">
-                        <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.name}</div>
+                        <div class="text-sm font-bold border-b border-slate-100 dark:border-slate-700 pb-1 mb-1">${s.display_name || s.name}</div>
                         ${statusHtml}
                         <div class="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium italic">Coordinate updated via drag</div>
                         <div class="text-[10px] font-mono bg-slate-100 dark:bg-slate-900/50 p-1.5 rounded border border-slate-200 dark:border-slate-700 leading-relaxed shadow-sm">
@@ -1873,7 +2250,7 @@ async function initMaintenanceMap() {
             const opt = document.createElement('option');
             opt.value = s.name;
             const status = !s.lat || !s.lng ? ' (No Marker - Click map to place)' : '';
-            opt.textContent = `${s.name}${status}`;
+            opt.textContent = `${s.display_name || s.name}${status}`;
             dashSelect.appendChild(opt);
         }
     });
@@ -1931,7 +2308,7 @@ function selectCameraOnMap(name) {
     // UI Updates
     document.getElementById('noCameraSelected').classList.add('hidden');
     document.getElementById('previewPlayerArea').classList.remove('hidden');
-    document.getElementById('previewStatus').classList.remove('hidden');
+
     document.getElementById('previewCamName').textContent = name;
 
     reloadDashboardPreview('mse');
@@ -1963,7 +2340,7 @@ function deselectCameraOnMap() {
     // UI Reset
     document.getElementById('noCameraSelected').classList.remove('hidden');
     document.getElementById('previewPlayerArea').classList.add('hidden');
-    document.getElementById('previewStatus').classList.add('hidden');
+
     const player = document.getElementById('dashboardPlayer');
     if (player) player.innerHTML = '';
 }
@@ -2032,12 +2409,18 @@ async function updateCameraLocation(name, lat, lng) {
             // Show subtle feedback
             const toast = document.createElement('div');
             toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-green-600 text-white px-6 py-3 rounded-2xl shadow-2xl text-sm font-bold animate-bounce';
-            toast.textContent = `Location updated for ${name}`;
+            toast.textContent = `Location updated for ${stream.display_name || stream.name}`;
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 3000);
             
             // Refresh table if in cameras view
             if (currentView === 'cameras') renderStreamsTable();
+    if (currentView === 'nvr') {
+        _buildCameraPool();
+        renderNVRGrid();
+        renderNVRCameraList();
+        _updateNVRGridPager();
+    }
         } else {
             alert("Failed to update location");
         }
@@ -2064,7 +2447,8 @@ function openCameraPreviewModal(name) {
     const title = document.getElementById('cameraPreviewTitle');
     if (!modal || !player) return;
 
-    title.textContent = name;
+    const stream = allStreams.find(s => s.name === name);
+    title.textContent = stream ? (stream.display_name || stream.name) : name;
 
     // Loading spinner
     player.innerHTML = `
@@ -2222,7 +2606,7 @@ function renderCommandCenterMarkers() {
                          onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJncmF5Ij48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTQgMTZsNC41ODYtNC41ODZhMiAyIDAgMDEyLjgyODAwTDE2IDE2bS0yLTJsMS41ODYtMS41ODZhMiAyIDAgMDEyLjgyODAwTDIwIDE0bS02LTZoLjAxTTYgMjBoMTJhMiAyIDAgMDAyLTJWNmEyIDIgMCAwMC0yLTJINmEyIDIgMDAwLTIgMTJoMiAwIDAwMiAyekkiLz48L3N2Zz4='">
                     
                     <div class="absolute bottom-0 left-0 right-0 p-2 pt-6 bg-gradient-to-t from-black/90 to-transparent pointer-events-none">
-                        <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${s.name}">${s.name}</h4>
+                        <h4 class="font-bold text-[11px] truncate text-white drop-shadow-md" title="${s.display_name || s.name}">${s.display_name || s.name}</h4>
                     </div>
                     ${isEnabled ? `
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -2275,11 +2659,15 @@ function debounceMapSearch(query) {
 
     window.mapSearchTimer = setTimeout(() => {
         const q = String(query).toLowerCase().trim();
-        const matches = Object.keys(commandCenterMarkers).filter(name => name.toLowerCase().includes(q));
+        const matches = Object.keys(commandCenterMarkers).filter(name => {
+            const title = commandCenterMarkers[name]?.options?.title || name;
+            return name.toLowerCase().includes(q) || title.toLowerCase().includes(q);
+        });
 
         // Filter markers on map
         Object.entries(commandCenterMarkers).forEach(([name, marker]) => {
-            if (name.toLowerCase().includes(q)) {
+            const title = marker.options?.title || name;
+            if (name.toLowerCase().includes(q) || title.toLowerCase().includes(q)) {
                 if (!globalCameraMap.hasLayer(marker)) marker.addTo(globalCameraMap);
             } else {
                 if (globalCameraMap.hasLayer(marker)) marker.remove();
@@ -2288,12 +2676,14 @@ function debounceMapSearch(query) {
 
         // Populate dropdown
         if (resultsList) {
-            resultsList.innerHTML = matches.slice(0, 10).map(name => `
+            resultsList.innerHTML = matches.slice(0, 10).map(name => {
+                const title = commandCenterMarkers[name]?.options?.title || name;
+                return `
                 <button onclick="selectCCSearchResult('${name.replace(/'/g, "\\'")}')" class="w-full flex items-center px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-none text-left">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-brand-500 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${name}</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">${title}</span>
                 </button>
-            `).join('');
+            `}).join('');
 
             if (matches.length > 0) {
                 resultsDropdown.classList.remove('hidden');
@@ -2472,7 +2862,7 @@ function renderCCGridPage(page) {
             card.onclick = () => openCameraPreviewModal(stream.name);
             card.innerHTML = `
                 <div class="p-4 flex justify-between items-center border-b border-slate-100 dark:border-slate-800">
-                    <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.name}">${stream.name}</h3>
+                    <h3 class="font-bold text-[15px] truncate text-slate-800 dark:text-white" title="${stream.display_name || stream.name}">${stream.display_name || stream.name}</h3>
                     <div class="flex items-center gap-1">
                         <button onclick="event.stopPropagation(); goToMapMarker('${stream.name.replace(/'/g, "\\'")}')" class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg transition-colors shrink-0 z-10" title="View location on map">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -2548,7 +2938,8 @@ function openShareModal(manualName) {
     
     if (!modal || !urlInput || !iframeText) return;
     
-    nameSpan.textContent = name;
+    const stream = allStreams.find(s => s.name === name);
+    nameSpan.textContent = stream ? (stream.display_name || stream.name) : name;
     
     // Construct URLs
     const protocol = window.location.protocol;
@@ -2606,9 +2997,9 @@ function renderMapSidebarCameraList(streams) {
                 ${s.enabled === false ? '<div class="absolute inset-0 bg-slate-900/40 flex items-center justify-center"><span class="px-2 py-1 bg-yellow-500/90 text-white text-[10px] font-black uppercase rounded tracking-widest">Disabled</span></div>' : ''}
             </div>
             <div class="p-2.5">
-                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-0.5">${s.name}</div>
+                <div class="text-[11px] font-black text-slate-800 dark:text-white uppercase truncate group-hover/item:text-brand-500 transition-colors mb-0.5">${s.display_name || s.name}</div>
                 <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.replace(/[^a-zA-Z0-9]/g,'').substring(0,8) || s.name}</span>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">ID: ${s.name.substring(0,8)}...</span>
                     <div class="flex gap-1.5 items-center">
                         <svg class="w-3 h-3 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
@@ -2954,4 +3345,987 @@ function exportProcessedStreams() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+async function refreshMyPublicToken() {
+    if (!confirm("Re-generate your Public Hub token? This will break old links.")) return;
+    try {
+        const res = await fetch(`/api/users/token?id=${window.USER_ID}`, { method: 'POST' });
+        if (res.ok) {
+            const data = await res.json();
+            window.USER_PUBLIC_TOKEN = data.public_token;
+            showToast("Public Hub token re-generated", "success");
+            const inputEl = document.getElementById("profile-public-token-input");
+            if (inputEl) inputEl.value = window.location.origin + "/view/" + data.public_token;
+            
+            // Sync with allUsers array so Manage User view is updated instantly
+            const userIdx = allUsers.findIndex(u => parseInt(u.id) === parseInt(window.USER_ID));
+            if (userIdx !== -1) {
+                allUsers[userIdx].public_token = data.public_token;
+            }
+            
+            // Re-render table if we are currently looking at it
+            if (currentView === 'users') {
+                renderUsersTable();
+            }
+        } else {
+            showToast("Failed to re-generate token", "error");
+        }
+    } catch (e) {
+        showToast("Network error", "error");
+    }
+}
+function copyUserTokenLink(userId) {
+    const u = allUsers.find(x => parseInt(x.id) === parseInt(userId));
+    if (u && u.public_token) {
+        copyToClipboard(`${window.location.origin}/view/${u.public_token}`);
+    } else {
+        showToast("No public token available", "error");
+    }
+}
+
+function openUserHub(userId) {
+    const u = allUsers.find(x => parseInt(x.id) === parseInt(userId));
+    if (u && u.public_token) {
+        window.open(`/view/${u.public_token}`, '_blank');
+    } else {
+        showToast("No public token available", "error");
+    }
+}
+
+// --- NVR / Multi-Stream View Logic ---
+let nvrGridSize    = 2;    // columns x rows
+let nvrGridPage    = 0;    // current grid page (0-indexed)
+let nvrSelectedIndex = 0;  // active slot for manual assign
+let nvrIsFullscreen  = false;  // NVR fullscreen state
+
+// All enabled streams for NVR (populated from allStreams)
+let nvrCameraPool  = [];   // full sorted list for the grid paging
+
+function _cleanupNVRStreams() {
+    const area = document.getElementById('nvrGridArea');
+    if (area) area.querySelectorAll('iframe').forEach(f => f.src = '');
+}
+
+function initNVRView() {
+    nvrGridPage = 0;
+    nvrSelectedIndex = 0;
+
+    if (!allStreams || allStreams.length === 0) {
+        // Streams not loaded yet — wait for loadStreams() to finish
+        const list = document.getElementById('nvrCameraList');
+        if (list) list.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs animate-pulse">Loading cameras...</div>';
+        // loadStreams() will call initNVRView-equivalent when done (see patched loadStreams)
+        loadStreams();
+        return;
+    }
+
+    _buildCameraPool();
+    renderNVRGrid();
+    renderNVRCameraList();
+    _updateNVRGridPager();
+}
+
+// Build sorted pool from allStreams
+function _buildCameraPool(query) {
+    const q = (query || '').toLowerCase();
+    nvrCameraPool = [...allStreams]
+        .filter(s => s.enabled !== false)
+        .filter(s => !q || s.name.toLowerCase().includes(q) || (s.display_name||'').toLowerCase().includes(q))
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
+}
+
+// ── Sidebar: full camera list for manual assign ────────────────────────────
+function filterNVRCameras() {
+    renderNVRCameraList();
+}
+
+function renderNVRCameraList() {
+    const list  = document.getElementById('nvrCameraList');
+    if (!list) return;
+
+    const query  = (document.getElementById('nvrSearch')?.value || '').toLowerCase();
+    const isDark = document.documentElement.classList.contains('dark');
+    const pools  = [...allStreams]
+        .filter(s => s.enabled !== false)
+        .filter(s => !query || s.name.toLowerCase().includes(query) || (s.display_name||'').toLowerCase().includes(query))
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0));
+
+    list.innerHTML = '';
+    if (pools.length === 0) {
+        list.innerHTML = '<div class="text-center py-8 text-slate-400 italic text-xs">No cameras</div>';
+        return;
+    }
+    const countEl = document.getElementById('nvrDeviceCount');
+    if (countEl) countEl.textContent = `${pools.length} device${pools.length !== 1 ? 's' : ''}`;
+
+    pools.forEach(s => {
+        const div = document.createElement('div');
+        div.className = `p-2.5 rounded-lg cursor-pointer transition-all border border-transparent flex items-center gap-2 group ${isDark ? 'hover:bg-slate-800 text-slate-300' : 'hover:bg-slate-100 text-slate-700'}`;
+        div.onclick = () => selectCameraForNVR(s);
+        div.innerHTML = `
+            <div class="w-6 h-6 rounded flex-shrink-0 flex items-center justify-center ${s.online ? (isDark?'text-brand-400':'text-brand-600') : (isDark?'text-slate-600':'text-slate-400')}">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-bold truncate">${s.display_name || s.name}</p>
+                <div class="flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0 ${s.online ? 'bg-green-500' : 'bg-slate-400'}"></span>
+                    <p class="text-[9px] text-slate-500 truncate">${s.online ? 'Online' : 'Offline'}</p>
+                </div>
+            </div>`;
+        list.appendChild(div);
+    });
+}
+
+// ── Grid SIZE change ───────────────────────────────────────────────────────
+function setNVRGrid(size) {
+    nvrGridSize  = size;
+    nvrGridPage  = 0;       // reset to first page on grid size change
+    nvrSelectedIndex = 0;
+    _buildCameraPool();
+    renderNVRGrid();
+    _updateNVRGridPager();
+
+    document.querySelectorAll('.grid-btn').forEach(btn => {
+        const active = parseInt(btn.dataset.size) === size;
+        btn.classList.toggle('bg-slate-800', active);
+        btn.classList.toggle('text-brand-400', active);
+        btn.classList.toggle('text-slate-500', !active);
+    });
+}
+
+// ── Grid PAGING ────────────────────────────────────────────────────────────
+function _totalGridPages() {
+    const cap = nvrGridSize * nvrGridSize;
+    return Math.max(1, Math.ceil(nvrCameraPool.length / cap));
+}
+
+function _updateNVRGridPager() {
+    const total   = _totalGridPages();
+    const pageEl  = document.getElementById('nvrGridPageText');
+    const prevBtn = document.getElementById('nvrGridPrevBtn');
+    const nextBtn = document.getElementById('nvrGridNextBtn');
+    const status  = document.getElementById('nvrStatusText');
+    const cap     = nvrGridSize * nvrGridSize;
+
+    if (pageEl)  pageEl.textContent = `${nvrGridPage + 1} / ${total}`;
+    if (prevBtn) prevBtn.disabled   = nvrGridPage === 0;
+    if (nextBtn) nextBtn.disabled   = nvrGridPage >= total - 1;
+
+    // Active slot count on this page
+    const startIdx  = nvrGridPage * cap;
+    const pageSlice = nvrCameraPool.slice(startIdx, startIdx + cap);
+    const active    = pageSlice.length;
+    if (status) status.textContent = `${active} / ${cap} SLOTS  |  PAGE ${nvrGridPage + 1} / ${total}`;
+}
+
+function nvrGridPrev() {
+    if (nvrGridPage > 0) {
+        nvrGridPage--;
+        renderNVRGrid();
+        _updateNVRGridPager();
+    }
+}
+
+function nvrGridNext() {
+    if (nvrGridPage < _totalGridPages() - 1) {
+        nvrGridPage++;
+        renderNVRGrid();
+        _updateNVRGridPager();
+    }
+}
+
+// ── Render grid from camera pool ────────────────────────────────────────────
+function renderNVRGrid() {
+    // Stop existing MJPEG streams before re-rendering
+    _cleanupNVRStreams();
+
+    const area = document.getElementById('nvrGridArea');
+    if (!area) return;
+
+    const cap       = nvrGridSize * nvrGridSize;
+    const startIdx  = nvrGridPage * cap;
+    const pageSlice = nvrCameraPool.slice(startIdx, startIdx + cap);
+
+    area.innerHTML = '';
+    area.style.display = 'grid';
+    area.style.gridTemplateColumns = `repeat(${nvrGridSize}, 1fr)`;
+    area.style.gridTemplateRows    = `repeat(${nvrGridSize}, 1fr)`;
+    area.style.gap    = '2px';
+    area.style.height = '100%';
+
+    for (let i = 0; i < cap; i++) {
+        const s        = pageSlice[i] || null;
+        const isActive = nvrSelectedIndex === i;
+
+        const slot = document.createElement('div');
+        slot.className = [
+            'nvr-cell nvr-slot-box relative group overflow-hidden flex items-center justify-center bg-black cursor-crosshair transition-all duration-150',
+            isActive ? 'ring-2 ring-inset ring-brand-500 z-10' : '',
+        ].join(' ');
+        slot.onclick = () => { 
+            nvrSelectedIndex = i; 
+            // Update selection UI only, no full re-render (avoids stream refresh)
+            area.querySelectorAll('.nvr-slot-box').forEach((box, idx) => {
+                if (idx === i) box.classList.add('ring-2', 'ring-inset', 'ring-brand-500', 'z-10');
+                else box.classList.remove('ring-2', 'ring-inset', 'ring-brand-500', 'z-10');
+            });
+        };
+        slot.ondblclick = () => { 
+            if (s) {
+                // If single camera, maybe go 1x1 or toggle fullscreen for this element?
+                // Requesting fullscreen on the slot itself for a "zoom" effect
+                if (!document.fullscreenElement) {
+                    if (slot.requestFullscreen) slot.requestFullscreen();
+                    else if (slot.webkitRequestFullscreen) slot.webkitRequestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+        };
+
+        if (s) {
+            // ── Clean NVR Player (Injection Mode) ──
+            const container = document.createElement('div');
+            container.className = 'nvr-stream-container relative w-full h-full overflow-hidden bg-black rounded-sm border border-slate-800/30';
+            
+            const iframe = document.createElement('iframe');
+            iframe.className = 'absolute inset-0 w-full h-full border-0';
+            iframe.src = `/rtc/stream.html?src=${encodeURIComponent(s.name)}&mode=webrtc,mse`;
+            iframe.allow = "autoplay; fullscreen";
+            iframe.style.pointerEvents = 'none'; 
+            
+            // Interval injection logic to force-hide UI as soon as it appears
+            iframe.onload = () => {
+                const inject = () => {
+                    try {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (!doc) return;
+                        
+                        // Hide internal components
+                        const status = doc.querySelector('.status');
+                        const controls = doc.querySelector('.controls');
+                        if (status) status.style.display = 'none';
+                        if (controls) controls.style.display = 'none';
+                        
+                        // Ensure video is zoomed (Fill)
+                        const video = doc.querySelector('video');
+                        if (video) {
+                            video.style.objectFit = 'cover';
+                            video.style.width = '100% !important';
+                            video.style.height = '100% !important';
+                        }
+                    } catch(e) {}
+                };
+                
+                // Run immediately and every 500ms for 3 seconds to catch dynamic UI updates
+                inject();
+                const timer = setInterval(inject, 500);
+                setTimeout(() => clearInterval(timer), 3000);
+            };
+            
+            container.appendChild(iframe);
+            slot.appendChild(container);
+
+            // Offline badge (hidden initially, shown on img error)
+            const offBadge = document.createElement('div');
+            offBadge.style.display = 'none';
+            offBadge.className = 'absolute inset-0 flex flex-col items-center justify-center bg-black/80 pointer-events-none';
+            offBadge.innerHTML = `
+                <svg class="w-6 h-6 text-slate-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18.364 5.636a9 9 0 010 12.728M15.536 8.464a5 5 0 010 7.072M6.343 17.657a9 9 0 010-12.728M9.172 15.536a5 5 0 010-7.072"/>
+                </svg>
+                <span class="text-[9px] text-slate-500 font-bold uppercase">Offline</span>`;
+            slot.appendChild(offBadge);
+
+            // Camera name overlay (on hover)
+            const nameOverlay = document.createElement('div');
+            nameOverlay.className = 'absolute bottom-0 left-0 right-0 z-10 px-2 py-1 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none';
+            nameOverlay.innerHTML = `<p class="text-[9px] font-black text-white uppercase tracking-tighter truncate">${s.display_name || s.name}</p>`;
+            slot.appendChild(nameOverlay);
+
+            // Remove button (on hover)
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'absolute top-1 right-1 z-20 p-1 bg-red-500/90 hover:bg-red-500 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity';
+            removeBtn.innerHTML = '<svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>';
+            removeBtn.onclick = (e) => { e.stopPropagation(); removeNVRSlot(i, e); };
+            slot.appendChild(removeBtn);
+
+            // Active ring
+            if (isActive) {
+                const ring = document.createElement('div');
+                ring.className = 'absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none z-20';
+                slot.appendChild(ring);
+            }
+        } else {
+            // Empty slot
+            slot.innerHTML = `
+                <div class="flex flex-col items-center gap-1 pointer-events-none select-none text-slate-700 group-hover:text-slate-500 transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    <span class="text-[8px] font-black uppercase tracking-widest">Empty</span>
+                </div>
+                ${isActive ? '<div class="absolute inset-0 ring-2 ring-inset ring-brand-500 pointer-events-none"></div>' : ''}
+            `;
+        }
+        area.appendChild(slot);
+    }
+}
+
+function selectCameraForNVR(camera) {
+    const cap       = nvrGridSize * nvrGridSize;
+    const globalIdx = nvrGridPage * cap + nvrSelectedIndex;
+
+    // Replace or insert
+    if (globalIdx < nvrCameraPool.length) {
+        nvrCameraPool[globalIdx] = camera;
+    } else {
+        // fill gaps with nulls then insert
+        while (nvrCameraPool.length < globalIdx) nvrCameraPool.push(null);
+        nvrCameraPool[globalIdx] = camera;
+    }
+
+    // Move to next slot
+    nvrSelectedIndex = (nvrSelectedIndex + 1) % cap;
+    renderNVRGrid();
+    _updateNVRGridPager();
+}
+
+function clearNVRGrid() {
+    nvrCameraPool    = [];
+    nvrGridPage      = 0;
+    nvrSelectedIndex = 0;
+    renderNVRGrid();
+    _updateNVRGridPager();
+}
+
+// ── Fullscreen ─────────────────────────────────────────────────────────────
+function toggleNVRFullscreen() {
+    const view    = document.getElementById('view-nvr');
+    const sidebar = view ? view.querySelector('.nvr-sidebar') : null;
+    if (!view) return;
+
+    if (!nvrIsFullscreen) {
+        // Enter fullscreen
+        const req = view.requestFullscreen || view.webkitRequestFullscreen || view.mozRequestFullscreen;
+        if (req) req.call(view);
+        view.classList.add('nvr-fullscreen');
+        nvrIsFullscreen = true;
+        _updateFullscreenBtn(true);
+    } else {
+        _exitNVRFullscreen();
+    }
+}
+
+function _exitNVRFullscreen() {
+    const view    = document.getElementById('view-nvr');
+    const sidebar = view ? view.querySelector('.nvr-sidebar') : null;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch(e) {}
+    }
+    if (view)    view.classList.remove('nvr-fullscreen');
+    if (sidebar) sidebar.classList.remove('nvr-sidebar-peek');
+    nvrIsFullscreen = false;
+    _updateFullscreenBtn(false);
+}
+
+function _updateFullscreenBtn(isFs) {
+    const btn   = document.getElementById('nvrFullscreenBtn');
+    const iconIn  = document.getElementById('nvrFsIconIn');
+    const iconOut = document.getElementById('nvrFsIconOut');
+    if (!btn) return;
+    if (isFs) {
+        if (iconIn)  iconIn.classList.add('hidden');
+        if (iconOut) iconOut.classList.remove('hidden');
+        btn.title = 'Exit Fullscreen';
+    } else {
+        if (iconIn)  iconIn.classList.remove('hidden');
+        if (iconOut) iconOut.classList.add('hidden');
+        btn.title = 'Fullscreen';
+    }
+}
+
+// Reveal sidebar on hover (always, even outside fullscreen)
+function nvrSidebarPeek(show) {
+    const sidebar = document.querySelector('#view-nvr .nvr-sidebar');
+    if (!sidebar) return;
+    if (show) {
+        sidebar.classList.add('nvr-sidebar-peek');
+    } else {
+        sidebar.classList.remove('nvr-sidebar-peek');
+    }
+}
+
+// Listen for native fullscreen exit (ESC key / browser UI)
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && nvrIsFullscreen) {
+        _exitNVRFullscreen();
+    }
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    if (!document.webkitFullscreenElement && nvrIsFullscreen) {
+        _exitNVRFullscreen();
+    }
+});
+
+async function autoPlayAllNVR() {
+    const btn = document.getElementById('nvrAutoPlayBtn');
+    if (!btn) return;
+    
+    // Visual feedback: spin and change color
+    btn.classList.add('text-brand-600', 'animate-pulse');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+
+    _buildCameraPool();
+    nvrGridPage = 0;
+    nvrSelectedIndex = 0;
+
+    renderNVRGrid();
+    _updateNVRGridPager();
+
+    setTimeout(() => {
+        btn.classList.remove('text-brand-600', 'animate-pulse');
+        btn.innerHTML = originalHtml;
+        showToast(`Auto-populated ${nvrCameraPool.length} online cameras`);
+    }, 600);
+}
+
+// --- Node Management ---
+let allNodes = [];
+
+async function loadNodes() {
+    const tableBody = document.getElementById('nodeTableBody');
+    if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400 italic">Loading nodes...</td></tr>';
+    
+    try {
+        const response = await fetch('/api/admin/nodes');
+        allNodes = await response.json() || [];
+        renderNodesTable();
+    } catch (e) {
+        console.error("Failed to load nodes", e);
+        if (tableBody) tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-red-400">Failed to load nodes</td></tr>';
+    }
+}
+
+function renderNodesTable() {
+    const tableBody = document.getElementById('nodeTableBody');
+    if (!tableBody) return;
+    tableBody.innerHTML = '';
+
+    if (allNodes.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="7" class="px-6 py-10 text-center"><div class="flex flex-col items-center gap-2"><svg class="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" /></svg><p class="text-slate-400 text-sm">No node servers registered yet.</p></div></td></tr>';
+        return;
+    }
+
+    allNodes.forEach((n, i) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800';
+        
+        const statusHtml = n.is_active 
+            ? '<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 text-[10px] font-bold"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> ONLINE</span>'
+            : '<span class="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 text-[10px] font-bold">OFFLINE</span>';
+
+        tr.innerHTML = `
+            <td class="px-6 py-5 text-xs text-slate-400 font-bold">#${i + 1}</td>
+            <td class="px-6 py-5">
+                <div class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">${n.name}</div>
+                <div class="text-[10px] text-slate-400 font-medium">${n.location || 'Unknown Location'}</div>
+            </td>
+            <td class="px-6 py-5">
+                <code class="text-[11px] px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-mono text-slate-500 dark:text-slate-400">${n.url}</code>
+            </td>
+            <td class="px-6 py-5 text-center">
+                <span class="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-md">${n.rtsp_port}</span>
+            </td>
+            <td class="px-6 py-5">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500">
+                    <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                    ${n.location || '—'}
+                </div>
+            </td>
+            <td class="px-6 py-5">
+                <div class="flex justify-center">${statusHtml}</div>
+            </td>
+            <td class="px-6 py-5 text-right">
+                <div class="flex justify-end gap-1">
+                    <button onclick='openNodeModal(${JSON.stringify(n)})' class="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all" title="Edit Node">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button onclick="deleteNode(${n.id})" class="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all" title="Delete Node">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                </div>
+            </td>
+        `;
+        tableBody.appendChild(tr);
+    });
+}
+
+function openNodeModal(node = null) {
+    const modal = document.getElementById('nodeModal');
+    const title = document.getElementById('nodeModalTitle');
+    if (!modal) return;
+    
+    // Reset form
+    document.getElementById('nodeId').value = node ? node.id : '';
+    document.getElementById('nodeName').value = node ? node.name : '';
+    document.getElementById('nodeUrl').value = node ? node.url : '';
+    document.getElementById('nodeRtspPort').value = node ? node.rtsp_port : '8554';
+    document.getElementById('nodeLocation').value = node ? (node.location || '') : '';
+    document.getElementById('nodeSecret').value = node ? (node.secret || '') : '';
+    
+    title.textContent = node ? 'Edit Node Server' : 'Add Node Server';
+    modal.classList.remove('hidden');
+}
+
+function closeNodeModal() {
+    const modal = document.getElementById('nodeModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function submitNodeForm() {
+    const idValue = document.getElementById('nodeId').value;
+    const data = {
+        id: idValue ? parseInt(idValue) : 0,
+        name: document.getElementById('nodeName').value,
+        url: document.getElementById('nodeUrl').value,
+        rtsp_port: parseInt(document.getElementById('nodeRtspPort').value),
+        location: document.getElementById('nodeLocation').value,
+        secret: document.getElementById('nodeSecret').value,
+        is_active: true
+    };
+
+    if (!data.name || !data.url) {
+        showToast("Server Name and API URL are required", "error");
+        return;
+    }
+
+    // Basic URL validation
+    if (!data.url.startsWith('http')) {
+        showToast("Endpoint URL must include protocol (e.g. http://)", "warning");
+    }
+
+    const method = idValue ? 'PUT' : 'POST';
+    try {
+        const response = await fetch('/api/admin/nodes', {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            showToast(idValue ? "Node server updated" : "Node server registered successfully", "success");
+            closeNodeModal();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            const err = await response.text();
+            showToast("Failed to save node: " + err, "error");
+        }
+    } catch (e) {
+        showToast("Network error connecting to master server", "error");
+    }
+}
+
+async function deleteNode(id) {
+    if (!confirm("Are you sure you want to delete this node? Streams assigned to this node will stop working.")) return;
+    try {
+        const response = await fetch(`/api/admin/nodes?id=${id}`, { method: 'DELETE' });
+        if (response.ok) {
+            showToast("Node server removed", "success");
+            loadNodes();
+        } else {
+            showToast("Failed to delete node", "error");
+        }
+    } catch (e) {
+        showToast("Network error", "error");
+    }
+}
+
+// --- License Manager ---
+function loadLicenses() {
+    fetch('/api/admin/licenses')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('licenseTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (!Array.isArray(data)) return console.error('Licenses data is not an array:', data);
+            
+            data.forEach(lic => {
+                const statusClass = lic.is_used ? 'bg-slate-100 dark:bg-slate-800 text-slate-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400';
+                const statusText = lic.is_used ? 'USED' : 'ACTIVE';
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors';
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-mono font-bold text-brand-600 dark:text-brand-400">
+                        <div class="flex items-center gap-2">
+                             ${lic.key}
+                             <button onclick="copyToClipboard('${lic.key}')" class="p-1 hover:text-brand-500 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg></button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-xs"><span class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">${lic.plan}</span></td>
+                    <td class="px-6 py-4 text-sm">${lic.duration_days} Days</td>
+                    <td class="px-6 py-4 text-[10px] font-black"><span class="px-2.5 py-1 rounded-full ${statusClass}">${statusText}</span></td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${lic.used_by_user_id || '-'}</td>
+                    <td class="px-6 py-4 text-[10px] text-slate-400 font-mono">${new Date(lic.created_at).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        });
+}
+
+function openLicenseModal() {
+    document.getElementById('licenseModal').classList.remove('hidden');
+}
+
+function closeLicenseModal() {
+    document.getElementById('licenseModal').classList.add('hidden');
+}
+
+function submitLicenseGen() {
+    const plan = document.getElementById('licPlan').value;
+    const days = parseInt(document.getElementById('licDays').value);
+
+    fetch('/api/admin/licenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, duration_days: days })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.key) {
+            showToast('License key generated: ' + data.key, 'success');
+            closeLicenseModal();
+            loadLicenses();
+        } else {
+            showToast(data.error || 'Failed to generate license', 'error');
+        }
+    });
+}
+
+function openRedeemModal() {
+    document.getElementById('redeemModal').classList.remove('hidden');
+}
+
+function closeRedeemModal() {
+    document.getElementById('redeemModal').classList.add('hidden');
+}
+
+function submitLicenseRedeem() {
+    const key = document.getElementById('redeemKey').value.trim();
+    if (!key) return showToast('Please enter a license key', 'warning');
+
+    fetch('/api/user/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key })
+    })
+    .then(async res => {
+        const data = await res.json();
+        if (res.ok) {
+            showToast(`Success! Your plan is now ${data.plan}. Reloading...`, 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.error || 'Failed to redeem license', 'error');
+        }
+    });
+}
+
+// ====================================================================
+// PAYMENT GATEWAY — iPaymu
+// ====================================================================
+
+// Load plans for the user's "Buy Plan" section
+async function loadPricingPlans() {
+    const container = document.getElementById('pricingPlansContainer');
+    if (!container) return;
+    container.innerHTML = `<div class="flex items-center justify-center py-8"><div class="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div></div>`;
+
+    try {
+        const res = await fetch('/api/plans');
+        const plans = await res.json();
+        if (!plans || plans.length === 0) {
+            container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">No plans available.</p>';
+            return;
+        }
+
+        const current = window.CURRENT_PLAN || 'Free';
+        const planColors = {
+            'Basic': 'from-blue-500 to-cyan-500',
+            'Premium': 'from-violet-500 to-purple-600',
+            'Advance': 'from-amber-500 to-orange-600',
+        };
+
+        container.innerHTML = plans.filter(p => p.is_active).map(p => {
+            const isCurrent = p.name === current;
+            const gradient = planColors[p.name] || 'from-slate-500 to-slate-600';
+            return `
+            <div class="relative rounded-2xl border ${isCurrent ? 'border-brand-500 shadow-lg shadow-brand-500/20' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-slate-900 overflow-hidden">
+                ${isCurrent ? '<div class="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r '+gradient+'"></div>' : ''}
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">${p.label}</h3>
+                            <p class="text-xs text-slate-400 font-medium">${p.max_cameras} Cameras · ${p.duration_days} Days</p>
+                        </div>
+                        ${isCurrent ? '<span class="px-2 py-1 bg-brand-100 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 rounded-lg text-[10px] font-black uppercase">Active</span>' : ''}
+                    </div>
+                    <div class="mb-5">
+                        <span class="text-3xl font-black text-slate-900 dark:text-white">Rp ${p.price.toLocaleString('id-ID')}</span>
+                        <span class="text-slate-400 text-sm"> / bulan</span>
+                    </div>
+                    <button onclick="purchasePlan('${p.name}')" ${isCurrent ? 'disabled' : ''}
+                        class="w-full py-2.5 rounded-xl text-sm font-bold transition-all ${isCurrent
+                            ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r '+gradient+' text-white hover:opacity-90 active:scale-95 shadow-lg'}">
+                        ${isCurrent ? 'Current Plan' : 'Buy Now'}
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Failed to load pricing plans.</p>';
+    }
+}
+
+// Initiate payment for a plan
+async function purchasePlan(planName) {
+    if (!confirm(`Lanjutkan pembelian paket ${planName}?`)) return;
+
+    try {
+        showToast('Memproses pembayaran...', 'info');
+        const res = await fetch('/api/payment/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan: planName })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.payment_url) {
+            showToast('Mengarahkan ke halaman pembayaran...', 'success');
+            setTimeout(() => window.open(data.payment_url, '_blank'), 800);
+        } else {
+            showToast(data.error || 'Gagal membuat pembayaran. Pastikan IPAYMU_VA dan IPAYMU_API_KEY sudah dikonfigurasi.', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+}
+
+// Admin: Load pricing settings
+async function loadAdminPricingSettings() {
+    const container = document.getElementById('adminPricingContainer');
+    if (!container) return;
+    container.innerHTML = '<p class="text-slate-400 text-sm">Loading...</p>';
+
+    try {
+        const res = await fetch('/api/admin/plans');
+        const plans = await res.json();
+
+        container.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 dark:border-slate-700">
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Plan</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Label</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Harga (Rp)</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Durasi (Hari)</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Max Kamera</th>
+                        <th class="text-left py-3 px-4 font-bold text-slate-500 text-xs uppercase">Status</th>
+                        <th class="py-3 px-4"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${plans.map(p => `
+                    <tr class="border-b border-slate-100 dark:border-slate-800" id="plan-row-${p.name}">
+                        <td class="py-3 px-4 font-black text-slate-800 dark:text-white">${p.name}</td>
+                        <td class="py-3 px-4"><input id="plan-label-${p.name}" value="${p.label}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-40"></td>
+                        <td class="py-3 px-4"><input id="plan-price-${p.name}" type="number" value="${p.price}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-32"></td>
+                        <td class="py-3 px-4"><input id="plan-days-${p.name}" type="number" value="${p.duration_days}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-24"></td>
+                        <td class="py-3 px-4"><input id="plan-cams-${p.name}" type="number" value="${p.max_cameras}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm w-24"></td>
+                        <td class="py-3 px-4">
+                            <select id="plan-active-${p.name}" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1.5 text-sm">
+                                <option value="true" ${p.is_active ? 'selected' : ''}>Active</option>
+                                <option value="false" ${!p.is_active ? 'selected' : ''}>Hidden</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="saveAdminPlan('${p.name}')" class="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-lg transition-colors">Simpan</button>
+                        </td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+            <p class="text-xs font-bold text-amber-700 dark:text-amber-300">⚙️ Environment Variables untuk iPaymu</p>
+            <div class="mt-2 font-mono text-xs text-amber-600 dark:text-amber-400 space-y-1">
+                <p>IPAYMU_VA=<span class="text-slate-500">nomor_va_anda</span></p>
+                <p>IPAYMU_API_KEY=<span class="text-slate-500">api_key_anda</span></p>
+                <p>IPAYMU_PRODUCTION=<span class="text-slate-500">false (sandbox) atau true (production)</span></p>
+                <p>APP_URL=<span class="text-slate-500">https://domain-anda.com</span></p>
+            </div>
+        </div>`;
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm">Gagal memuat pengaturan pricing.</p>';
+    }
+}
+
+async function saveAdminPlan(planName) {
+    const label = document.getElementById(`plan-label-${planName}`)?.value;
+    const price = parseInt(document.getElementById(`plan-price-${planName}`)?.value);
+    const days = parseInt(document.getElementById(`plan-days-${planName}`)?.value);
+    const cams = parseInt(document.getElementById(`plan-cams-${planName}`)?.value);
+    const active = document.getElementById(`plan-active-${planName}`)?.value === 'true';
+
+    try {
+        const res = await fetch('/api/admin/plans', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: planName, label, price, duration_days: days, max_cameras: cams, is_active: active })
+        });
+        if (res.ok) {
+            showToast(`Plan ${planName} berhasil disimpan!`, 'success');
+        } else {
+            showToast('Gagal menyimpan plan.', 'error');
+        }
+    } catch (e) {
+        showToast('Error: ' + e.message, 'error');
+    }
+}
+
+async function loadOrderHistory() {
+    const container = document.getElementById('orderHistoryContainer');
+    if (!container) return;
+    container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">Loading...</p>';
+    try {
+        const res = await fetch('/api/admin/orders');
+        const orders = await res.json();
+        if (!orders || orders.length === 0) {
+            container.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">Belum ada order.</p>';
+            return;
+        }
+        const statusBadge = (s) => ({
+            'paid': '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-[10px] font-black">PAID</span>',
+            'pending': '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded text-[10px] font-black">PENDING</span>',
+        }[s] || `<span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-black">${s.toUpperCase()}</span>`);
+
+        container.innerHTML = `<div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead><tr class="border-b border-slate-100 dark:border-slate-800">
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Ref ID</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">User ID</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Plan</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Amount</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Status</th>
+                    <th class="text-left py-2 px-3 text-xs font-bold text-slate-400">Tanggal</th>
+                </tr></thead>
+                <tbody>${orders.map(o => `
+                <tr class="border-b border-slate-50 dark:border-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/30">
+                    <td class="py-2 px-3 font-mono text-xs text-slate-500">${o.reference_id}</td>
+                    <td class="py-2 px-3 text-slate-600 dark:text-slate-300">${o.user_id}</td>
+                    <td class="py-2 px-3 font-bold text-slate-700 dark:text-slate-200">${o.plan_name}</td>
+                    <td class="py-2 px-3 font-bold">Rp ${o.amount.toLocaleString('id-ID')}</td>
+                    <td class="py-2 px-3">${statusBadge(o.status)}</td>
+                    <td class="py-2 px-3 text-xs text-slate-400">${new Date(o.created_at).toLocaleDateString('id-ID')}</td>
+                </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>`;
+    } catch (e) {
+        container.innerHTML = '<p class="text-red-500 text-sm text-center py-4">Gagal memuat order.</p>';
+    }
+}
+
+async function loadProfileData() {
+    try {
+        const res = await fetch('/api/users/me');
+        if (res.ok) {
+            const data = await res.json();
+            const waInput = document.getElementById('profile-whatsapp');
+            if (waInput && data.whatsapp) waInput.value = data.whatsapp;
+
+            const publicUrlInput = document.getElementById('profile-public-token-input');
+            if (publicUrlInput && data.public_token) {
+                publicUrlInput.value = window.location.origin + "/view/" + data.public_token;
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load profile data', e);
+    }
+}
+
+async function updateProfileField(event, field, inputId) {
+    event.preventDefault();
+    const input = document.getElementById(inputId);
+    const val = input.value.trim();
+    if (!val) return;
+
+    const payload = {};
+    payload[field] = val;
+
+    try {
+        const res = await fetch('/api/users/me', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        let data = {};
+        try { data = await res.json(); } catch(e){}
+
+        if (res.ok) {
+            showToast('Berhasil diperbarui!', 'success');
+            if (field === 'password') input.value = ''; 
+        } else {
+            showToast(data.error || data.message || 'Gagal memperbarui', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+}
+
+async function claimTrialAdvance() {
+    const btn = document.getElementById('claimTrialBtn');
+    const dashboardBtn = document.getElementById('claimTrialDashboardBtn');
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Processing...';
+    }
+    if (dashboardBtn) {
+        dashboardBtn.disabled = true;
+        dashboardBtn.innerHTML = 'PROCESSING...';
+    }
+
+    try {
+        const res = await fetch('/api/user/claim-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            showToast('Trial Advance Aktif!', 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showToast(data.error || 'Gagal klaim trial', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = 'Claim Sekarang';
+            }
+            if (dashboardBtn) {
+                dashboardBtn.disabled = false;
+                dashboardBtn.innerHTML = 'KLAIM SEKARANG';
+            }
+        }
+    } catch (e) {
+        showToast('Koneksi bermasalah', 'error');
+        if (btn) btn.disabled = false;
+        if (dashboardBtn) dashboardBtn.disabled = false;
+    }
 }
