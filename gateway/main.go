@@ -594,7 +594,9 @@ func deleteCamera(inst *TunnelInstance) {
 				inst.Stop()
 
 				// Auto Deregister from backend API
-				deregisterFromBackend(inst.Camera.Name)
+				camID := inst.Camera.ServerID
+				if camID == "" { camID = inst.Camera.Name }
+				deregisterFromBackend(inst.Camera.Name, camID)
 
 				// Remove from config slice
 				for i, c := range config.Cameras {
