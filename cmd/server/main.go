@@ -133,10 +133,18 @@ func startsWithString(s, prefix string) bool {
 
 func proxyToGo2RTC(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Path
-	// Allow /rtc/api/ and /api/ stream endpoints
+	// Allow specific stream endpoints
 	allowed := false
-	if strings.HasPrefix(path, "/rtc/api/") || strings.HasPrefix(path, "/api/stream.") || strings.HasPrefix(path, "/rtc/stream.html") {
+	if path == "/rtc/api/ws" || path == "/rtc/api/webrtc" || strings.HasPrefix(path, "/api/stream.") || strings.HasPrefix(path, "/rtc/stream.html") {
 		allowed = true
+	}
+	if strings.HasPrefix(path, "/rtc/api/stream.") || strings.HasPrefix(path, "/rtc/api/frame.") {
+		allowed = true
+	}
+
+	// Explicitly block sensitive endpoints
+	if path == "/rtc/api/streams" || path == "/rtc/api/config" || path == "/rtc/api/models" {
+		allowed = false
 	}
 	
 	// Block dashboard
@@ -391,9 +399,18 @@ func secureRTCProxyHandler(w http.ResponseWriter, r *http.Request) {
 
 	allowed := false
 
-	// Allow all API sub-paths needed for streaming
-	if strings.HasPrefix(path, "/rtc/api/") {
+	// Allow specific API sub-paths needed for streaming
+	if path == "/rtc/api/ws" || path == "/rtc/api/webrtc" {
 		allowed = true
+	}
+	if strings.HasPrefix(path, "/rtc/api/stream.") || strings.HasPrefix(path, "/rtc/api/frame.") {
+		allowed = true
+	}
+
+	// Explicitly block sensitive endpoints
+	if path == "/rtc/api/streams" || path == "/rtc/api/config" || path == "/rtc/api/models" {
+		http.Error(w, "Access Denied: API endpoint restricted.", http.StatusForbidden)
+		return
 	}
 
 	// Allow stream.html player page
