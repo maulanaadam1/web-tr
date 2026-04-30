@@ -1510,8 +1510,8 @@ func registerToBackend(inst *TunnelInstance) {
 		}
 	}
 
-	// Give the tunnel a brief moment to stabilize
-	time.Sleep(1 * time.Second)
+	// Give the tunnel more time to stabilize (especially for ZeroTier/VPN)
+	time.Sleep(2 * time.Second)
 
 	// Ensure we have a backend configured
 	apiURL := getServerAPIURL()
@@ -1559,10 +1559,18 @@ func registerToBackend(inst *TunnelInstance) {
 		proxyHostPort := fmt.Sprintf("%s:%d", host, inst.proxyPort)
 		rtspSource = replaceHostPortInRTSP(originalRTSP, proxyHostPort)
 
+		// Optimization: Force only video stream for better browser compatibility
+		if !strings.Contains(rtspSource, "#") {
+			rtspSource += "#video"
+		}
+
 		addLog(fmt.Sprintf("[%s] Camera is LOCAL — proxying via VPN IP: %s", camName, rtspSource))
 	} else {
 		// Camera has a public IP — go2rtc can reach it directly!
 		rtspSource = originalRTSP
+		if !strings.Contains(rtspSource, "#") {
+			rtspSource += "#video"
+		}
 		addLog(fmt.Sprintf("[%s] Camera is PUBLIC — registering direct RTSP URL", camName))
 	}
 

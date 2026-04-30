@@ -192,17 +192,7 @@ func syncStreamToGo2RTC(nodeAPIUrl, name, streamUrl string, isDelete bool) error
 		method = http.MethodDelete
 	}
 
-	// Clean up URL: remove output-specific params like ?mp4 or ?webrtc if they exist in source
-	cleanUrl := streamUrl
-	if strings.Contains(cleanUrl, "?") && !strings.Contains(cleanUrl, "#") {
-		// Only strip if it's a known go2rtc output param
-		if strings.HasSuffix(cleanUrl, "?mp4") || strings.HasSuffix(cleanUrl, "?webrtc") || strings.HasSuffix(cleanUrl, "?mse") {
-			cleanUrl = strings.Split(cleanUrl, "?")[0]
-			log.Printf("[Sync] Stripping output parameter from source URL: %s -> %s", streamUrl, cleanUrl)
-		}
-	}
-
-	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(cleanUrl))
+	reqUrl := fmt.Sprintf("%s?name=%s&src=%s", nodeAPIUrl, url.QueryEscape(name), url.QueryEscape(streamUrl))
 	if isDelete {
 		reqUrl = fmt.Sprintf("%s?src=%s", nodeAPIUrl, url.QueryEscape(name))
 	}
@@ -1418,6 +1408,7 @@ func main() {
 			}
 			
 			streamMgr.SyncFromDB()
+			time.Sleep(500 * time.Millisecond)
 
 			// Route stream creation to the correct node
 			if req.Backend == "go2rtc" || req.Backend == "ffmpeg" {
@@ -2448,10 +2439,7 @@ func main() {
 
 		targetNodeID := 1
 		nodeAPI := "http://localhost:1984/api/streams"
-		nodeIP := os.Getenv("PUBLIC_IP") 
-		if nodeIP == "" {
-			nodeIP = "43.157.204.11" // Force VPS IP as default fallback for Gateway
-		}
+		nodeIP := "localhost"
 		rtspPort := 8554
 
 		if targetNode != nil {
@@ -2461,10 +2449,7 @@ func main() {
 			
 			// Extract IP from Node URL for the gateway response
 			parsedUrl, _ := url.Parse(nodeAPI)
-			host := parsedUrl.Hostname()
-			if host != "" && host != "localhost" && host != "127.0.0.1" {
-				nodeIP = host
-			}
+			nodeIP = parsedUrl.Hostname()
 			if nodeIP == "" { nodeIP = targetNode.URL } // Fallback
 		}
 
