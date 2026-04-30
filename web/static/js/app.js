@@ -1020,8 +1020,7 @@ async function submitUserForm() {
 
         if (response.ok) {
             closeUserModal();
-            showToast(isEdit ? "User updated" : "User created", "success");
-            setTimeout(() => location.reload(), 500);
+            loadUsers();
         } else {
             const err = await response.text();
             alert("Error: " + err);
@@ -1036,8 +1035,7 @@ async function deleteUser(id) {
     try {
         const response = await fetch(`/api/users?id=${id}`, { method: 'DELETE' });
         if (response.ok) {
-            showToast("User deleted", "success");
-            setTimeout(() => location.reload(), 500);
+            loadUsers();
         } else {
             const err = await response.text();
             alert("Error: " + err);
@@ -3918,7 +3916,7 @@ async function submitNodeForm() {
         if (response.ok) {
             showToast(idValue ? "Node server updated" : "Node server registered successfully", "success");
             closeNodeModal();
-            setTimeout(() => location.reload(), 500);
+            loadNodes();
         } else {
             const err = await response.text();
             showToast("Failed to save node: " + err, "error");
@@ -4028,7 +4026,7 @@ function submitLicenseRedeem() {
         const data = await res.json();
         if (res.ok) {
             showToast(`Success! Your plan is now ${data.plan}. Reloading...`, 'success');
-            setTimeout(() => location.reload(), 500);
+            setTimeout(() => location.reload(), 2000);
         } else {
             showToast(data.error || 'Failed to redeem license', 'error');
         }
@@ -4310,8 +4308,8 @@ async function claimTrialAdvance() {
         const data = await res.json();
         
         if (res.ok) {
-            showToast('Trial Advance Aktif!', 'success');
-            setTimeout(() => location.reload(), 500);
+            showToast('Trial Advance 2 Hari berhasil diaktifkan!', 'success');
+            setTimeout(() => location.reload(), 1500);
         } else {
             showToast(data.error || 'Gagal klaim trial', 'error');
             if (btn) {
