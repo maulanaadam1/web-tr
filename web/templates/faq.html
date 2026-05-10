@@ -151,23 +151,63 @@
                     </div>
                 </section>
 
-                <!-- Paket -->
-                <section id="paket">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        </div>
-                        <h2 class="text-2xl font-bold">Paket & Pembayaran</h2>
-                    </div>
-                    <div class="space-y-4">
                         <div class="faq-item">
                             <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
                                 <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
-                                    Apakah ada paket gratis?
+                                    Apa perbedaan rincian fungsi antar paket berlangganan?
                                     <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                                 </summary>
-                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
-                                    Ya! Paket Free mengizinkan Anda menghubungkan hingga 2 kamera secara gratis dengan batasan durasi menonton 60 menit per sesi. Untuk penggunaan profesional tanpa batasan, Anda bisa memilih paket Basic, Premium, atau Advance.
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed space-y-4">
+                                    <p>Setiap paket dirancang untuk kebutuhan operasional yang berbeda. Berikut adalah rincian fungsinya:</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                            <p class="font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase">Free</p>
+                                            <ul class="list-disc pl-4 space-y-1">
+                                                <li><strong>2 Slot Kamera:</strong> Hubungkan hingga 2 kamera IP/RTSP.</li>
+                                                <li><strong>Sesi 60 Menit:</strong> Batasan waktu menonton live (perlu refresh).</li>
+                                                <li><strong>Shared Server:</strong> Resource berbagi dengan pengguna paket gratis.</li>
+                                                <li><strong>Dashboard Standar:</strong> Akses ke panel manajemen kamera dasar.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                            <p class="font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase">Basic</p>
+                                            <ul class="list-disc pl-4 space-y-1">
+                                                <li><strong>4 Slot Kamera:</strong> Kapasitas untuk rumah atau ruko kecil.</li>
+                                                <li><strong>24/7 Unlimited Live:</strong> Streaming nonstop tanpa batasan durasi.</li>
+                                                <li><strong>Shared Server:</strong> Resource berbagi dengan performa stabil.</li>
+                                                <li><strong>Dashboard Standar:</strong> Kelola & pantau status secara real-time.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                            <p class="font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase">Premium</p>
+                                            <ul class="list-disc pl-4 space-y-1">
+                                                <li><strong>8 Slot Kamera:</strong> Ideal untuk bisnis atau kantor menengah.</li>
+                                                <li><strong>24/7 Unlimited Live:</strong> Monitoring dengan prioritas bandwidth tinggi.</li>
+                                                <li><strong>Command Center:</strong> Fitur pemantauan terpusat yang efisien.</li>
+                                                <li><strong>GIS Map Integration:</strong> Visualisasi lokasi kamera di peta.</li>
+                                                <li><strong>Public Hub:</strong> URL khusus untuk akses tanpa login.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                            <p class="font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase">Advance</p>
+                                            <ul class="list-disc pl-4 space-y-1">
+                                                <li><strong>16 Slot Kamera:</strong> Mendukung tampilan Grid 4x4 simultan.</li>
+                                                <li><strong>24/7 Unlimited Live:</strong> Performa maksimal untuk pengawasan intensif.</li>
+                                                <li><strong>Command Center & GIS Map:</strong> Manajemen banyak titik di satu peta.</li>
+                                                <li><strong>NVR View:</strong> Antarmuka monitoring layar besar/TV.</li>
+                                                <li><strong>Public Hub:</strong> Link publik aman untuk audiens luas.</li>
+                                            </ul>
+                                        </div>
+                                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 md:col-span-2">
+                                            <p class="font-bold text-brand-600 dark:text-brand-400 mb-2 uppercase">Enterprise</p>
+                                            <ul class="list-disc pl-4 space-y-1">
+                                                <li><strong>Unlimited Cameras & On-Premise:</strong> Solusi infrastruktur skala besar.</li>
+                                                <li><strong>24/7 Unlimited Live:</strong> Jaminan ketersediaan resource tertinggi.</li>
+                                                <li><strong>Full Modules:</strong> Command Center, GIS Map, & NVR View kustom.</li>
+                                                <li><strong>Public Hub Management:</strong> Manajemen banyak link publik sekaligus.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
                             </details>
                         </div>
