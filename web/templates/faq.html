@@ -73,7 +73,7 @@
             <div class="space-y-16">
                 
                 <!-- Umum -->
-                <section id="umum">
+                <section id="umum" class="scroll-mt-24">
                     <div class="flex items-center gap-4 mb-8">
                         <div class="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-600">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -107,7 +107,7 @@
                 </section>
 
                 <!-- Teknis -->
-                <section id="teknis">
+                <section id="teknis" class="scroll-mt-24">
                     <div class="flex items-center gap-4 mb-8">
                         <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
@@ -149,8 +149,15 @@
                             </details>
                         </div>
                     </div>
-                </section>
-
+                <!-- Paket -->
+                <section id="paket" class="scroll-mt-24">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Paket & Pembayaran</h2>
+                    </div>
+                    <div class="space-y-4">
                         <div class="faq-item">
                             <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
                                 <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
@@ -226,11 +233,22 @@
                                 </div>
                             </details>
                         </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Bagaimana metode pembayarannya?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Kami menggunakan payment gateway iPaymu yang mendukung berbagai metode pembayaran lokal Indonesia seperti QRIS, Transfer Bank (Virtual Account), dan gerai retail (Indomaret/Alfamart). Paket langganan akan aktif secara otomatis setelah pembayaran berhasil.
+                                </div>
+                            </details>
+                        </div>
                     </div>
                 </section>
 
                 <!-- Keamanan -->
-                <section id="keamanan">
+                <section id="keamanan" class="scroll-mt-24">
                     <div class="flex items-center gap-4 mb-8">
                         <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
