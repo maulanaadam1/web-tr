@@ -645,6 +645,11 @@ func main() {
 		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
 		tmpl.Execute(w, nil)
 	})
+	http.HandleFunc("/faq", func(w http.ResponseWriter, r *http.Request) {
+		tmpl, err := template.ParseFiles("web/templates/faq.html")
+		if err != nil { http.Error(w, err.Error(), http.StatusInternalServerError); return }
+		tmpl.Execute(w, nil)
+	})
 
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
 		if (prelaunch || hideSignup) && r.URL.Query().Get("tab") == "signup" {

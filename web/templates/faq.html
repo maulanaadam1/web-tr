@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequently Asked Questions - RTSP2go</title>
+    <meta name="description" content="Pertanyaan yang sering diajukan mengenai layanan streaming RTSP2go, teknis gateway, keamanan, dan paket langganan.">
+    <script src="https://cdn.tailwindcss.com?v=3.4.1"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 900: '#312e81', 950: '#1e1b4b' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .faq-item summary::-webkit-details-marker { display: none; }
+        .faq-item details[open] summary svg { transform: rotate(180deg); }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white transition-colors duration-300 antialiased">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <a href="/" class="flex items-center gap-3">
+                    <div class="bg-gradient-to-br from-brand-500 to-purple-600 p-1.5 rounded-lg text-white">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    </div>
+                    <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-600 to-purple-600 dark:from-brand-400 dark:to-purple-400 bg-clip-text text-transparent">RTSP2go</span>
+                </a>
+                <div class="flex items-center gap-6">
+                    <a href="/" class="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-brand-600 transition-colors">Beranda</a>
+                    <a href="/login" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all">Login</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header class="py-16 lg:py-24 bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950 border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 font-medium text-xs mb-6 border border-brand-200 dark:border-brand-800">
+                Pusat Bantuan
+            </div>
+            <h1 class="text-4xl lg:text-5xl font-extrabold mb-6 tracking-tight">Frequently Asked Questions</h1>
+            <p class="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Temukan jawaban cepat untuk pertanyaan umum mengenai layanan streaming, teknis, dan kebijakan RTSP2go.
+            </p>
+        </div>
+    </header>
+
+    <!-- FAQ Sections -->
+    <main class="py-16 lg:py-24">
+        <div class="max-w-4xl mx-auto px-4">
+            
+            <!-- Categories Navigation -->
+            <div class="flex flex-wrap justify-center gap-3 mb-12">
+                <a href="#umum" class="px-5 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold hover:border-brand-500 transition-colors shadow-sm">Umum</a>
+                <a href="#teknis" class="px-5 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold hover:border-brand-500 transition-colors shadow-sm">Teknis & Gateway</a>
+                <a href="#paket" class="px-5 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold hover:border-brand-500 transition-colors shadow-sm">Paket & Pembayaran</a>
+                <a href="#keamanan" class="px-5 py-2 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-bold hover:border-brand-500 transition-colors shadow-sm">Keamanan</a>
+            </div>
+
+            <div class="space-y-16">
+                
+                <!-- Umum -->
+                <section id="umum">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-600">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Umum</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="faq-item group">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Apa itu RTSP2go?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    RTSP2go adalah platform cloud yang memungkinkan Anda untuk menghubungkan kamera IP atau NVR apa pun yang mendukung protokol RTSP ke internet. Kami mengonversi stream video mentah tersebut menjadi format web modern seperti WebRTC, HLS, dan MP4 sehingga bisa ditonton langsung di browser tanpa plugin atau software tambahan.
+                                </div>
+                            </details>
+                        </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Apakah saya butuh perangkat keras khusus?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Tidak. Selama kamera IP Anda mendukung RTSP (hampir semua merk seperti Hikvision, Dahua, Bardi, TP-Link VIGI, dll. mendukung ini), Anda bisa langsung menggunakannya. Untuk kamera di jaringan lokal, Anda hanya butuh satu PC/laptop atau Raspberry Pi yang menyala untuk menjalankan Gateway App kami.
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Teknis -->
+                <section id="teknis">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center text-purple-600">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Teknis & Gateway</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Apa itu RTSP2go Gateway?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Gateway adalah aplikasi ringan yang bertugas sebagai "jembatan". Jika kamera Anda memiliki IP lokal (misal 192.168.1.100), server cloud tidak bisa mengaksesnya secara langsung. Gateway yang berjalan di lokasi lokal Anda akan mengambil stream tersebut dan mengirimkannya secara aman ke server cloud kami tanpa perlu melakukan Port Forwarding di router.
+                                </div>
+                            </details>
+                        </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Berapa bandwidth yang dibutuhkan?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Bandwidth yang digunakan bergantung pada resolusi dan bitrate kamera Anda. Secara rata-rata, satu kamera 720p (HD) membutuhkan bandwidth upload sekitar 1-2 Mbps di lokasi kamera. Untuk monitoring lancar, kami merekomendasikan koneksi internet yang stabil.
+                                </div>
+                            </details>
+                        </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Kamera merk apa saja yang didukung?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Semua merk yang memiliki fitur RTSP. Beberapa merk populer yang sudah teruji: Hikvision, Dahua, Uniview, Bardi, TP-Link VIGI/Tapo, Xiaomi (beberapa model), Ezviz, dan banyak lagi. Kami merekomendasikan kompresi video H.264 untuk kompabilitas terbaik.
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Paket -->
+                <section id="paket">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Paket & Pembayaran</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Apakah ada paket gratis?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Ya! Paket Free mengizinkan Anda menghubungkan hingga 2 kamera secara gratis dengan batasan durasi menonton 60 menit per sesi. Untuk penggunaan profesional tanpa batasan, Anda bisa memilih paket Basic, Premium, atau Advance.
+                                </div>
+                            </details>
+                        </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Bagaimana metode pembayarannya?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Kami menggunakan payment gateway iPaymu yang mendukung berbagai metode pembayaran lokal Indonesia seperti QRIS, Transfer Bank (Virtual Account), dan gerai retail (Indomaret/Alfamart). Paket langganan akan aktif secara otomatis setelah pembayaran berhasil.
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Keamanan -->
+                <section id="keamanan">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center text-amber-600">
+                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </div>
+                        <h2 class="text-2xl font-bold">Keamanan</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Apakah stream saya aman?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Sangat aman. Seluruh koneksi antara Gateway Anda dan server kami dienkripsi menggunakan TLS/SSL (HTTPS/WSS). Kami tidak menyimpan rekaman video Anda di server kami kecuali Anda menggunakan fitur Cloud Recording di paket tertentu. Stream hanya dikirimkan secara langsung (real-time) ke penonton yang sah.
+                                </div>
+                            </details>
+                        </div>
+                        <div class="faq-item">
+                            <details class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden transition-all duration-300 open:ring-2 open:ring-brand-500/20">
+                                <summary class="flex items-center justify-between p-6 cursor-pointer font-bold text-slate-800 dark:text-slate-100 list-none">
+                                    Siapa yang bisa melihat stream saya?
+                                    <svg class="w-5 h-5 text-slate-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                                </summary>
+                                <div class="px-6 pb-6 text-slate-600 dark:text-slate-400 leading-relaxed">
+                                    Hanya Anda (pemilik akun) yang memiliki akses melalui dashboard utama. Namun, Anda memiliki opsi untuk mengaktifkan fitur "Public View" untuk kamera tertentu jika Anda ingin membagikan link tontonan kepada publik atau memasangnya di website Anda sendiri.
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- Still Have Questions? -->
+            <div class="mt-24 p-10 rounded-[2.5rem] bg-brand-600 text-white text-center shadow-2xl shadow-brand-500/30 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl pointer-events-none"></div>
+                <h3 class="text-3xl font-extrabold mb-4">Masih punya pertanyaan?</h3>
+                <p class="text-brand-100 mb-8 max-w-lg mx-auto">Tim kami siap membantu Anda 24/7 untuk solusi teknis maupun konsultasi bisnis.</p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="https://wa.me/6285111033425" target="_blank" class="bg-white text-brand-700 px-8 py-3.5 rounded-2xl font-bold hover:bg-brand-50 transition-colors shadow-lg">Hubungi WhatsApp</a>
+                    <a href="mailto:rtsp2go@gmail.com" class="bg-brand-700/50 backdrop-blur text-white px-8 py-3.5 rounded-2xl font-bold hover:bg-brand-700 transition-colors border border-brand-500/30">Kirim Email</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-12 border-t border-slate-200 dark:border-slate-900 text-center text-sm text-slate-500">
+        <p>© 2026 RTSP2go — Solusi Streaming IP Camera Profesional</p>
+    </footer>
+
+    <script>
+        // Apply saved dark mode preference
+        if (localStorage.getItem('theme') === 'dark' || !localStorage.getItem('theme')) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+</body>
+</html>
