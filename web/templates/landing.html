@@ -145,7 +145,7 @@
                     {{end}}
                     <a href="#contact" class="font-medium text-slate-600 hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400 transition-colors">Contact</a>
                     <a href="/login" class="font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-700 transition-colors">Sign In</a>
-                    <a href="/login?mode=register" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 hover:-translate-y-0.5">Klaim Trial</a>
+                    <a href="/login?mode=register" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-full font-bold text-xs transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 hover:-translate-y-0.5">Klaim Trial</a>
                 </div>
                 <div class="md:hidden flex items-center gap-4">
                     <a href="/login" class="bg-brand-600 text-white px-4 py-2 rounded-lg font-medium text-sm">Login</a>
@@ -175,7 +175,7 @@
             </p>
             
             <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
-                <a href="/login?mode=register&plan=Advance" class="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-brand-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
+                <a href="/login?mode=register&plan=Advance" class="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-xl shadow-orange-500/30 hover:-translate-y-1 flex items-center justify-center gap-2">
                     Klaim Advance Trial Gratis
                     <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </a>
@@ -379,7 +379,8 @@
                     <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-brand-500 to-purple-500 text-[9px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider whitespace-nowrap">Best Value</div>
                     <h3 class="text-lg font-bold mb-1 text-brand-400">Premium</h3>
                     <p class="text-slate-400 text-xs mb-4 h-8">Bisnis & Toko Ritel.</p>
-                    <div class="mb-4">
+                    <div class="mb-4 flex items-baseline gap-2">
+                        <span class="text-xs text-slate-400 line-through decoration-red-500/50">Rp 50k</span>
                         <span class="text-2xl font-extrabold text-white">Rp 35k</span><span class="text-slate-400 text-xs">/bln</span>
                     </div>
                     <ul class="space-y-1.5 mb-6 flex-1">
@@ -396,7 +397,10 @@
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
                     <h3 class="text-lg font-bold mb-1 text-slate-100">Advance</h3>
                     <p class="text-slate-400 text-xs mb-4 h-8">Monitoring NVR Penuh.</p>
-                    <div class="mb-4 text-white"><span class="text-2xl font-extrabold">Rp 70k</span><span class="text-slate-400 text-xs">/bln</span></div>
+                    <div class="mb-4 text-white flex items-baseline gap-2">
+                        <span class="text-xs text-slate-400 line-through decoration-red-500/50">Rp 100k</span>
+                        <span class="text-2xl font-extrabold">Rp 85k</span><span class="text-slate-400 text-xs">/bln</span>
+                    </div>
                     <ul class="space-y-1.5 mb-6 flex-1">
                         <li class="flex items-start gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> <span><strong>16 Slot Kamera:</strong> Dukungan tampilan Grid 4x4 simultan.</span></li>
                         <li class="flex items-start gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> <span><strong>24/7 Unlimited Live:</strong> Streaming nonstop tanpa batas durasi.</span></li>
@@ -406,7 +410,7 @@
                         <li class="flex items-start gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> <span><strong>Dedicated Server</strong></span></li>
                         <li class="flex items-start gap-2 text-xs text-slate-300"><svg class="w-3.5 h-3.5 text-brand-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> <span><strong>Public Hub:</strong> Akses stream tanpa login.</span></li>
                     </ul>
-                    <a href="/login?mode=register&plan=Advance" class="w-full py-2.5 px-3 bg-brand-600 hover:bg-brand-500 transition-colors text-center font-bold rounded-xl text-xs shadow-lg shadow-brand-500/20">Pilih Paket</a>
+                    <a href="/login?mode=register&plan=Advance" class="w-full py-2.5 px-3 bg-orange-500 hover:bg-orange-600 transition-colors text-center font-bold rounded-xl text-xs shadow-lg shadow-orange-500/20">Klaim Advance Trial Gratis</a>
                 </div>
                 <!-- Enterprise -->
                 <div class="bg-slate-800/50 backdrop-blur border border-slate-700 p-6 rounded-3xl flex flex-col hover:-translate-y-2 transition-transform duration-300 relative">
