@@ -98,9 +98,12 @@ streams:
     URIPSUMOHARJO PANDEGILING PTZ: rtsp://edishub:g412uda5u12y426@36.66.208.113:554/Streaming/Channels/3102
     Wonokromo RSI: rtsp://edishub:g412uda5u12y426@36.66.208.112:554/mpeg4/ch113/sub/av_stream
 api:
-    listen: 127.0.0.1:1984
+    listen: :1984
     username: admin
     password: admin123
+
+rtsp:
+    listen: :8554
 
 webrtc:
     listen: :8555
